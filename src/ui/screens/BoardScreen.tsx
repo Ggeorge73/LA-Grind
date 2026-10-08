@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { opportunityView, type OpportunityView } from '../../sim/actions';
+import { opportunityView, tvView, type OpportunityView } from '../../sim/actions';
 import { visibleTier } from '../../sim/board';
-import { BOARD_REFRESH_HOUR, PREP_MAX_HOURS } from '../../sim/constants';
+import { BOARD_REFRESH_HOUR, CALLBACK_BEATS, PILOT_FEE_MULTIPLIER, PREP_MAX_HOURS } from '../../sim/constants';
 import type { Medium, Opportunity } from '../../sim/types';
 import { useGame } from '../../store/game';
 import { money, pct } from '../format';
 import type { Tab } from '../GameScreen';
 import { Button, Card, MediumTag } from '../kit';
+import { PendingPilots, PilotSeasonBanner, YourShowCard } from './tvKit';
 
 type Filter = 'all' | Medium;
 const FILTERS: { id: Filter; label: string }[] = [
@@ -43,6 +44,9 @@ function OpportunityCard({ view, onNavigate }: { view: OpportunityView; onNaviga
       <article aria-label={opp.title}>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <MediumTag medium={opp.medium} />
+          {view.pilot && (
+            <span className="rounded-md bg-tv px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-bg">Pilot</span>
+          )}
           <span className="font-semibold">Tier {opp.tier}</span>
           <span className="text-muted">{cap(opp.skill)}</span>
           {status && (
@@ -50,7 +54,16 @@ function OpportunityCard({ view, onNavigate }: { view: OpportunityView; onNaviga
           )}
         </div>
 
-        <h2 className="mt-1.5 font-bold leading-snug">{opp.title}</h2>
+        {view.pilot ? (
+          <>
+            <h2 className="mt-1.5 font-bold leading-snug">“{view.pilot.showTitle}”</h2>
+            <p className="text-sm">
+              {view.pilot.label} · <span className="font-semibold">{view.pilot.network}</span> · {view.pilot.role}
+            </p>
+          </>
+        ) : (
+          <h2 className="mt-1.5 font-bold leading-snug">{opp.title}</h2>
+        )}
         <p className="text-xs text-muted">
           {view.where} · {view.window}
         </p>
@@ -58,7 +71,8 @@ function OpportunityCard({ view, onNavigate }: { view: OpportunityView; onNaviga
         <div className="mt-2 flex items-end justify-between gap-3">
           <div className="min-w-0 text-sm">
             <p>
-              <span className="font-semibold">{money(view.pay)}</span> · +{view.rp} RP
+              <span className="font-semibold">{money(view.pay)}</span>
+              {view.pilot && <span className="text-tv"> ({PILOT_FEE_MULTIPLIER}× TV pay)</span>} · +{view.rp} RP
               {view.network > 0 && <> · +{view.network} Network</>}
             </p>
             <p className="text-xs text-muted">
@@ -75,6 +89,11 @@ function OpportunityCard({ view, onNavigate }: { view: OpportunityView; onNaviga
           )}
         </div>
         {open && canPrepMore && <p className="mt-1 text-xs text-muted">→ {pct(view.oddsWithMaxPrep)} with max prep</p>}
+        {open && view.pilot && (
+          <p className="mt-2 rounded-lg border border-tv/50 bg-tv/10 px-2 py-1 text-xs">
+            🎬 Callback: {CALLBACK_BEATS} director notes. Pick the right reads to raise your odds. No exposure risk.
+          </p>
+        )}
         {open && view.exposureRisk && (
           <p className="mt-2 rounded-lg border border-warn/50 bg-warn/10 px-2 py-1 text-xs text-warn">
             ⚠ Exposure risk: your skill is below the bar — failure costs RP
@@ -141,6 +160,7 @@ export function BoardScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) 
   if (!state) return null;
 
   const items = state.board.filter((o) => filter === 'all' || o.medium === filter);
+  const tv = tvView(state);
 
   return (
     <div>
@@ -150,6 +170,10 @@ export function BoardScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) 
           Visible up to Tier {visibleTier(state.player)} · refreshes {pad(BOARD_REFRESH_HOUR)}:00
         </p>
       </header>
+
+      <PilotSeasonBanner season={tv.season} />
+      {tv.contract && <YourShowCard contract={tv.contract} onNavigate={onNavigate} idPrefix="gigs" />}
+      <PendingPilots pilots={tv.pilots} />
 
       <div role="group" aria-label="Filter by medium" className="mb-3 grid grid-cols-4 gap-1">
         {FILTERS.map((f) => (

@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react';
-import { listActions, type ActionOption } from '../../sim/actions';
+import { listActions, tvView, type ActionOption } from '../../sim/actions';
 import { LOCATIONS } from '../../sim/content/locations';
 import { useGame } from '../../store/game';
 import { duration } from '../format';
 import type { Tab } from '../GameScreen';
 import { Button, Card, Chip, SectionTitle } from '../kit';
+import { YourShowCard } from './tvKit';
 
 const RIDESHARE_HOURS = [1, 2, 4, 6, 8] as const;
 const SLEEP_HOURS = [1, 4, 6, 8, 10] as const;
@@ -111,6 +112,7 @@ export function HustleScreen({ onNavigate }: { onNavigate: (tab: Tab) => void })
 
   const location = LOCATIONS[state.player.location];
   const actions = listActions(state, rideshareHours, sleepHours);
+  const show = tvView(state).contract;
 
   const pickerFor = (o: ActionOption) => {
     if (o.command.type === 'START_JOB' && o.command.hours !== undefined) {
@@ -128,6 +130,8 @@ export function HustleScreen({ onNavigate }: { onNavigate: (tab: Tab) => void })
         <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">Daily Hustle · {location.name}</h1>
         <p className="text-sm text-muted">{location.blurb}</p>
       </header>
+
+      {show && <YourShowCard contract={show} onNavigate={onNavigate} idPrefix="hustle" />}
 
       {GROUPS.map((g) => {
         const items = actions.filter((a) => a.group === g.id);
