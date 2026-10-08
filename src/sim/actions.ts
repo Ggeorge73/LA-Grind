@@ -547,7 +547,8 @@ export function musicBizView(s: GameState): MusicBizView {
     fans,
     shows: VENUES.map((v) => {
       const command: Command = { type: 'PLAY_SHOW', venueId: v.id };
-      const expectedTickets = Math.min(v.capacity, Math.round(fans * C.SHOW_DRAW));
+      // Nothing to expect from a room that won't book you yet.
+      const expectedTickets = fans < v.minFans ? 0 : Math.min(v.capacity, Math.round(fans * C.SHOW_DRAW));
       return {
         id: v.id,
         name: VENUE_FLAVOR[v.id].name,
