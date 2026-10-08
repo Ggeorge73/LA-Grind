@@ -1,6 +1,7 @@
 // Plain-language activity-log lines for sim events. Returns null for events the log skips.
 import { JOBS } from './content/jobs';
 import { LEISURE, LOCATIONS } from './content/locations';
+import { FESTIVALS } from './content/film';
 import type { GameEvent } from './types';
 import { formatMoney } from './world';
 
@@ -68,15 +69,32 @@ export function describeEvent(e: GameEvent): string | null {
     case 'PROJECT_ABANDONED':
       return `Abandoned "${e.title}". It lives on as a Google Doc.`;
     case 'SESSION_SCORED':
-      return `Writing session scored ${e.score}/100.`;
+      return `${{ develop: 'Writing session', shoot: 'Shoot day', post: 'Edit session' }[e.stage as 'develop' | 'shoot' | 'post'] ?? 'Session'} scored ${e.score}/100.`;
     case 'PITCHED':
       return e.yes ? `Pitch landed (${pct(e.odds)} odds): +${formatMoney(e.amount)} raised.` : `Pitch passed on (${pct(e.odds)} odds).`;
     case 'SELF_FUNDED':
       return `You put ${formatMoney(e.amount)} of your own money in. Bold.`;
     case 'CREW_HIRED':
       return `Hired ${e.candidate.name} (skill ${e.candidate.skill}) for ${formatMoney(e.candidate.fee)}.`;
+    case 'FESTIVAL_SUBMITTED':
+      return `Submitted to ${festivalName(e.festivalId)} (${pct(e.odds)} odds, −${formatMoney(e.fee)}). Results in a few days at 06:00.`;
+    case 'FESTIVAL_RESULT':
+      if (!e.accepted) return `${festivalName(e.festivalId)} passed (${pct(e.odds)} odds).`;
+      return [
+        `Accepted at ${festivalName(e.festivalId)}! +${e.rp} RP.`,
+        e.award ? `Won the ${e.award}.` : '',
+        e.offer ? `${e.offer.distributor} offers ${formatMoney(e.offer.amount)} for distribution.` : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+    case 'FILM_RELEASED':
+      return e.distributor
+        ? `"${e.title}" released by ${e.distributor}: +${formatMoney(e.amount)}.`
+        : `"${e.title}" self-released online: +${e.rp} RP.`;
     case 'ACTION_REJECTED':
     case 'HEADLINE':
       return null;
   }
 }
+
+const festivalName = (id: string): string => FESTIVALS.find((f) => f.id === id)?.name ?? id;

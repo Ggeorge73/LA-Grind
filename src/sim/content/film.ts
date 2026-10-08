@@ -50,3 +50,26 @@ export const FILM_PIPELINE = [
   { id: 'post', kind: 'work', label: 'Post-production' },
   { id: 'festival', kind: 'circuit', label: 'Festival circuit' },
 ] as const;
+
+export type FestivalId = 'noho-shorts' | 'silverlake-underground' | 'slamdunce' | 'sunburnt' | 'canned';
+
+export interface Festival {
+  id: FestivalId;
+  name: string;
+  tier: number;
+  fee: number;
+  /** Days until the result lands (at 06:00). */
+  waitDays: number;
+  /** Distribution offer multiplier on budget × (0.3 + Quality/100). */
+  offerMultiplier: number;
+  /** RP for an acceptance. */
+  rp: number;
+}
+
+export const FESTIVALS: readonly Festival[] = [
+  { id: 'noho-shorts', name: 'NoHo Shorts Night', tier: 1, fee: 25, waitDays: 3, offerMultiplier: 0.2, rp: 40 },
+  { id: 'silverlake-underground', name: 'Silver Lake Underground', tier: 2, fee: 50, waitDays: 5, offerMultiplier: 0.4, rp: 80 },
+  { id: 'slamdunce', name: 'SlamDunce', tier: 3, fee: 100, waitDays: 7, offerMultiplier: 0.8, rp: 150 },
+  { id: 'sunburnt', name: 'Sunburnt', tier: 4, fee: 150, waitDays: 10, offerMultiplier: 1.2, rp: 250 },
+  { id: 'canned', name: 'Canned', tier: 5, fee: 200, waitDays: 14, offerMultiplier: 1.8, rp: 400 },
+];

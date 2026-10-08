@@ -114,7 +114,7 @@ export const TRADES_MAX = 60;
 export const LOG_MAX = 120;
 export const NPC_HEADLINES_PER_DAY = 3;
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 // Projects (PI-2 career engine) — film numbers; scales live in content/film.ts
 export const WRITE_SESSION_HOURS = 3;
@@ -150,3 +150,46 @@ export const FILM_WEIGHT_SCRIPT = 0.35;
 export const FILM_WEIGHT_SHOOT = 0.4;
 export const FILM_WEIGHT_POST = 0.15;
 export const FILM_WEIGHT_CREW = 0.1;
+
+// Shoot (Sprint 6)
+export const SHOOT_HOURS = 10;
+export const SHOOT_ENERGY = 45;
+/** Call time: a shoot day must start between these hours. */
+export const SHOOT_CALL_WINDOW = [5, 10] as const;
+export const SHOOT_SCORE_BASE = 15;
+export const SHOOT_SCORE_DIRECTING = 0.5;
+export const SHOOT_SCORE_CREW = 0.25;
+export const SHOOT_SCORE_ACTING = 0.1;
+export const SHOOT_SCORE_LUCK = 15;
+
+// Post
+export const EDIT_HOURS = 4;
+export const EDIT_ENERGY = 20;
+export const EDIT_SCORE_BASE = 20;
+export const EDIT_SCORE_DIRECTING = 0.5;
+/** Per skill point of the hired Editor (0 if none). */
+export const EDIT_SCORE_EDITOR = 4;
+export const EDIT_SCORE_LUCK = 10;
+
+// Festival circuit
+export const FESTIVAL_QUALITY_OFFSET = 20;
+export const FESTIVAL_CLOUT_WEIGHT = 5;
+export const FESTIVAL_TIER_WEIGHT = 15;
+export const FESTIVAL_SPREAD = 12;
+export const FESTIVAL_FLOOR = 0.03;
+export const FESTIVAL_CEILING = 0.95;
+/** Award chance = (Quality − base − perTier·tier) / range, clamped 0..max. */
+export const AWARD_BASE = 50;
+export const AWARD_PER_TIER = 5;
+export const AWARD_RANGE = 50;
+export const AWARD_MAX = 0.6;
+/** Award RP is this multiple of the festival's RP. */
+export const AWARD_RP_MULTIPLIER = 1;
+/** Offer chance on acceptance = base + Quality/divisor. */
+export const OFFER_CHANCE_BASE = 0.5;
+export const OFFER_CHANCE_DIVISOR = 200;
+export const OFFER_QUALITY_BASE = 0.3;
+/** Network gained when an offer is accepted (the film is out there). */
+export const RELEASE_NETWORK = 5;
+/** Self-release: RP = quality × this. */
+export const SELF_RELEASE_RP_PER_QUALITY = 0.5;

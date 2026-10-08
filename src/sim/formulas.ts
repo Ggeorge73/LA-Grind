@@ -167,3 +167,39 @@ export const crewFee = (budget: number, skill: number): number => Math.round(bud
 
 export const crewPoolSize = (network: number, slots: number): number =>
   Math.min(C.CREW_POOL_MAX, Math.max(slots + 1, C.CREW_POOL_BASE + Math.floor(network / C.CREW_POOL_PER_NETWORK)));
+
+export interface ShootInput {
+  directing: number;
+  acting: number;
+  /** Crew quality 0–100. */
+  crew: number;
+}
+
+export const shootScore = (i: ShootInput, roll: number): number =>
+  clamp(
+    C.SHOOT_SCORE_BASE +
+      C.SHOOT_SCORE_DIRECTING * i.directing +
+      C.SHOOT_SCORE_CREW * i.crew +
+      C.SHOOT_SCORE_ACTING * i.acting +
+      roll * C.SHOOT_SCORE_LUCK,
+    0,
+    100,
+  );
+
+/** `editorSkill` is the hired Editor's skill (1–5), or 0 without one. */
+export const editScore = (directing: number, editorSkill: number, roll: number): number =>
+  clamp(C.EDIT_SCORE_BASE + C.EDIT_SCORE_DIRECTING * directing + C.EDIT_SCORE_EDITOR * editorSkill + roll * C.EDIT_SCORE_LUCK, 0, 100);
+
+/** Festival acceptance: logistic((Q + 5·Clout − 20 − 15·tier) / 12), clamped. */
+export function festivalOdds(quality: number, clout: number, tier: number): number {
+  const score = quality + C.FESTIVAL_CLOUT_WEIGHT * clout - C.FESTIVAL_QUALITY_OFFSET - C.FESTIVAL_TIER_WEIGHT * tier;
+  return clamp(1 / (1 + Math.exp(-score / C.FESTIVAL_SPREAD)), C.FESTIVAL_FLOOR, C.FESTIVAL_CEILING);
+}
+
+export const awardChance = (quality: number, tier: number): number =>
+  clamp((quality - C.AWARD_BASE - C.AWARD_PER_TIER * tier) / C.AWARD_RANGE, 0, C.AWARD_MAX);
+
+export const offerChance = (quality: number): number => clamp(C.OFFER_CHANCE_BASE + quality / C.OFFER_CHANCE_DIVISOR, 0, 1);
+
+export const offerAmount = (budget: number, quality: number, multiplier: number): number =>
+  Math.round(budget * (C.OFFER_QUALITY_BASE + quality / 100) * multiplier);

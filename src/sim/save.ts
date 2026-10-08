@@ -29,6 +29,11 @@ type Migration = (file: SaveFile) => SaveFile;
 const MIGRATIONS: Record<number, Migration> = {
   // v1 → v2 (PI-2): careers. Old runs simply have no project and no credits yet.
   1: (file) => ({ ...file, version: 2, state: { ...file.state, version: 2, project: null, credits: [] } }),
+  // v2 → v3 (Sprint 6): festival circuit. An in-flight project gets empty submissions and offers.
+  2: (file) => {
+    const project = file.state.project ? { ...file.state.project, submissions: [], offers: [] } : null;
+    return { ...file, version: 3, state: { ...file.state, version: 3, project } };
+  },
 };
 
 export function migrate(file: SaveFile): SaveFile | null {
