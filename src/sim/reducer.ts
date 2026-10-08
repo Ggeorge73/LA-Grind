@@ -5,7 +5,7 @@ import { JOBS } from './content/jobs';
 import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LOCATIONS, REPAIR_LOCATION } from './content/locations';
 import { NPC_HEADLINES } from './content/headlines';
 import { SUBMISSION_NAME, generateBoard, oddsFor, submissionFee } from './board';
-import { advance } from './clock';
+import { advance, settleOverdraft } from './clock';
 import { atHour, commute, cloutTier, hourOf, minuteOfDay } from './formulas';
 import { Rng, seedToState } from './rng';
 import type { Activity, ArchetypeId, Command, GameEvent, GameState } from './types';
@@ -275,6 +275,7 @@ export function step(state: GameState, cmd: Command): StepResult {
       break;
     case 'ACCEPT_OFFER':
       acceptOffer(s, rng, cmd.offerId, events);
+      settleOverdraft(s, events);
       break;
     case 'SELF_RELEASE':
       selfRelease(s, rng, events);

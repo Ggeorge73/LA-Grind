@@ -86,6 +86,14 @@ function newDay(s: GameState, rng: Rng, events: GameEvent[]): void {
   resolveFestivals(s, rng, events);
 }
 
+/** Instant commands that pay out (e.g. accepting a distribution offer) settle an overdraft right away. */
+export function settleOverdraft(s: GameState, events: GameEvent[]): void {
+  if (s.overdraft && s.player.cash >= 0) {
+    s.overdraft = null;
+    events.push({ type: 'OVERDRAFT_CLEARED' });
+  }
+}
+
 function checkOverdraft(s: GameState, rng: Rng, events: GameEvent[]): void {
   const p = s.player;
   if (p.cash < 0 && !s.overdraft) {
