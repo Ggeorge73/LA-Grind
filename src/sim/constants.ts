@@ -1,0 +1,117 @@
+// Every balance number in the game lives here or in content/. Nothing inline in rules or UI.
+
+export const MINUTES_PER_HOUR = 60;
+export const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
+
+/** Real milliseconds per game minute at 1x (1 game hour = 60 real seconds). */
+export const REAL_MS_PER_GAME_MINUTE = 1000;
+export const SPEEDS = [0, 1, 4] as const;
+/** Clamp catch-up so one frame never simulates more than this much real time. */
+export const MAX_CATCHUP_REAL_MS = 5000;
+
+export const START_DAY = 1;
+export const START_HOUR = 8;
+export const BILLS_HOUR = 6;
+export const BOARD_REFRESH_HOUR = 6;
+
+export const FOOD_PER_DAY = 20;
+export const CAR_COSTS_PER_DAY = 10;
+
+export const STAT_MIN = 0;
+export const STAT_MAX = 100;
+
+// Energy and burnout
+export const ENERGY_AWAKE_DRAIN_PER_HOUR = 1.5;
+export const ENERGY_SLEEP_GAIN_PER_HOUR = 12;
+export const BURNOUT_ENERGY_THRESHOLD = 20;
+export const BURNOUT_GAIN_FACTOR = 0.5;
+export const BURNOUT_RECOVERY_PER_HOUR = 2;
+export const CREATIVE_BURNOUT_ON = 60;
+export const CREATIVE_BURNOUT_OFF = 30;
+export const CREATIVE_BURNOUT_ODDS_MULTIPLIER = 0.5;
+/** Minimum Energy needed to start a tiring action (sleep and leisure are always allowed). */
+export const MIN_ENERGY_TO_START = 5;
+
+// Clout tiers
+export const MAX_TIER = 10;
+export const TIER_RP_FACTOR = 100;
+
+// Opportunities
+export const OPP_BASE_PAY = 150;
+export const OPP_BASE_RP = 40;
+export const OPP_BOARD_MIN = 4;
+export const OPP_BOARD_MAX = 6;
+export const OPP_EXTRA_PER_NETWORK = 25;
+export const SCREEN_WINDOW = { start: 9, end: 17 } as const;
+export const MUSIC_WINDOW = { start: 19, end: 23 } as const;
+
+export const ODDS_SPARK_WEIGHT = 0.3;
+export const ODDS_TIER_GAP_WEIGHT = 10;
+export const ODDS_PREP_WEIGHT = 5;
+export const ODDS_DIFFICULTY_BASE = 40;
+export const ODDS_DIFFICULTY_PER_TIER = 12;
+export const ODDS_SPREAD = 12;
+export const ODDS_FLOOR = 0.02;
+export const ODDS_CEILING = 0.9;
+
+export const PREP_MAX_HOURS = 4;
+export const PREP_SPARK_PER_HOUR = 10;
+export const PREP_ENERGY_PER_HOUR = 8;
+
+export const SUBMIT_HOURS = 1;
+export const SUBMIT_ENERGY = 10;
+export const SUBMIT_FEE = 40;
+
+export const BOOKED_SKILL_GAIN = 2;
+export const GUILD_VOUCHER_MIN_TIER = 2;
+export const GUILD_VOUCHERS_NEEDED = 3;
+export const UNION_RATE_MULTIPLIER = 2;
+
+export const EXPOSED_SKILL_PER_TIER = 8;
+export const EXPOSED_RP_PER_TIER = 30;
+
+// Travel
+export const RUSH_MULTIPLIER = 2.0;
+export const RUSH_405_MULTIPLIER = 3.0;
+export const MIDDAY_MULTIPLIER = 1.3;
+export const OFFPEAK_MULTIPLIER = 1.0;
+export const RUSH_HOURS: ReadonlyArray<readonly [number, number]> = [
+  [7, 10],
+  [16, 19],
+];
+export const MIDDAY_HOURS = [10, 16] as const;
+export const TRAVEL_MINUTES_PER_ENERGY = 10;
+export const GAS_PER_BLOCK = 2;
+export const GAS_BLOCK_BASE_MINUTES = 15;
+export const CAR_HEALTH_PER_TRIP = 1;
+export const CAR_POOR_THRESHOLD = 20;
+export const CAR_POOR_MULTIPLIER = 1.5;
+export const BUS_MULTIPLIER = 2.5;
+
+// Other actions
+export const LEISURE_HOURS = 2;
+export const LEISURE_SPARK = 25;
+export const LEISURE_BURNOUT_RELIEF = 4;
+export const CLASS_HOURS = 3;
+export const CLASS_COST = 60;
+export const CLASS_ENERGY = 15;
+export const CLASS_SKILL_GAIN = 3;
+export const HEADSHOTS_COST = 400;
+export const HEADSHOTS_HOURS = 2;
+export const HEADSHOTS_MIN_TIER = 2;
+export const CAR_REPAIR_COST = 300;
+export const CAR_REPAIR_HOURS = 2;
+export const CAR_REPAIR_GAIN = 40;
+export const SLEEP_MIN_HOURS = 1;
+export const SLEEP_MAX_HOURS = 10;
+
+// Overdraft and new runs
+export const OVERDRAFT_DAYS = 3;
+export const NEW_RUN_NETWORK_KEEP = 0.25;
+
+// Feeds
+export const TRADES_MAX = 60;
+export const LOG_MAX = 120;
+export const NPC_HEADLINES_PER_DAY = 3;
+
+export const SAVE_VERSION = 1;
