@@ -235,7 +235,7 @@ describe('project invariants and saves', () => {
       if (p) {
         expect(p.spent).toBeLessThanOrEqual(p.raised);
         expect(p.raised).toBeGreaterThanOrEqual(p.selfFunded);
-        expect(hiredCrew(p).length).toBeLessThanOrEqual(FILM_SCALES[p.scale].crewSlots);
+        expect(hiredCrew(p).length).toBeLessThanOrEqual(FILM_SCALES[p.scale as keyof typeof FILM_SCALES].crewSlots);
         for (const x of p.scores.develop) expect(x).toBeGreaterThanOrEqual(0);
       }
     }
@@ -307,7 +307,7 @@ function festivalStage(arch: 'indie' | 'nepo' | 'midwest' = 'indie', seed = 3): 
 /** Make the finished film great (state tweak), so acceptance/award/offer odds are high. */
 function polish(s: GameState): GameState {
   const t = structuredClone(s);
-  t.project!.scores = { develop: [95, 95], shoot: [95, 95], post: [95] };
+  t.project!.scores = { develop: [95, 95], shoot: [95, 95], post: [95], record: [] };
   return t;
 }
 
@@ -536,12 +536,12 @@ describe('release', () => {
 });
 
 describe('film saves, determinism and invariants', () => {
-  it('a v2 save with an in-flight project migrates to v3 with empty submissions and offers, and can carry on', () => {
+  it('a v2 save with an in-flight project migrates (via v3) with empty submissions and offers, and can carry on', () => {
     const s = shoot(shoot(shootStage()));
     const { submissions: _s, offers: _o, ...oldProject } = s.project!;
     const v2 = JSON.stringify({ version: 2, savedAt: 0, state: { ...s, version: 2, project: oldProject } });
     const m = deserialize(v2)!;
-    expect(m.version).toBe(3);
+    expect(m.version).toBe(C.SAVE_VERSION);
     expect(m.project!.submissions).toEqual([]);
     expect(m.project!.offers).toEqual([]);
     expect(m.project!.scores).toEqual(s.project!.scores);
@@ -553,7 +553,7 @@ describe('film saves, determinism and invariants', () => {
   it('a v2 save with no project migrates with project null', () => {
     const s = newGame('midwest', 2);
     const m = deserialize(JSON.stringify({ version: 2, savedAt: 0, state: { ...s, version: 2 } }))!;
-    expect(m.version).toBe(3);
+    expect(m.version).toBe(C.SAVE_VERSION);
     expect(m.project).toBeNull();
   });
 
@@ -622,7 +622,7 @@ describe('film saves, determinism and invariants', () => {
       s = res.state;
       const p = s.project;
       if (p) {
-        for (const sub of p.submissions) expect(sub.tier).toBeLessThanOrEqual(FILM_SCALES[p.scale].bestFestivalTier);
+        for (const sub of p.submissions) expect(sub.tier).toBeLessThanOrEqual(FILM_SCALES[p.scale as keyof typeof FILM_SCALES].bestFestivalTier);
         expect(new Set(p.submissions.map((x) => x.festivalId)).size).toBe(p.submissions.length);
       }
       if (cmd.type === 'SELF_RELEASE' && before.project && before.project.submissions.some((x) => x.status === 'pending'))

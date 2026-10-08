@@ -114,7 +114,7 @@ export const TRADES_MAX = 60;
 export const LOG_MAX = 120;
 export const NPC_HEADLINES_PER_DAY = 3;
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 // Projects (PI-2 career engine) — film numbers; scales live in content/film.ts
 export const WRITE_SESSION_HOURS = 3;
@@ -193,3 +193,37 @@ export const OFFER_QUALITY_BASE = 0.3;
 export const RELEASE_NETWORK = 5;
 /** Self-release: RP = quality × this. */
 export const SELF_RELEASE_RP_PER_QUALITY = 0.5;
+
+// Music (Sprint 7) — scales live in content/music.ts
+export const RECORD_HOURS = 4;
+export const RECORD_ENERGY = 20;
+export const RECORD_SCORE_BASE = 15;
+export const RECORD_SCORE_MUSIC = 0.5;
+export const RECORD_SCORE_CREW = 0.25;
+export const RECORD_SCORE_SPARK = 0.1;
+export const RECORD_SCORE_LUCK = 15;
+
+export const MUSIC_WEIGHT_SONGS = 0.4;
+export const MUSIC_WEIGHT_RECORD = 0.45;
+export const MUSIC_WEIGHT_CREW = 0.15;
+
+export const PROMO_HOURS = 2;
+export const PROMO_ENERGY = 10;
+export const PROMO_SPARK = 10;
+/** A promo multiplies the next day's streams by (1 + this). */
+export const PROMO_BOOST = 0.5;
+
+export const RELEASE_DAYS = 7;
+export const STREAM_BASE = 1000;
+export const STREAMS_PER_FAN = 4;
+/** Streams scale with (Quality / this)². */
+export const STREAM_QUALITY_PIVOT = 50;
+export const STREAM_DECAY = 0.75;
+export const ROYALTY_PER_STREAM = 0.004;
+export const FAN_CONVERSION = 0.02;
+/** Chart position = 101 − slope·log10(streams / base); above CHART_SIZE means it didn't chart. */
+export const CHART_BASE_STREAMS = 500;
+export const CHART_SLOPE = 25;
+export const CHART_SIZE = 100;
+/** RP at the end of release week = this × (101 − peak). 2 → 3 (LAG-62): at 2 a newcomer's single (#85–90) paid less RP than one Tier-1 gig. */
+export const CHART_RP_PER_PLACE = 3;

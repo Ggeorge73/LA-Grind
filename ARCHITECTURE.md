@@ -7,7 +7,7 @@ The simulation is a calculator and the screen is its display. Every rule lives i
 | Brief's name | Where it lives | Holds |
 |---|---|---|
 | **WorldState** | `GameState` | `minute` (absolute game minutes; day = minute / 1440), `seed` + `rngState`, `activity` (what the player is busy doing), `overdraft`, `trades` (The Trades), `log`, `stats`, `status` (`playing` / `movedHome`), `version` |
-| **Player** | `GameState.player` | archetype, home, location, cash, Energy, Burnout, Spark, `creativeBurnout` |
+| **Player** | `GameState.player` | archetype, home, location, cash, Energy, Burnout, Spark, `creativeBurnout`, `fans` (music) |
 | **CareerProgress** | `player.skills`, `player.rp`, `player.network`, `player.guildVouchers` | Acting/Writing/Directing/Music, Reputation Points (Clout Tier is *derived* by `cloutTier(rp)`), Network, guild vouchers |
 | **Inventory** | `player.hasHeadshots`, `player.carHealth` | One-time headshots, car condition |
 | **Opportunity / JobBoard** | `GameState.board: Opportunity[]` + `content/jobs.ts` | Today's opportunities (medium, skill, tier, location, window, prep, status), and the fixed survival-job table |
@@ -17,7 +17,7 @@ The simulation is a calculator and the screen is its display. Every rule lives i
 
 Balance numbers live only in `constants.ts` and `content/`. Adding a gig, job, festival or headline means adding a row.
 
-**Project engine (`project.ts`).** Every career stage is one of four reusable kinds: `work` (timed sessions that score 0–100), `raise` (pitches with odds), `hire` (pick from a pool) and `circuit` (submit to tiered venues; results land at 06:00). Film uses all four; Music and TV will be new pipelines over the same kinds. Festival results are resolved by the clock's 06:00 tick, next to bills and the board refresh.
+**Project engine (`project.ts`).** Every career stage is one of four reusable kinds: `work` (timed sessions that score 0–100), `raise` (pitches with odds), `hire` (pick from a pool) and `circuit` (submit to tiered venues; results land at 06:00). Film and music both use all four, and TV will be one more pipeline. `content/projects.ts` is the single registry of pipelines, scales and crew roles per medium; scale ids are unique across media, so `START_PROJECT { scale }` also picks the medium. Music's release week is a `circuit` resolved day by day at 06:00 (streams, royalties, Fans, chart position). Festival results are resolved by the clock's 06:00 tick, next to bills and the board refresh.
 
 ## Command → event flow
 
@@ -46,7 +46,7 @@ Game loop ──► ADVANCE n minutes ──► clock.tick() × n:
 | `lifecycle` | `visibilitychange` / `pagehide` | App plugin `pause` / `resume` |
 | `haptics` | no-op | Haptics plugin (tap, success, warning) |
 
-`index.ts` picks the implementation with `Capacitor.isNativePlatform()`. **Nothing outside `src/platform/` imports a Capacitor plugin.** Saves are versioned JSON strings, and `migrate()` upgrades old versions step by step (v1 → v2 added careers; v2 → v3 added festival submissions and offers).
+`index.ts` picks the implementation with `Capacitor.isNativePlatform()`. **Nothing outside `src/platform/` imports a Capacitor plugin.** Saves are versioned JSON strings, and `migrate()` upgrades old versions step by step (v1 → v2 added careers; v2 → v3 festival submissions and offers; v3 → v4 music: Fans, studio and release week).
 
 ## Phase 3: moving the rules to a server
 

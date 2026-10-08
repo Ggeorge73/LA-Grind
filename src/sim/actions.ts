@@ -1,11 +1,19 @@
 // Read-only views for the UI: what the player can do right now, what it costs, what it pays,
 // and why not. Keeps every rule in src/sim so components only render and dispatch.
-import { CREW_ROLES, FESTIVALS, FILM_PIPELINE, FILM_SCALES, FILM_SCALE_IDS } from './content/film';
+import { FESTIVALS, FILM_SCALES } from './content/film';
+import { MUSIC_SCALES } from './content/music';
+import { CHART_NAME } from './content/musicFlavor';
+import { CREW_ROLE_NAMES, PROJECT_SCALES, SCALE_IDS_BY_MEDIUM, type ProjectMedium } from './content/projects';
 import { DISTRIBUTORS, FESTIVAL_BLURBS, INVESTORS } from './content/filmFlavor';
 import {
   crewQuality,
   editorSkill,
   eligibleFestivals,
+  filmScaleOf,
+  musicScaleOf,
+  peakPosition,
+  pipelineOf,
+  promotedToday,
   festivalOddsFor,
   fundingRoom,
   hiredCrew,
@@ -226,6 +234,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
 export interface ScaleOption {
   id: Project['scale'];
+  medium: ProjectMedium;
   name: string;
   budget: number;
   minTier: number;
@@ -235,19 +244,21 @@ export interface ScaleOption {
 }
 
 export function projectScaleOptions(s: GameState): ScaleOption[] {
-  return FILM_SCALE_IDS.map((id) => {
-    const sc = FILM_SCALES[id];
-    const command: Command = { type: 'START_PROJECT', scale: id };
-    return {
-      id,
-      name: sc.name,
-      budget: sc.budget,
-      minTier: sc.minTier,
-      summary: `${sc.scriptSessions} writing sessions · ${sc.crewSlots} crew · ${sc.shootDays} shoot days · festivals up to tier ${sc.bestFestivalTier}`,
-      command,
-      disabledReason: whyNot(s, command),
-    };
-  });
+  return (['film', 'music'] as const).flatMap((medium) =>
+    SCALE_IDS_BY_MEDIUM[medium].map((id) => {
+      const sc = PROJECT_SCALES[id];
+      const command: Command = { type: 'START_PROJECT', scale: id };
+      let summary: string;
+      if (medium === 'film') {
+        const f = FILM_SCALES[id as keyof typeof FILM_SCALES];
+        summary = `${f.scriptSessions} writing sessions · ${f.crewSlots} crew · ${f.shootDays} shoot days · festivals up to tier ${f.bestFestivalTier}`;
+      } else {
+        const m = MUSIC_SCALES[id as keyof typeof MUSIC_SCALES];
+        summary = `${m.songs} ${m.songs === 1 ? 'song' : 'songs'} · ${m.crewSlots} studio crew · ${m.recordSessions} studio sessions · 7-day release week`;
+      }
+      return { id, medium, name: sc.name, budget: sc.budget, minTier: sc.minTier, summary, command, disabledReason: whyNot(s, command) };
+    }),
+  );
 }
 
 export interface ProjectView {
@@ -293,6 +304,22 @@ export interface ProjectView {
   }[];
   offers: { id: string; distributor: string; blurb: string; festival: string; amount: number; command: Command; disabledReason: string | null }[];
   selfRelease: { command: Command; disabledReason: string | null; rp: number };
+  /** Music only (null for film). */
+  record: { done: number; needed: number; scores: number[]; average: number; studio: string; where: string; command: Command; disabledReason: string | null } | null;
+  release: {
+    released: boolean;
+    chart: string;
+    days: { day: number; streams: number; fans: number; royalties: number; position: number | null; promoted: boolean }[];
+    daysTotal: number;
+    peak: number | null;
+    totalStreams: number;
+    fans: number;
+    releaseCommand: Command;
+    releaseReason: string | null;
+    promoCommand: Command;
+    promoReason: string | null;
+    promotedToday: boolean;
+  } | null;
   abandon: Command;
 }
 
@@ -300,14 +327,16 @@ export function projectView(s: GameState): ProjectView | null {
   const p = s.project;
   if (!p) return null;
   const sc = scaleOf(p);
-  const currentIdx = FILM_PIPELINE.findIndex((x) => x.id === p.stage);
+  const pipeline = pipelineOf(p);
+  const currentIdx = pipeline.findIndex((x) => x.id === p.stage);
+  const film = p.medium === 'film';
   const writeCmd: Command = { type: 'WRITE_SESSION' };
   return {
     project: p,
     scaleName: sc.name,
-    stages: FILM_PIPELINE.map((x, i) => ({ id: x.id, label: x.label, status: i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'upcoming' })),
+    stages: pipeline.map((x, i) => ({ id: x.id, label: x.label, status: i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'upcoming' })),
     quality: projectQuality(p),
-    script: { quality: scriptQuality(p), done: p.scores.develop.length, needed: sc.scriptSessions, scores: p.scores.develop },
+    script: { quality: scriptQuality(p), done: p.scores.develop.length, needed: sc.writeSessions, scores: p.scores.develop },
     write: { command: writeCmd, disabledReason: whyNot(s, writeCmd) },
     budget: {
       budget: p.budget,
@@ -317,7 +346,8 @@ export function projectView(s: GameState): ProjectView | null {
       remaining: remainingBudget(p),
       room: Number.isFinite(fundingRoom(p)) ? fundingRoom(p) : 0,
     },
-    investors: INVESTORS.map((inv) => {
+    // Investors are film-only for now (music labels arrive in Sprint 8).
+    investors: (film ? INVESTORS : []).map((inv) => {
       const command: Command = { type: 'PITCH', investorId: inv.id };
       return {
         id: inv.id,
@@ -338,14 +368,14 @@ export function projectView(s: GameState): ProjectView | null {
       productionValue: productionValue(p),
       candidates: p.crewPool.map((c) => {
         const command: Command = { type: 'HIRE_CREW', candidateId: c.id };
-        return { id: c.id, name: c.name, role: CREW_ROLES[c.role], skill: c.skill, fee: c.fee, quirk: c.quirk, hired: c.hired, command, disabledReason: whyNot(s, command) };
+        return { id: c.id, name: c.name, role: CREW_ROLE_NAMES[c.role], skill: c.skill, fee: c.fee, quirk: c.quirk, hired: c.hired, command, disabledReason: whyNot(s, command) };
       }),
     },
     shoot: (() => {
       const command: Command = { type: 'SHOOT_DAY' };
       return {
         done: p.scores.shoot.length,
-        needed: sc.shootDays,
+        needed: film ? filmScaleOf(p).shootDays : 0,
         scores: p.scores.shoot,
         average: average(p.scores.shoot),
         where: LOCATIONS[p.location].name,
@@ -357,7 +387,7 @@ export function projectView(s: GameState): ProjectView | null {
       const command: Command = { type: 'EDIT_SESSION' };
       return {
         done: p.scores.post.length,
-        needed: sc.editSessions,
+        needed: film ? filmScaleOf(p).editSessions : 0,
         scores: p.scores.post,
         average: average(p.scores.post),
         hasEditor: editorSkill(p) > 0,
@@ -376,7 +406,7 @@ export function projectView(s: GameState): ProjectView | null {
         fee: f.fee,
         waitDays: f.waitDays,
         odds: sub ? sub.odds : festivalOddsFor(s, p, f),
-        eligible: eligibleFestivals(p).includes(f),
+        eligible: film && eligibleFestivals(p).includes(f),
         submission: sub ? { status: sub.status, resultMinute: sub.resultMinute, award: sub.award } : null,
         command,
         disabledReason: whyNot(s, command),
@@ -398,6 +428,42 @@ export function projectView(s: GameState): ProjectView | null {
       const command: Command = { type: 'SELF_RELEASE' };
       return { command, disabledReason: whyNot(s, command), rp: Math.round(Math.round(projectQuality(p)) * C.SELF_RELEASE_RP_PER_QUALITY) };
     })(),
+    record: film
+      ? null
+      : (() => {
+          const command: Command = { type: 'RECORD_SESSION' };
+          return {
+            done: p.scores.record.length,
+            needed: musicScaleOf(p).recordSessions,
+            scores: p.scores.record,
+            average: average(p.scores.record),
+            studio: p.studio ?? 'The studio',
+            where: LOCATIONS[p.location].name,
+            command,
+            disabledReason: whyNot(s, command),
+          };
+        })(),
+    release: film
+      ? null
+      : (() => {
+          const releaseCommand: Command = { type: 'RELEASE_RECORD' };
+          const promoCommand: Command = { type: 'PROMO' };
+          const days = (p.release?.days ?? []).map((d, i) => ({ day: i + 1, ...d }));
+          return {
+            released: p.release !== null,
+            chart: CHART_NAME,
+            days,
+            daysTotal: C.RELEASE_DAYS,
+            peak: peakPosition(p),
+            totalStreams: days.reduce((sum, d) => sum + d.streams, 0),
+            fans: s.player.fans,
+            releaseCommand,
+            releaseReason: whyNot(s, releaseCommand),
+            promoCommand,
+            promoReason: whyNot(s, promoCommand),
+            promotedToday: promotedToday(s, p),
+          };
+        })(),
     abandon: { type: 'ABANDON_PROJECT' },
   };
 }

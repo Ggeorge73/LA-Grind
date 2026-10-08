@@ -59,13 +59,36 @@ A project's **quality** is the weighted average of its stage scores. The payoff 
 
 **Film quality** `= 0.35·Script + 0.40·Shoot + 0.15·Post + 0.10·Crew + production value`, clamped to 0–100.
 
+## Music career (Sprints 7–8)
+
+Same engine, new pipeline: **write → book the studio → crew → record → release week**. Start a record from the Projects tab (one project at a time, film or music).
+
+| Scale | Min Clout | Studio budget | Songs | Crew slots | Studio sessions | Stream multiplier |
+|---|---:|---:|---:|---:|---:|---:|
+| Single | 1 | $400 | 1 | 1 | 2 | 1× |
+| EP | 2 | $4,000 | 4 | 2 | 5 | 2.5× |
+| Album | 4 | $15,000 | 10 | 3 | 12 | 6× |
+
+1. **Write songs** (`work`): 3h, −15 Energy, −15 Spark, anywhere. Score `= clamp(20 + 0.6·Music + 0.2·Spark + rand(0–10))`. Music +1 per song.
+2. **Book the studio** (`raise`): self-fund the studio budget. (Label advances arrive in Sprint 8.)
+3. **Crew** (`hire`): producer, engineer, session players and a feature from a Network-sized pool; fees come out of the studio budget, leftover becomes production value.
+4. **Record** (`work`): 4h, −20 Energy, at the studio's neighbourhood. Score `= clamp(15 + 0.5·Music + 0.25·Crew + 0.1·Spark + rand(0–15))`. Music +1 per session.
+5. **Release week** (`circuit`): press *Release* any time after recording. For 7 days, at 06:00:
+   - Streams `= round((1,000 + 4·Fans) × (Quality/50)² × scale multiplier × 0.75^day × (1 + 0.5·promo))`, where promo is 1 if you promoted the day before.
+   - Royalties $0.004 per stream. Fans gained `= streams × 2% × Quality/100`.
+   - Chart position on *The Billbored Hot 100* `= 101 − 25·log₁₀(streams / 500)`; above 100 means it didn't chart.
+   - *Promo* (2h, −10 Energy, −10 Spark, once a day, anywhere) boosts the next day.
+   - After day 7 the record becomes a credit ("Peaked at #N" / "Didn't chart") and pays RP `= 3 × (101 − peak)` if it charted. (LAG-62 balance pass: single budget $600 → $400 and chart RP 2 → 3 per place, so a single is roughly break-even for the Bedroom Producer and beats a Tier-1 gig for RP.)
+
+**Music quality** `= 0.40·Songs + 0.45·Recording + 0.15·Crew + production value`. **Fans** is a new stat that persists across releases (the Bedroom Producer starts with some). Label deals, tours, beat sales and placements are Sprint 8.
+
 ## Sprint plan
 
 | Sprint | Name | Scope |
 |---|---|---|
 | 5 | **Greenlight** (Film I) — LAG-40…46 | Project engine + save migration v2; Develop, Financing, Crew stages; Projects tab |
 | 6 | **Festival Circuit** (Film II) — LAG-47…50 | Shoot, Post, festivals, distribution, film headlines; balance pass incl. LAG-33; film play-test |
-| 7 | **The Drop** (Music I) — LAG-51 | Write → record → release; Fans and Streams; release-week chart in The Trades |
+| 7 | **The Drop** (Music I) — LAG-51, LAG-57…62 | Write → record → release; Fans and Streams; release-week chart in The Trades |
 | 8 | **Deal Memo** (Music II) — LAG-52 | Label deal, tour, beat sales, song placements into film and TV projects |
 | 9 | **Pilot Season** (TV I) — LAG-53 | Callback mini-game; pilot season circuit |
 | 10 | **Writers' Room** (TV II) — LAG-54, LAG-55 | Pitch deck → agent meeting → writers' room; full guild and union membership |

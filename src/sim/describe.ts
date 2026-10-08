@@ -65,11 +65,13 @@ export function describeEvent(e: GameEvent): string | null {
         shoot: 'Crew assembled. Ready to shoot.',
         post: 'Picture wrap. Into the edit.',
         festival: 'Locked cut. Festival season awaits.',
+        record: 'Crew booked. Time to record.',
+        release: 'Mastered. Release it when you are ready.',
       }[e.stage];
     case 'PROJECT_ABANDONED':
       return `Abandoned "${e.title}". It lives on as a Google Doc.`;
     case 'SESSION_SCORED':
-      return `${{ develop: 'Writing session', shoot: 'Shoot day', post: 'Edit session' }[e.stage as 'develop' | 'shoot' | 'post'] ?? 'Session'} scored ${e.score}/100.`;
+      return `${{ develop: 'Writing session', shoot: 'Shoot day', post: 'Edit session', record: 'Studio session' }[e.stage as 'develop' | 'shoot' | 'post' | 'record'] ?? 'Session'} scored ${e.score}/100.`;
     case 'PITCHED':
       return e.yes ? `Pitch landed (${pct(e.odds)} odds): +${formatMoney(e.amount)} raised.` : `Pitch passed on (${pct(e.odds)} odds).`;
     case 'SELF_FUNDED':
@@ -91,6 +93,16 @@ export function describeEvent(e: GameEvent): string | null {
       return e.distributor
         ? `"${e.title}" released by ${e.distributor}: +${formatMoney(e.amount)}.`
         : `"${e.title}" self-released online: +${e.rp} RP.`;
+    case 'RECORD_RELEASED':
+      return `"${e.title}" is out (quality ${e.quality}). Release week starts tomorrow at 06:00.`;
+    case 'PROMO_DONE':
+      return `Promo: ${e.stunt}. Tomorrow's streams get a boost.`;
+    case 'RELEASE_DAY':
+      return `Release day ${e.day}: ${e.streams.toLocaleString('en-US')} streams, +${e.fans} fans, +${formatMoney(e.royalties)}${e.position === null ? ', not on the chart' : `, chart #${e.position}`}.`;
+    case 'RELEASE_WEEK_ENDED':
+      return e.peak === null
+        ? `Release week over: ${e.totalStreams.toLocaleString('en-US')} streams, never charted.`
+        : `Release week over: peaked at #${e.peak}, ${e.totalStreams.toLocaleString('en-US')} streams, +${e.rp} RP.`;
     case 'ACTION_REJECTED':
     case 'HEADLINE':
       return null;

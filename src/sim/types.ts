@@ -22,6 +22,8 @@ export interface Player {
   carHealth: number;
   hasHeadshots: boolean;
   creativeBurnout: boolean;
+  /** Music fanbase. Persists across releases; drives release-week streams. */
+  fans: number;
 }
 
 /** What the player is busy doing. Rewards land when the clock reaches endMinute. */
@@ -63,13 +65,14 @@ export interface Activity {
 
 // ---------- Projects (PI-2 career engine) ----------
 
-export type ProjectStage = 'develop' | 'finance' | 'crew' | 'shoot' | 'post' | 'festival';
-export type ProjectAction = 'write' | 'pitch' | 'hire' | 'shoot' | 'edit';
+export type ProjectStage = 'develop' | 'finance' | 'crew' | 'shoot' | 'post' | 'festival' | 'record' | 'release';
+export type ProjectAction = 'write' | 'pitch' | 'hire' | 'shoot' | 'edit' | 'record' | 'promo';
+export type ProjectScaleId = 'short' | 'micro' | 'indie' | 'single' | 'ep' | 'album';
 
 export interface CrewCandidate {
   id: string;
   name: string;
-  role: 'dp' | 'sound' | 'editor' | 'gaffer' | 'ad' | 'designer' | 'composer';
+  role: 'dp' | 'sound' | 'editor' | 'gaffer' | 'ad' | 'designer' | 'composer' | 'producer' | 'engineer' | 'session' | 'feature';
   skill: number;
   fee: number;
   quirk: string;
@@ -79,13 +82,16 @@ export interface CrewCandidate {
 export interface Project {
   id: string;
   medium: Medium;
-  scale: 'short' | 'micro' | 'indie';
+  scale: ProjectScaleId;
   title: string;
+  /** Film: where the set is. Music: the studio's neighbourhood. */
   location: LocationId;
+  /** Music: the studio's name. */
+  studio: string | null;
   stage: ProjectStage;
   startedMinute: number;
   /** Session scores per work stage (0–100 each). */
-  scores: { develop: number[]; shoot: number[]; post: number[] };
+  scores: { develop: number[]; shoot: number[]; post: number[]; record: number[] };
   budget: number;
   raised: number;
   selfFunded: number;
@@ -95,6 +101,26 @@ export interface Project {
   /** Festival circuit (stage 'festival'). */
   submissions: FestivalSubmission[];
   offers: DistributionOffer[];
+  /** Music release week (stage 'release'); null until released. */
+  release: MusicRelease | null;
+}
+
+export interface ReleaseDay {
+  streams: number;
+  fans: number;
+  royalties: number;
+  /** Chart position, or null if it didn't chart. */
+  position: number | null;
+  promoted: boolean;
+}
+
+export interface MusicRelease {
+  releasedMinute: number;
+  /** Day index (dayOf) of the last promo, so promo is once a day. */
+  lastPromoDay: number | null;
+  /** A promo since the last 06:00 boosts the next day. */
+  promoPending: boolean;
+  days: ReleaseDay[];
 }
 
 export interface FestivalSubmission {
@@ -204,7 +230,7 @@ export type Command =
   | { type: 'SKIP_TO_DONE' }
   | { type: 'ADVANCE'; minutes: number }
   | { type: 'NEW_RUN'; archetype: ArchetypeId; seed: number }
-  | { type: 'START_PROJECT'; scale: Project['scale'] }
+  | { type: 'START_PROJECT'; scale: ProjectScaleId }
   | { type: 'ABANDON_PROJECT' }
   | { type: 'WRITE_SESSION' }
   | { type: 'PITCH'; investorId: string }
@@ -214,7 +240,10 @@ export type Command =
   | { type: 'EDIT_SESSION' }
   | { type: 'SUBMIT_FESTIVAL'; festivalId: string }
   | { type: 'ACCEPT_OFFER'; offerId: string }
-  | { type: 'SELF_RELEASE' };
+  | { type: 'SELF_RELEASE' }
+  | { type: 'RECORD_SESSION' }
+  | { type: 'RELEASE_RECORD' }
+  | { type: 'PROMO' };
 
 export type GameEvent =
   | { type: 'ACTION_STARTED'; activity: Activity }
@@ -250,4 +279,8 @@ export type GameEvent =
   | { type: 'CREW_HIRED'; candidate: CrewCandidate }
   | { type: 'FESTIVAL_SUBMITTED'; festivalId: string; fee: number; odds: number; resultMinute: number }
   | { type: 'FESTIVAL_RESULT'; festivalId: string; accepted: boolean; odds: number; rp: number; award: string | null; offer: DistributionOffer | null }
-  | { type: 'FILM_RELEASED'; title: string; quality: number; amount: number; distributor: string | null; rp: number };
+  | { type: 'FILM_RELEASED'; title: string; quality: number; amount: number; distributor: string | null; rp: number }
+  | { type: 'RECORD_RELEASED'; title: string; quality: number }
+  | { type: 'PROMO_DONE'; stunt: string }
+  | { type: 'RELEASE_DAY'; day: number; streams: number; fans: number; royalties: number; position: number | null }
+  | { type: 'RELEASE_WEEK_ENDED'; title: string; peak: number | null; rp: number; totalStreams: number };

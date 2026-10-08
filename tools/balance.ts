@@ -1,14 +1,26 @@
 // Headless balance run: every archetype × scripted strategies × 30 in-game days,
-// plus a film table (one short film end-to-end next to a survival job).
+// plus a film table (one short film end-to-end next to a survival job) and a music table (a single / an EP).
 // Usage: npm run balance
 import * as C from '../src/sim/constants';
 import { ARCHETYPES, ARCHETYPE_IDS } from '../src/sim/content/archetypes';
 import { FILM_SCALES, type FilmScaleId } from '../src/sim/content/film';
 import { INVESTORS } from '../src/sim/content/filmFlavor';
+import { MUSIC_SCALES, type MusicScaleId } from '../src/sim/content/music';
 import { HEADSHOTS_LOCATION } from '../src/sim/content/locations';
 import { oddsFor } from '../src/sim/board';
 import { bookingPayout, cloutTier, dailyBills, dayOf, hourOf, isExposure } from '../src/sim/formulas';
-import { eligibleFestivals, festivalOddsFor, fundingRoom, hiredCrew, pendingSubmissions, pitchOddsFor, remainingBudget, submittedTo } from '../src/sim/project';
+import {
+  eligibleFestivals,
+  festivalOddsFor,
+  fundingRoom,
+  hiredCrew,
+  musicScaleOf,
+  pendingSubmissions,
+  pitchOddsFor,
+  promotedToday,
+  remainingBudget,
+  submittedTo,
+} from '../src/sim/project';
 import { newGame, step, whyNot } from '../src/sim/reducer';
 import type { ArchetypeId, Command, GameEvent, GameState, Medium, Opportunity } from '../src/sim/types';
 
@@ -365,6 +377,103 @@ for (const id of ARCHETYPE_IDS) {
     const outcome = !credit ? 'not released' : credit.outcome.startsWith('Released') ? 'distribution deal' : 'self-released';
     console.log(
       `| ${ARCHETYPES[id].name} | ${sc.name} | ${credit ? daysTaken.toFixed(1) : `> ${FILM_DAYS}`} | ${credit?.quality ?? '—'} | ${accepted}/${results.length}${awards ? `, ${awards} award${awards > 1 ? 's' : ''}` : ''} | ${outcome} | ${filmRp} | ${r.tier} | ${money(selfFunded + fees)} | ${money(offer)} | ${money(r.endCash - base.endCash)} |`,
+    );
+  }
+}
+
+// ---------- Music table ----------
+// One record end-to-end next to a weekday barista job: write → self-fund the studio → hire the best crew the
+// budget allows → record at the studio → release at once → (optionally) one promo a day through release week.
+// An EP needs Clout 2: until then the policy keeps putting out singles (same loop) and starts the EP once it can.
+
+function makeRecord(scale: MusicScaleId, promo: boolean): () => Policy {
+  return () => {
+    const job = baristaWeekdays();
+    return (s) => {
+      const p = s.project;
+      const h = hour(s);
+      const pl = s.player;
+      const reserve = 10 * dailyBills(ARCHETYPES[pl.archetype].rentPerDay);
+      if (!p) {
+        const want = cloutTier(pl.rp) >= MUSIC_SCALES[scale].minTier ? scale : 'single';
+        if (pl.cash >= MUSIC_SCALES[want].budget + reserve / 2 || want === 'single') return { type: 'START_PROJECT', scale: want };
+        return h >= 22 || h < 6 ? sleepUntil(s, 6) : job(s);
+      }
+      // Instant moves first.
+      if (p.stage === 'finance') {
+        const amount = Math.min(fundingRoom(p), Math.floor(pl.cash - reserve / 2));
+        if (amount > 0) return { type: 'SELF_FUND', amount };
+      }
+      if (p.stage === 'release' && !p.release) return { type: 'RELEASE_RECORD' };
+
+      if (h >= 22 || h < 6) return sleepUntil(s, 6);
+      const workday = day(s) % 7 >= 1 && day(s) % 7 <= 5;
+      if (workday && h <= 11) {
+        const cmd = job(s);
+        if (cmd?.type === 'START_JOB' || cmd?.type === 'TRAVEL') return cmd;
+      }
+      if (pl.energy < 30) return sleepUntil(s, 6);
+
+      switch (p.stage) {
+        case 'develop':
+          if (pl.spark >= C.WRITE_SESSION_SPARK) return { type: 'WRITE_SESSION' };
+          return go(s, 'hollywood') ?? { type: 'LEISURE', leisureId: 'records' };
+        case 'crew': {
+          const left = musicScaleOf(p).crewSlots - hiredCrew(p).length;
+          const open = p.crewPool.filter((c) => !c.hired);
+          const cheapest = [...open].sort((a, b) => a.fee - b.fee);
+          const restCost = (skip: string) => cheapest.filter((c) => c.id !== skip).slice(0, left - 1).reduce((t, c) => t + c.fee, 0);
+          const pick = [...open].sort((a, b) => b.skill - a.skill || a.fee - b.fee).find((c) => c.fee + restCost(c.id) <= remainingBudget(p)) ?? cheapest[0];
+          if (!pick) return null;
+          if (pick.fee > remainingBudget(p)) {
+            const top = Math.min(pick.fee - remainingBudget(p), Math.floor(pl.cash));
+            return top > 0 ? { type: 'SELF_FUND', amount: top } : job(s);
+          }
+          return { type: 'HIRE_CREW', candidateId: pick.id };
+        }
+        case 'record':
+          return go(s, p.location) ?? { type: 'RECORD_SESSION' };
+        case 'release':
+          if (promo && !promotedToday(s, p) && pl.spark >= C.PROMO_SPARK) return { type: 'PROMO' };
+          if (promo && !promotedToday(s, p)) return go(s, 'hollywood') ?? { type: 'LEISURE', leisureId: 'records' };
+          return go(s, pl.home);
+        default:
+          return job(s);
+      }
+    };
+  };
+}
+
+const MUSIC_DAYS = 60;
+const MUSIC_RUNS: Array<[string, MusicScaleId, boolean]> = [
+  ['Single + promo', 'single', true],
+  ['Single, no promo', 'single', false],
+  ['EP + promo', 'ep', true],
+];
+console.log(`\nMusic runs: one record + weekday barista vs barista alone (stops at the end of release week, max ${MUSIC_DAYS} days)\n`);
+console.log('| Archetype | Strategy | Days to week end | Quality | Peak | Streams | Fans gained | Royalties | Studio cost | Music RP | Tier after | Cash vs barista-only |');
+console.log('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
+for (const id of ARCHETYPE_IDS) {
+  for (const [name, scale, promo] of MUSIC_RUNS) {
+    // Singles released on the way to Clout 2 count toward the EP run's totals; the EP's own credit is the one shown.
+    const done = (s: GameState) => s.credits.some((c) => c.scale === MUSIC_SCALES[scale].name);
+    const r = simulate(id, makeRecord(scale, promo), MUSIC_DAYS, done);
+    const credit = r.state.credits.find((c) => c.scale === MUSIC_SCALES[scale].name);
+    const daysTaken = (r.state.minute - newGame(id, SEED).minute) / 1440;
+    const ended = r.events.filter((e) => e.type === 'RELEASE_WEEK_ENDED');
+    const last = ended[ended.length - 1];
+    const sum = (t: GameEvent['type'], f: (e: GameEvent) => number) => r.events.filter((e) => e.type === t).reduce((a, e) => a + f(e), 0);
+    const streams = sum('RELEASE_DAY', (e) => (e.type === 'RELEASE_DAY' ? e.streams : 0));
+    const fans = sum('RELEASE_DAY', (e) => (e.type === 'RELEASE_DAY' ? e.fans : 0));
+    const pay = sum('RELEASE_DAY', (e) => (e.type === 'RELEASE_DAY' ? e.royalties : 0));
+    const cost = sum('SELF_FUNDED', (e) => (e.type === 'SELF_FUNDED' ? e.amount : 0));
+    const rp = ended.reduce((a, e) => a + (e.type === 'RELEASE_WEEK_ENDED' ? e.rp : 0), 0);
+    const base = simulate(id, baristaWeekdays, daysTaken);
+    const singles = ended.length - (credit ? 1 : 0);
+    const label = scale === 'ep' && singles > 0 ? `${name} (after ${singles} single${singles > 1 ? 's' : ''})` : name;
+    const peak = last?.type === 'RELEASE_WEEK_ENDED' && credit ? (last.peak === null ? 'no chart' : `#${last.peak}`) : '—';
+    console.log(
+      `| ${ARCHETYPES[id].name} | ${label} | ${credit ? daysTaken.toFixed(1) : `> ${MUSIC_DAYS}`} | ${credit?.quality ?? '—'} | ${peak} | ${streams.toLocaleString('en-US')} | ${fans.toLocaleString('en-US')} | ${money(pay)} | ${money(cost)} | ${rp} | ${r.tier} | ${money(r.endCash - base.endCash)} |`,
     );
   }
 }

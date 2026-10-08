@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { projectScaleOptions, projectView, type ProjectView, type ScaleOption } from '../../sim/actions';
 import {
+  BILLS_HOUR,
   EDIT_ENERGY,
   EDIT_HOURS,
   HIRE_HOURS,
   MINUTES_PER_DAY,
   PITCH_HOURS,
   PRODUCTION_VALUE_MAX,
+  PROMO_BOOST,
+  PROMO_ENERGY,
+  PROMO_HOURS,
+  PROMO_SPARK,
+  RECORD_ENERGY,
+  RECORD_HOURS,
   SHOOT_CALL_WINDOW,
   SHOOT_ENERGY,
   SHOOT_HOURS,
@@ -15,14 +22,14 @@ import {
 import { LOCATIONS } from '../../sim/content/locations';
 import type { Command, ProjectCredit } from '../../sim/types';
 import { useGame } from '../../store/game';
-import { clock, day, money, pct } from '../format';
+import { clock, compact, count, day, money, pct } from '../format';
 import type { Tab } from '../GameScreen';
 import { Button, Card, Meter, SectionTitle, Sheet } from '../kit';
 
 /** Preset self-fund amounts (UI shortcuts, not balance rules — the sim validates each). */
 const SELF_FUND_PRESETS = [100, 500, 1000] as const;
 /** Disabled reasons that are solved by travelling somewhere get a Map shortcut. */
-const needsTravel = (reason: string) => /takes meetings in|the set is in/i.test(reason);
+const needsTravel = (reason: string) => /takes meetings in|the set is in/i.test(reason) || / is in [A-Z]/.test(reason);
 
 /** Runs a command and keeps the rejection reason next to the button that caused it. */
 function useRun() {
@@ -70,11 +77,20 @@ function ScaleCard({ option }: { option: ScaleOption }) {
   );
 }
 
-/** Credits are written by the sim as "Released by …" or "Self-released online" when a film comes out. */
-const isRelease = (outcome: string) => /^(released by|self-released)/i.test(outcome);
+const MEDIUM_GROUPS = [
+  { medium: 'film', title: 'Film', tagline: 'Script, money, crew, shoot, festivals', cls: 'text-film' },
+  { medium: 'music', title: 'Music', tagline: 'Write, book a studio, record, drop it', cls: 'text-music' },
+] as const;
+
+/**
+ * Credits are written by the sim as "Released by …" or "Self-released online" when a film comes out,
+ * and "Peaked at #N on …" when a record's release week charts.
+ */
+const isRelease = (outcome: string) => /^(released by|self-released|peaked at)/i.test(outcome);
 
 function ReleaseBanner({ credit, onDismiss }: { credit: ProjectCredit; onDismiss: () => void }) {
   const ref = useRef<HTMLElement>(null);
+  const music = credit.medium === 'music';
   // The release button sits far down the festival list; bring the good news into view (instant, so reduced motion is respected).
   useEffect(() => ref.current?.scrollIntoView({ block: 'start' }), []);
   return (
@@ -85,16 +101,18 @@ function ReleaseBanner({ credit, onDismiss }: { credit: ProjectCredit; onDismiss
       role="status"
     >
       <p className="text-2xl leading-none" aria-hidden>
-        🎬🍾
+        {music ? '🎧🍾' : '🎬🍾'}
       </p>
       <h2 id="release-banner-title" className="mt-1 font-[family-name:var(--font-display)] text-lg font-bold">
-        “{credit.title}” is out!
+        {music ? `“${credit.title}” charted!` : `“${credit.title}” is out!`}
       </h2>
       <p className="text-sm">{credit.outcome}</p>
       <p className="text-xs text-muted">
         {credit.scale} · Quality {credit.quality}/100 · Day {day(credit.minute)} {clock(credit.minute)}
       </p>
-      <p className="mt-1 text-xs">Your IMDb page has an actual credit on it now. Start the next one.</p>
+      <p className="mt-1 text-xs">
+        {music ? 'Release week is over and the chart remembers. Start the next one.' : 'Your IMDb page has an actual credit on it now. Start the next one.'}
+      </p>
       <Button variant="ghost" className="mt-1 w-full" onClick={onDismiss}>
         Dismiss
       </Button>
@@ -115,16 +133,28 @@ function NoProject() {
       {celebrate && <ReleaseBanner credit={latest} onDismiss={() => setDismissed(latestKey)} />}
       <header className="mb-3">
         <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">Projects</h1>
-        <p className="text-sm text-muted">Stop auditioning for other people's movies. Make your own.</p>
+        <p className="text-sm text-muted">Stop auditioning for other people's work. Make your own — one project at a time.</p>
       </header>
 
-      <ul className="flex flex-col gap-2">
-        {options.map((o) => (
-          <li key={o.id}>
-            <ScaleCard option={o} />
-          </li>
-        ))}
-      </ul>
+      {MEDIUM_GROUPS.map((g) => {
+        const group = options.filter((o) => o.medium === g.medium);
+        if (group.length === 0) return null;
+        return (
+          <section key={g.medium} aria-labelledby={`scales-${g.medium}`}>
+            <h2 id={`scales-${g.medium}`} className="mb-2 mt-4 flex items-baseline gap-2 first:mt-0">
+              <span className={`text-xs font-semibold uppercase tracking-widest ${g.cls}`}>{g.title}</span>
+              <span className="text-xs text-muted">{g.tagline}</span>
+            </h2>
+            <ul className="flex flex-col gap-2">
+              {group.map((o) => (
+                <li key={o.id}>
+                  <ScaleCard option={o} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
 
       <section aria-label="Your credits">
         <SectionTitle>Your credits</SectionTitle>
@@ -140,7 +170,7 @@ function NoProject() {
                   <h3 className="font-semibold leading-snug">“{c.title}”</h3>
                   <p className={`text-sm ${isRelease(c.outcome) ? 'font-semibold text-good' : 'text-muted'}`}>{c.outcome}</p>
                   <p className="text-xs text-muted">
-                    {c.scale} · Quality {c.quality}/100 · Day {day(c.minute)}
+                    {c.medium === 'music' ? 'Music' : 'Film'} · {c.scale} · Quality {c.quality}/100 · Day {day(c.minute)}
                   </p>
                 </Card>
               </li>
@@ -187,23 +217,26 @@ function WriteCard({ view }: { view: ProjectView }) {
   const { error, run } = useRun();
   const { script, write } = view;
   const reasonId = 'write-reason';
+  const music = view.project.medium === 'music';
   return (
     <Card>
-      <h2 className="font-bold">Write the script</h2>
+      <h2 className="font-bold">{music ? 'Write the songs' : 'Write the script'}</h2>
       <p className="text-sm">
-        Sessions <span className="font-semibold tabular-nums">{script.done}/{script.needed}</span> · Script quality{' '}
+        {music ? 'Song' : 'Sessions'} <span className="font-semibold tabular-nums">{script.done}/{script.needed}</span> · {music ? 'Song' : 'Script'} quality{' '}
         <span className="font-semibold tabular-nums">{Math.round(script.quality)}</span>/100
       </p>
       {script.scores.length > 0 ? (
-        <ul aria-label="Session scores" className="mt-1 flex flex-wrap gap-1.5">
+        <ul aria-label={music ? 'Song scores' : 'Session scores'} className="mt-1 flex flex-wrap gap-1.5">
           {script.scores.map((s, i) => (
             <li key={i} className="rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs tabular-nums">
-              Draft {i + 1}: {s}
+              {music ? 'Song' : 'Draft'} {i + 1}: {s}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-1 text-xs text-muted">The blank page stares back. It has notes.</p>
+        <p className="mt-1 text-xs text-muted">
+          {music ? 'A voice memo of you humming. It has potential. Probably.' : 'The blank page stares back. It has notes.'}
+        </p>
       )}
       <Button
         variant="primary"
@@ -212,7 +245,7 @@ function WriteCard({ view }: { view: ProjectView }) {
         aria-describedby={write.disabledReason || error ? reasonId : undefined}
         onClick={() => run(write.command)}
       >
-        Write ({WRITE_SESSION_HOURS}h)
+        {music ? `Write a song (${WRITE_SESSION_HOURS}h)` : `Write (${WRITE_SESSION_HOURS}h)`}
       </Button>
       <Reason id={reasonId} text={write.disabledReason} error={error} />
     </Card>
@@ -380,11 +413,12 @@ function CrewCard({ c }: { c: ProjectView['crew']['candidates'][number] }) {
 
 function CrewStage({ view }: { view: ProjectView }) {
   const { crew, budget } = view;
+  const music = view.project.medium === 'music';
   return (
     <>
       <Card>
         <h2 className="font-bold">
-          Crew {crew.hired}/{crew.slots}
+          {music ? 'Studio crew' : 'Crew'} {crew.hired}/{crew.slots}
         </h2>
         <div className="mt-1 grid grid-cols-2 gap-3">
           <Meter label="Crew quality" value={crew.quality} />
@@ -393,7 +427,7 @@ function CrewStage({ view }: { view: ProjectView }) {
         <p className="mt-2 text-sm">
           Budget remaining <span className="font-semibold tabular-nums">{money(budget.remaining)}</span>
         </p>
-        <p className="text-xs text-muted">Unspent money ends up on screen. Allegedly.</p>
+        <p className="text-xs text-muted">{music ? 'Unspent money ends up in the mix. Allegedly.' : 'Unspent money ends up on screen. Allegedly.'}</p>
       </Card>
       <SectionTitle>Candidates</SectionTitle>
       <ul className="flex flex-col gap-2">
@@ -726,14 +760,238 @@ function FestivalStage({ view }: { view: ProjectView }) {
   );
 }
 
+// ---------- Music ----------
+
+function StudioBooking({ view }: { view: ProjectView }) {
+  const b = view.budget;
+  return (
+    <Card>
+      <h2 className="font-bold">Book the studio</h2>
+      <p className="text-sm">
+        <span className="font-semibold">{view.project.studio ?? 'The studio'}</span>
+        <span className="text-muted"> · {LOCATIONS[view.project.location].name}</span>
+      </p>
+      <div className="mt-2">
+        <Meter label="Studio budget booked, %" value={b.budget > 0 ? (100 * b.raised) / b.budget : 0} tone="music" hint={`${money(b.raised)} of ${money(b.budget)} booked`} />
+      </div>
+      <p className="mt-1 text-sm">
+        <span className="font-semibold tabular-nums">{money(b.raised)}</span> of {money(b.budget)} booked
+      </p>
+      <p className="text-xs text-muted">No label yet, so it's your money. Crew fees come out of it; the rest goes into the sound.</p>
+    </Card>
+  );
+}
+
+function RecordCard({ view, onNavigate }: { view: ProjectView; onNavigate: (tab: Tab) => void }) {
+  const { error, run } = useRun();
+  const record = view.record;
+  if (!record) return null;
+  const reasonId = 'record-reason';
+  return (
+    <Card>
+      <h2 className="font-bold">Record</h2>
+      <p className="text-sm">
+        Session <span className="font-semibold tabular-nums">{record.done} / {record.needed}</span>
+        {record.scores.length > 0 && (
+          <>
+            {' '}
+            · Average <span className="font-semibold tabular-nums">{Math.round(record.average)}</span>/100
+          </>
+        )}
+      </p>
+      {record.scores.length > 0 ? (
+        <ScoreChips label="Recording session scores" prefix="Take" scores={record.scores} />
+      ) : (
+        <p className="mt-1 text-xs text-muted">The red light is on. Nobody touch the snacks.</p>
+      )}
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+        <dt className="text-muted">Studio</dt>
+        <dd className="min-w-0">
+          {record.studio} · {LOCATIONS[view.project.location].name}
+        </dd>
+        <dt className="text-muted">Cost</dt>
+        <dd>
+          {RECORD_HOURS}h · −{RECORD_ENERGY} Energy
+        </dd>
+      </dl>
+      <Button
+        variant="primary"
+        className="mt-2 w-full"
+        disabled={record.disabledReason !== null}
+        aria-describedby={record.disabledReason || error ? reasonId : undefined}
+        aria-label={`Record a session, ${RECORD_HOURS} hours, minus ${RECORD_ENERGY} Energy`}
+        onClick={() => run(record.command)}
+      >
+        Record ({RECORD_HOURS}h)
+      </Button>
+      <ReasonWithMap id={reasonId} text={record.disabledReason} error={error} onNavigate={onNavigate} />
+    </Card>
+  );
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+function MusicReleaseStage({ view }: { view: ProjectView }) {
+  const release = useRun();
+  const promo = useRun();
+  const r = view.release;
+  if (!r) return null;
+
+  if (!r.released) {
+    const reasonId = 'release-record-reason';
+    return (
+      <Card>
+        <h2 className="font-bold">Release week</h2>
+        <p className="text-sm">
+          It's mixed, mastered and final quality <span className="font-semibold tabular-nums">{Math.round(view.quality)}</span>/100. Drop it when you're
+          ready.
+        </p>
+        <ul className="mt-2 list-disc pl-5 text-xs text-muted">
+          <li>Release week lasts {r.daysTotal} days.</li>
+          <li>
+            Each day's streams, royalties, new fans and chart spot on {r.chart} land at {pad2(BILLS_HOUR)}:00.
+          </li>
+          <li>Promo once a day to boost the next day's streams.</li>
+        </ul>
+        <Button
+          variant="primary"
+          className="mt-2 w-full"
+          disabled={r.releaseReason !== null}
+          aria-describedby={r.releaseReason || release.error ? reasonId : undefined}
+          onClick={() => release.run(r.releaseCommand)}
+        >
+          Release it now
+        </Button>
+        <Reason id={reasonId} text={r.releaseReason} error={release.error} />
+      </Card>
+    );
+  }
+
+  const done = r.days.length;
+  const promoId = 'promo-reason';
+  return (
+    <>
+      <Card>
+        <h2 className="font-bold">Release week</h2>
+        <p className="text-xs text-muted">{r.chart}</p>
+        <p className="mt-1 text-sm">
+          Day <span className="font-semibold tabular-nums">{done} / {r.daysTotal}</span>
+          {done === 0 && <span className="text-muted"> · first numbers at {pad2(BILLS_HOUR)}:00</span>}
+        </p>
+        <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg border border-line bg-surface-2 px-1 py-1.5">
+            <dt className="text-[11px] text-muted">Peak</dt>
+            <dd className="text-lg font-bold tabular-nums leading-tight">{r.peak === null ? '—' : `#${r.peak}`}</dd>
+          </div>
+          <div className="rounded-lg border border-line bg-surface-2 px-1 py-1.5">
+            <dt className="text-[11px] text-muted">Streams</dt>
+            <dd className="text-lg font-bold tabular-nums leading-tight">{compact(r.totalStreams)}</dd>
+          </div>
+          <div className="rounded-lg border border-line bg-surface-2 px-1 py-1.5">
+            <dt className="text-[11px] text-muted">Fans</dt>
+            <dd className="text-lg font-bold tabular-nums leading-tight">{compact(r.fans)}</dd>
+          </div>
+        </dl>
+        {done > 0 ? (
+          <table className="mt-2 w-full table-fixed text-xs tabular-nums">
+            <caption className="sr-only">Release week, day by day</caption>
+            <thead>
+              <tr className="text-muted">
+                <th scope="col" className="w-[3.25rem] py-1 text-left font-normal">
+                  Day
+                </th>
+                <th scope="col" className="py-1 text-right font-normal">
+                  Streams
+                </th>
+                <th scope="col" className="py-1 text-right font-normal">
+                  Fans
+                </th>
+                <th scope="col" className="py-1 text-right font-normal">
+                  Royalties
+                </th>
+                <th scope="col" className="w-12 py-1 text-right font-normal">
+                  Chart
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.days.map((d) => (
+                <tr key={d.day} className="border-t border-line">
+                  <th scope="row" className="py-1 text-left font-normal">
+                    {d.day}
+                    {d.promoted && (
+                      <>
+                        <span className="ml-1 text-music" aria-hidden title="Promo boost">
+                          ▲
+                        </span>
+                        <span className="sr-only">, promo boost</span>
+                      </>
+                    )}
+                  </th>
+                  <td className="py-1 text-right">{count(d.streams)}</td>
+                  <td className="py-1 text-right">+{count(d.fans)}</td>
+                  <td className="py-1 text-right">{money(d.royalties)}</td>
+                  <td className={`py-1 text-right font-semibold ${d.position === null ? 'text-muted' : ''}`}>
+                    {d.position === null ? (
+                      <>
+                        <span aria-hidden>—</span>
+                        <span className="sr-only">didn't chart</span>
+                      </>
+                    ) : (
+                      `#${d.position}`
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="mt-2 text-xs text-muted">Out now. Refresh, refresh, refresh.</p>
+        )}
+        {r.days.some((d) => d.promoted) && (
+          <p className="mt-1 text-[11px] text-muted">
+            <span className="text-music" aria-hidden>
+              ▲
+            </span>{' '}
+            boosted by the previous day's promo
+          </p>
+        )}
+      </Card>
+      <Card>
+        <h2 className="font-bold">Promo</h2>
+        <p className="text-sm">
+          A promo push today adds +{Math.round(PROMO_BOOST * 100)}% to tomorrow's streams. Once a day, anywhere.
+        </p>
+        {r.promotedToday && <p className="mt-1 text-xs text-good">✓ Promoted today — tomorrow's numbers get the boost.</p>}
+        <Button
+          variant="primary"
+          className="mt-2 w-full"
+          disabled={r.promoReason !== null}
+          aria-describedby={r.promoReason || promo.error ? promoId : undefined}
+          onClick={() => promo.run(r.promoCommand)}
+        >
+          Promo ({PROMO_HOURS}h, −{PROMO_ENERGY} Energy, −{PROMO_SPARK} Spark)
+        </Button>
+        <Reason id={promoId} text={r.promoReason} error={promo.error} />
+      </Card>
+    </>
+  );
+}
+
 /** Where the quality number comes from: each stage's score so far (all values from projectView). */
 function QualityParts({ view }: { view: ProjectView }) {
-  const parts: { label: string; value: number | null }[] = [
-    { label: 'Script', value: view.script.done > 0 ? view.script.quality : null },
-    { label: 'Crew', value: view.crew.hired > 0 ? view.crew.quality : null },
-    { label: 'Shoot', value: view.shoot.done > 0 ? view.shoot.average : null },
-    { label: 'Post', value: view.post.done > 0 ? view.post.average : null },
-  ];
+  const parts: { label: string; value: number | null }[] = view.record
+    ? [
+        { label: 'Songs', value: view.script.done > 0 ? view.script.quality : null },
+        { label: 'Crew', value: view.crew.hired > 0 ? view.crew.quality : null },
+        { label: 'Record', value: view.record.done > 0 ? view.record.average : null },
+      ]
+    : [
+        { label: 'Script', value: view.script.done > 0 ? view.script.quality : null },
+        { label: 'Crew', value: view.crew.hired > 0 ? view.crew.quality : null },
+        { label: 'Shoot', value: view.shoot.done > 0 ? view.shoot.average : null },
+        { label: 'Post', value: view.post.done > 0 ? view.post.average : null },
+      ];
   return (
     <ul aria-label="Quality by stage" className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
       {parts.map((x) => (
@@ -752,13 +1010,14 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
   const [abandonError, setAbandonError] = useState<string | null>(null);
   const { project } = view;
   const location = LOCATIONS[project.location];
+  const music = project.medium === 'music';
 
   return (
     <div>
       <header className="mb-3">
         <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">“{project.title}”</h1>
         <p className="text-sm text-muted">
-          {view.scaleName} · shoots in {location.name}
+          {music ? `${view.scaleName} · records at ${project.studio ?? 'the studio'}, ${location.name}` : `${view.scaleName} · shoots in ${location.name}`}
         </p>
       </header>
 
@@ -771,7 +1030,14 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
       <div className="flex flex-col gap-2">
         {project.stage === 'develop' && <WriteCard view={view} />}
 
-        {project.stage === 'finance' && (
+        {project.stage === 'finance' && music && (
+          <>
+            <StudioBooking view={view} />
+            <SelfFund view={view} />
+          </>
+        )}
+
+        {project.stage === 'finance' && !music && (
           <>
             <BudgetSummary view={view} />
             <SectionTitle>Investors</SectionTitle>
@@ -791,6 +1057,8 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
         {project.stage === 'shoot' && <ShootCard view={view} onNavigate={onNavigate} />}
         {project.stage === 'post' && <PostCard view={view} />}
         {project.stage === 'festival' && <FestivalStage view={view} />}
+        {project.stage === 'record' && <RecordCard view={view} onNavigate={onNavigate} />}
+        {project.stage === 'release' && <MusicReleaseStage view={view} />}
       </div>
 
       <div className="mt-6">

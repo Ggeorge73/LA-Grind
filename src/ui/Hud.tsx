@@ -4,7 +4,7 @@ import { BILLS_HOUR, MAX_TIER, SPEEDS } from '../sim/constants';
 import { LOCATIONS } from '../sim/content/locations';
 import { cloutTier, tierProgress, tierThreshold } from '../sim/formulas';
 import { Button, Meter } from './kit';
-import { clock, day, duration, money } from './format';
+import { clock, compact, count, day, duration, money } from './format';
 
 const SPEED_LABEL = (s: Speed): { text: string; aria: string } =>
   s === 0 ? { text: 'Pause', aria: 'Pause' } : s === 1 ? { text: '1x', aria: 'Normal speed' } : { text: `${s}x`, aria: 'Fast speed' };
@@ -87,8 +87,16 @@ export function Hud() {
       <div className="mt-1.5">
         <div className="flex items-baseline justify-between text-[11px]">
           <span className="font-semibold">Clout Tier {tier}</span>
-          <span className="tabular-nums text-muted">
-            RP {Math.round(p.rp)} / {next === null ? 'max' : next}
+          <span className="flex items-baseline gap-2 tabular-nums text-muted">
+            <span>
+              <span className="sr-only">Fans {count(p.fans)}</span>
+              <span aria-hidden>
+                Fans <span className="font-semibold text-music">{compact(p.fans)}</span>
+              </span>
+            </span>
+            <span>
+              RP {Math.round(p.rp)} / {next === null ? 'max' : next}
+            </span>
           </span>
         </div>
         <div

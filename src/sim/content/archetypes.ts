@@ -10,6 +10,8 @@ export interface Archetype {
   rentPerDay: number;
   skills: Skills;
   network: number;
+  /** Starting music fans. */
+  fans: number;
   rp: number;
   carHealth: number;
   special: string;
@@ -34,6 +36,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     rentPerDay: 110,
     skills: { acting: 10, writing: 10, directing: 10, music: 10 },
     network: 40,
+    fans: 500,
     rp: 400,
     carHealth: 100,
     special: 'Has a manager: sees opportunities one tier above your Clout. Loses double RP when exposed.',
@@ -52,6 +55,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     rentPerDay: 25,
     skills: { acting: 20, writing: 10, directing: 10, music: 15 },
     network: 0,
+    fans: 0,
     rp: 0,
     carHealth: 55,
     special: 'Sleeps like a farmhand: sleep restores 20% more Energy. The car is held together by hope.',
@@ -70,6 +74,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     rentPerDay: 70,
     skills: { acting: 15, writing: 40, directing: 40, music: 10 },
     network: 15,
+    fans: 150,
     rp: 0,
     carHealth: 100,
     special: 'Owns camera gear: self-tapes and directing reels cost nothing to submit.',
@@ -88,6 +93,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     rentPerDay: 40,
     skills: { acting: 5, writing: 20, directing: 5, music: 40 },
     network: 5,
+    fans: 1200,
     rp: 0,
     carHealth: 100,
     special: 'Owns a home studio: demos cost nothing to submit.',

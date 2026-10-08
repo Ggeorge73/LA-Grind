@@ -11,7 +11,7 @@ import { Rng, seedToState } from './rng';
 import type { Activity, ArchetypeId, Command, GameEvent, GameState } from './types';
 import { addHeadline, addLog, formatMoney } from './world';
 import { describeEvent } from './describe';
-import { FILM_SCALES } from './content/film';
+import { PROJECT_SCALES } from './content/projects';
 import {
   abandonProject,
   acceptOffer,
@@ -23,6 +23,8 @@ import {
   pendingSubmissions,
   pitchOddsFor,
   pitchedToday,
+  promotedToday,
+  releaseRecord,
   scaleOf,
   selfFund,
   selfRelease,
@@ -59,6 +61,7 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
       carHealth: a.carHealth,
       hasHeadshots: false,
       creativeBurnout: false,
+      fans: a.fans,
     },
     activity: null,
     board: [],
@@ -152,7 +155,7 @@ export function whyNot(s: GameState, cmd: Command): string | null {
     }
     case 'START_PROJECT': {
       if (s.project) return 'Finish or abandon your current project first.';
-      const sc = FILM_SCALES[cmd.scale];
+      const sc = PROJECT_SCALES[cmd.scale];
       if (!sc) return 'Unknown project.';
       if (cloutTier(p.rp) < sc.minTier) return `${sc.name}s need Clout Tier ${sc.minTier}.`;
       return null;
@@ -168,6 +171,7 @@ export function whyNot(s: GameState, cmd: Command): string | null {
     case 'PITCH': {
       const pr = s.project;
       if (!pr || pr.stage !== 'finance') return 'Nothing to pitch right now.';
+      if (pr.medium !== 'film') return 'No label meetings yet. Book the studio with your own money.';
       const inv = investorById(cmd.investorId);
       if (!inv) return 'Unknown investor.';
       if (pitchedToday(s, pr)) return 'One pitch a day. Investors talk to each other.';
@@ -226,6 +230,25 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       if (pendingSubmissions(pr).length > 0) return 'Wait for your festival results first.';
       return null;
     }
+    case 'RECORD_SESSION': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'record') return 'Nothing to record right now.';
+      if (p.location !== pr.location) return `${pr.studio ?? 'The studio'} is in ${LOCATIONS[pr.location].name}.`;
+      return tired;
+    }
+    case 'RELEASE_RECORD': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'release') return 'Finish recording first.';
+      if (pr.release) return 'Already out. Ride the week.';
+      return null;
+    }
+    case 'PROMO': {
+      const pr = s.project;
+      if (!pr || !pr.release) return 'Release something first.';
+      if (promotedToday(s, pr)) return 'One promo push a day. The algorithm notices desperation.';
+      if (p.spark < C.PROMO_SPARK) return 'Not enough Creative Spark. Go recharge.';
+      return tired;
+    }
     case 'SUBMIT': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId);
       if (!opp || opp.status !== 'open') return 'That opportunity is gone.';
@@ -280,6 +303,9 @@ export function step(state: GameState, cmd: Command): StepResult {
     case 'SELF_RELEASE':
       selfRelease(s, rng, events);
       break;
+    case 'RELEASE_RECORD':
+      releaseRecord(s, rng, events);
+      break;
     default: {
       const activity = begin(s, cmd);
       s.activity = activity;
@@ -300,7 +326,7 @@ function begin(
   s: GameState,
   cmd: Exclude<
     Command,
-    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' }
+    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' }
   >,
 ): Activity {
   const p = s.player;
@@ -398,6 +424,17 @@ function begin(
       return make('project', `Editing: ${s.project!.title}`, C.EDIT_HOURS * H, {
         projectAction: 'edit',
         energyPerMinute: C.EDIT_ENERGY / (C.EDIT_HOURS * H),
+      });
+    case 'RECORD_SESSION':
+      return make('project', `Recording: ${s.project!.title}`, C.RECORD_HOURS * H, {
+        projectAction: 'record',
+        energyPerMinute: C.RECORD_ENERGY / (C.RECORD_HOURS * H),
+      });
+    case 'PROMO':
+      return make('project', `Promoting: ${s.project!.title}`, C.PROMO_HOURS * H, {
+        projectAction: 'promo',
+        energyPerMinute: C.PROMO_ENERGY / (C.PROMO_HOURS * H),
+        sparkPerMinute: -C.PROMO_SPARK / (C.PROMO_HOURS * H),
       });
     case 'SUBMIT': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId)!;
