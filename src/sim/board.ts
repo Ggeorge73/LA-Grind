@@ -2,7 +2,8 @@
 import * as C from './constants';
 import { ARCHETYPES } from './content/archetypes';
 import { OPPORTUNITY_TEMPLATES, type OpportunityTemplate } from './content/opportunities';
-import { boardSize, cloutTier, dayOf, successOdds } from './formulas';
+import { boardSize, cloutTier, dayOf, isPilotSeason, successOdds } from './formulas';
+import { generatePilots } from './tv';
 import type { Rng } from './rng';
 import type { GameState, Medium, Opportunity, Player } from './types';
 import { newId } from './world';
@@ -35,7 +36,7 @@ export function generateBoard(s: GameState, rng: Rng): Opportunity[] {
   }
 
   const day = dayOf(s.minute);
-  return picked.map((t) => {
+  const regular = picked.map((t) => {
     const w = windowFor(t.medium);
     return {
       id: newId(s, 'o'),
@@ -50,8 +51,12 @@ export function generateBoard(s: GameState, rng: Rng): Opportunity[] {
       day,
       prepHours: 0,
       status: 'open',
-    };
+    } satisfies Opportunity;
   });
+  // Pilot season: extra pilot auditions on top of the normal board.
+  // Pilots are cast on your own Clout, not on what a manager can show you (no tier-4 pilots at Acting 10).
+  const pilotTier = Math.min(cloutTier(s.player.rp), C.PILOT_MAX_TIER);
+  return [...regular, ...generatePilots(s, rng, pilotTier, day, isPilotSeason(day))];
 }
 
 /** Favour rows near the top of what the player can see, but keep lower rungs in play. */

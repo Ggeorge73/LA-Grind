@@ -7,6 +7,9 @@ import { LABELS, VENUES } from './content/musicBiz';
 import { LABEL_FLAVOR, VENUE_FLAVOR } from './content/musicBizFlavor';
 import { beatFee, beatLeaseChance, placementChance, showPay, soundtrackBonus } from './formulas';
 import { playedShowToday } from './musicBiz';
+import { PILOT_TIERS, STUDIO_LOT, type PilotTier } from './content/tv';
+import { callbackOdds, cloutTier, cycleDay, dayOf, isPilotSeason, pickupOdds } from './formulas';
+import { rightReads } from './tv';
 import { CREW_ROLE_NAMES, PROJECT_SCALES, SCALE_IDS_BY_MEDIUM, type ProjectMedium } from './content/projects';
 import { DISTRIBUTORS, FESTIVAL_BLURBS, INVESTORS } from './content/filmFlavor';
 import {
@@ -200,6 +203,8 @@ export interface OpportunityView {
   window: string;
   prep: { hours: number; command: Command; disabledReason: string | null }[];
   submit: { command: Command; disabledReason: string | null };
+  /** Pilot auditions: callback instead of an instant roll; no exposure risk; pays PILOT_FEE_MULTIPLIER×. */
+  pilot: { network: string; role: string; showTitle: string; label: string } | null;
 }
 
 export function opportunityView(s: GameState, opp: Opportunity): OpportunityView {
@@ -217,16 +222,17 @@ export function opportunityView(s: GameState, opp: Opportunity): OpportunityView
     opp,
     odds: oddsFor(p, opp),
     oddsWithMaxPrep: oddsFor(p, opp, remaining),
-    pay: payout.pay,
+    pay: opp.pilot ? payout.pay * C.PILOT_FEE_MULTIPLIER : payout.pay,
     rp: payout.rp,
     network: payout.network,
     fee: submissionFee(p, opp),
     submissionName: SUBMISSION_NAME[opp.skill],
-    exposureRisk: isExposure(p.skills[opp.skill], opp.tier),
+    exposureRisk: !opp.pilot && isExposure(p.skills[opp.skill], opp.tier),
     where: LOCATIONS[opp.location].name,
     window: `${pad(opp.windowStart)}:00–${pad(opp.windowEnd)}:00`,
     prep,
     submit: { command: submitCmd, disabledReason: whyNot(s, submitCmd) },
+    pilot: opp.pilot ? { ...opp.pilot, label: PILOT_TIERS[opp.tier as PilotTier].label } : null,
   };
 }
 
@@ -577,5 +583,94 @@ export function musicBizView(s: GameState): MusicBizView {
       label: r.label,
       placementChance: placementChance(r.quality, r.peak !== null),
     })),
+  };
+}
+
+// ---------- TV: pilot season (Sprint 9) ----------
+
+export interface TvView {
+  season: { active: boolean; dayOfCycle: number; daysLeft: number; startsInDays: number };
+  callback: {
+    showTitle: string;
+    network: string;
+    role: string;
+    tier: number;
+    baseOdds: number;
+    /** Current beat index (0-based), or beats.length when done. */
+    beatIndex: number;
+    beats: { note: string; reads: readonly string[]; sensed: number | null; picked: number | null }[];
+    /** Booking odds if every remaining beat goes right / wrong from here. */
+    oddsIfRight: number;
+    oddsIfWrong: number;
+    pick: (read: number) => Command;
+  } | null;
+  pilots: { id: string; showTitle: string; network: string; role: string; tier: number; right: number; decisionMinute: number; pickupOdds: number }[];
+  contract: {
+    showTitle: string;
+    network: string;
+    role: string;
+    tier: number;
+    weeklyPay: number;
+    episode: number;
+    episodesTotal: number;
+    episodesMissed: number;
+    shotThisWeek: boolean;
+    weekEndMinute: number;
+    where: string;
+    command: Command;
+    disabledReason: string | null;
+  } | null;
+}
+
+export function tvView(s: GameState): TvView {
+  const day = dayOf(s.minute);
+  const cd = cycleDay(day);
+  const active = isPilotSeason(day);
+  const cb = s.callback;
+  const clout = cloutTier(s.player.rp);
+  const shoot: Command = { type: 'SHOOT_EPISODE' };
+  return {
+    season: {
+      active,
+      dayOfCycle: cd,
+      daysLeft: active ? C.PILOT_SEASON_LAST - cd + 1 : 0,
+      startsInDays: active ? 0 : (C.PILOT_SEASON_FIRST - cd + C.PILOT_SEASON_CYCLE_DAYS) % C.PILOT_SEASON_CYCLE_DAYS,
+    },
+    callback: cb
+      ? (() => {
+          const right = rightReads(cb);
+          const left = cb.beats.length - cb.picks.length;
+          return {
+            showTitle: cb.showTitle,
+            network: cb.network,
+            role: cb.role,
+            tier: cb.tier,
+            baseOdds: cb.baseOdds,
+            beatIndex: cb.picks.length,
+            beats: cb.beats.map((b, i) => ({ note: b.note, reads: b.reads, sensed: b.sensed, picked: cb.picks[i] ?? null })),
+            oddsIfRight: callbackOdds(cb.baseOdds, right + left),
+            oddsIfWrong: callbackOdds(cb.baseOdds, right),
+            pick: (read: number): Command => ({ type: 'CALLBACK_PICK', read }),
+          };
+        })()
+      : null,
+    pilots: s.pilots.map((p) => ({ ...p, pickupOdds: pickupOdds(p.right, clout, p.tier) })),
+    contract: s.contract
+      ? {
+          showTitle: s.contract.showTitle,
+          network: s.contract.network,
+          role: s.contract.role,
+          tier: s.contract.tier,
+          weeklyPay: s.contract.weeklyPay,
+          episode: s.contract.episodesDone + 1,
+          episodesTotal: s.contract.episodesTotal,
+          episodesMissed: s.contract.episodesMissed,
+          shotThisWeek: s.contract.shotThisWeek,
+          weekEndMinute: s.contract.weekEndMinute,
+          where: LOCATIONS[STUDIO_LOT].name,
+          command: shoot,
+          disabledReason: whyNot(s, shoot),
+        }
+      : null,
   };
 }

@@ -538,7 +538,7 @@ describe('music business saves, determinism and views', () => {
       const v4 = JSON.stringify({ version: 4, savedAt: 0, state: { ...rest, version: 4, player, project } });
       const m = deserialize(v4)!;
       expect(m.version).toBe(C.SAVE_VERSION);
-      expect(C.SAVE_VERSION).toBe(5);
+      expect(C.SAVE_VERSION).toBeGreaterThanOrEqual(5);
       expect(m.beats).toEqual([]);
       expect(m.catalog).toEqual([]);
       expect(m.player.lastShowDay).toBeNull();

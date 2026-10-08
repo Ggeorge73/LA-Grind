@@ -114,7 +114,7 @@ export const TRADES_MAX = 60;
 export const LOG_MAX = 120;
 export const NPC_HEADLINES_PER_DAY = 3;
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 // Projects (PI-2 career engine) — film numbers; scales live in content/film.ts
 export const WRITE_SESSION_HOURS = 3;
@@ -272,3 +272,34 @@ export const PLACEMENT_FEE_BASE = 300;
 export const PLACEMENT_RP = 10;
 export const SOUNDTRACK_BONUS_MAX = 8;
 export const SOUNDTRACK_QUALITY_DIVISOR = 10;
+
+// TV — pilot season (Sprint 9); pilot tiers live in content/tv.ts
+export const PILOT_SEASON_CYCLE_DAYS = 30;
+/** Pilot season is days FIRST..LAST of each cycle (1-based day-of-cycle). */
+export const PILOT_SEASON_FIRST = 8;
+export const PILOT_SEASON_LAST = 17;
+export const PILOTS_PER_DAY = 2;
+export const PILOT_MAX_TIER = 4;
+export const CALLBACK_BEATS = 3;
+/** LAG-76: 12 → 6 pts. At 12 a perfect read (+36) lifted a 2%-floor network audition to 38%; now +18. */
+export const CALLBACK_RIGHT_BONUS = 0.06;
+export const CALLBACK_WRONG_PENALTY = 0.06;
+export const CALLBACK_SENSE_MIN = 0.15;
+export const CALLBACK_SENSE_MAX = 0.7;
+/** A booked pilot pays this × the normal TV fee for its tier. */
+/** LAG-76: 2 → 1.5, so the pilot fee is a bonus rather than the payday: the series is the prize. */
+export const PILOT_FEE_MULTIPLIER = 1.5;
+export const PILOT_DECISION_DAYS = 7;
+/** LAG-76: 20% → 15%, and 10 → 8 pts per right read: a 2-right callback at Clout 1 is 34%, a perfect one 42%. */
+export const PICKUP_BASE = 0.15;
+export const PICKUP_PER_RIGHT = 0.08;
+export const PICKUP_PER_CLOUT = 0.03;
+export const PICKUP_PER_TIER = 0.04;
+export const PICKUP_MIN = 0.05;
+export const PICKUP_MAX = 0.75;
+export const EPISODE_HOURS = 8;
+export const EPISODE_ENERGY = 35;
+export const EPISODE_RP_PER_TIER = 10;
+/** Share of the week's pay you get if you missed the episode.
+ *  LAG-76: 50% → 25%, so a missed tier-1 week ($225) costs more than the barista shift you could work instead. */
+export const MISSED_EPISODE_PAY = 0.25;

@@ -6,7 +6,7 @@ import type { Tab } from '../GameScreen';
 import { Button } from '../kit';
 
 /** Disabled reasons that are solved by travelling somewhere get a Map shortcut. */
-export const needsTravel = (reason: string) => /takes meetings in|the set is in/i.test(reason) || / is in [A-Z]/.test(reason);
+export const needsTravel = (reason: string) => /takes meetings in|the set is in|report to set in/i.test(reason) || / is in [A-Z]/.test(reason);
 
 /** Runs a command and keeps the rejection reason next to the button that caused it. */
 export function useRun() {

@@ -10,6 +10,7 @@ import { MapScreen } from './screens/MapScreen';
 import { ProjectsScreen } from './screens/ProjectsScreen';
 import { RunSummary } from './screens/RunSummary';
 import { TradesScreen } from './screens/TradesScreen';
+import { CallbackSheet } from './screens/tvKit';
 
 export type Tab = 'hustle' | 'map' | 'board' | 'projects' | 'trades' | 'log';
 
@@ -58,6 +59,7 @@ export function GameScreen() {
         </ul>
       </nav>
       <Toast />
+      <CallbackSheet />
       {movedHome && <RunSummary />}
     </div>
   );

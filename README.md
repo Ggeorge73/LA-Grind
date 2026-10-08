@@ -147,6 +147,21 @@ Music business (LAG-69): 45 days next to a weekday barista job, compared with ba
 
 With a label every archetype finishes an EP inside ~40 days (day 11–41 over 8 seeds; the Midwest Transplant is slowest at day 33–41). Beats are pocket money: $20–30/day for most, ~$55/day for the Bedroom Producer, under one $130 barista shift. Shows scale with Fans: the club pays ~$135 at 1,000 Fans and ~$400 at 3,000, but an act with a few hundred Fans earns almost nothing. Placements ($300–1,100) land in roughly half of the runs. With streams fixed to Fans at release, the Bedroom Producer's EP takes Fans from ~2,200 to ~5,000 (it was 7–14k when the week compounded). Tuned in LAG-69: show draw 3% → 2% and door split 60% → 45% (2,000 Fans at the club was ~$540 a night); beat lease cap 40% → 20%, Fans divisor 20,000 → 50,000, fee $20 + 1.5·Q → $10 + 1.2·Q; placement chance 2% → 1%; label advances 40–100% → 60–100% and marketing ×1.1–2 → ×1.1–1.5.
 
+Pilot season (LAG-76): 60 days (two seasons) next to a weekday barista job, compared with barista alone, over 10 seeds. Every season day the strategy preps 2h and submits to the best pilot it can afford (buying headshots once Tier 2 pilots show up) and shoots every episode. At a callback it either picks the read its Acting senses, otherwise read 0 ("sensed or 0", a player guessing), or always the right read ("perfect", a player who reads the director's notes).
+
+| Archetype | Reads | Booked a pilot in season 1 | Pickup odds (avg) | Pickup rate | Runs with a series | Cash vs barista-only (avg / min / max) | RP (avg) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| The Nepo Baby | sensed or 0 | 80% | 38% | 9/27 (33%) | 6/10 | $2,049 / -$1,228 / $12,936 | 571 |
+| The Nepo Baby | perfect | 100% | 45% | 31/59 (53%) | 9/10 | $8,555 / $646 / $16,176 | 847 |
+| The Midwest Transplant | sensed or 0 | 80% | 35% | 5/16 (31%) | 5/10 | -$207 / -$698 / $560 | 69 |
+| The Midwest Transplant | perfect | 90% | 44% | 20/47 (43%) | 9/10 | $1,313 / -$676 / $3,368 | 222 |
+| The Indie Hustler | sensed or 0 | 40% | 33% | 6/16 (38%) | 4/10 | $635 / -$20 / $2,158 | 70 |
+| The Indie Hustler | perfect | 80% | 44% | 16/43 (37%) | 9/10 | $1,432 / $294 / $3,244 | 180 |
+| The Bedroom Producer | sensed or 0 | 50% | 34% | 3/9 (33%) | 3/10 | -$313 / -$728 / $496 | 41 |
+| The Bedroom Producer | perfect | 90% | 43% | 18/43 (42%) | 8/10 | $1,310 / -$184 / $4,018 | 208 |
+
+Newcomers book a web pilot in their first season 40–80% of the time when guessing and 80–90% when they read the notes. Networks pick up 31–44% of pilots on average, so 8–9 runs in 10 land a show when reading well (3–5 when guessing). For a newcomer, a web or cable season adds ~$1.3k over 60 days with every episode shot; chasing pilots while guessing at callbacks roughly breaks even with the barista job. The Nepo Baby leads at +$8.6k with perfect reads because they start at Clout 3. Pilots are cast on Clout, not on the extra tier a manager shows, which closed an exploit where Acting-10 nepo babies landed network pilots (+$20k before the fix). Tuned in LAG-76: right read +12 → +6 points; pilot fee 2× → 1.5× the TV fee; pickup 20% + 10%/right → 15% + 8%/right; a missed episode week pays 25% (was 50%). Pilots now share the daily board and RNG with everything else, so the screen-gig rows in the 30-day table above move by seed noise in today's `npm run balance` (for example, Indie Hustler with headshots now reaches Tier 4). The reference numbers above are kept from LAG-69.
+
 No-income runway (days before cash first drops below $0):
 
 | Archetype | Runway | Target |

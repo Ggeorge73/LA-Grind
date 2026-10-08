@@ -41,7 +41,8 @@ export type ActivityKind =
   | 'prep'
   | 'submit'
   | 'show'
-  | 'beat';
+  | 'beat'
+  | 'episode';
 
 export interface Activity {
   kind: ActivityKind;
@@ -209,6 +210,55 @@ export interface Opportunity {
   day: number;
   prepHours: number;
   status: 'open' | 'booked' | 'rejected' | 'exposed';
+  /** Pilot-season audition: submitting opens a callback instead of an instant roll. */
+  pilot?: { network: string; role: string; showTitle: string };
+}
+
+export interface CallbackBeatState {
+  note: string;
+  reads: readonly [string, string, string];
+  best: number;
+  /** The read your Acting instinct points to (always the right one), or null if you didn't sense it. */
+  sensed: number | null;
+}
+
+/** An open pilot callback: three director notes, pick a read for each. */
+export interface Callback {
+  opportunityId: string;
+  showTitle: string;
+  network: string;
+  role: string;
+  tier: number;
+  /** Booking odds before the callback (locked at submission). */
+  baseOdds: number;
+  beats: CallbackBeatState[];
+  picks: number[];
+}
+
+export interface PendingPilot {
+  id: string;
+  showTitle: string;
+  network: string;
+  role: string;
+  tier: number;
+  /** Right reads at the callback (0–3); feeds pickup odds. */
+  right: number;
+  decisionMinute: number;
+}
+
+export interface SeriesContract {
+  showTitle: string;
+  network: string;
+  role: string;
+  tier: number;
+  weeklyPay: number;
+  episodesTotal: number;
+  /** Episode weeks completed (paid). */
+  episodesDone: number;
+  episodesMissed: number;
+  shotThisWeek: boolean;
+  /** 06:00 when the current episode week is paid. */
+  weekEndMinute: number;
 }
 
 export interface Headline {
@@ -259,6 +309,9 @@ export interface GameState {
   credits: ProjectCredit[];
   beats: Beat[];
   catalog: CatalogRecord[];
+  callback: Callback | null;
+  pilots: PendingPilot[];
+  contract: SeriesContract | null;
 }
 
 export type Command =
@@ -291,7 +344,9 @@ export type Command =
   | { type: 'PITCH_LABEL'; labelId: string }
   | { type: 'PLAY_SHOW'; venueId: string }
   | { type: 'MAKE_BEAT' }
-  | { type: 'PLACE_SONG'; recordId: string };
+  | { type: 'PLACE_SONG'; recordId: string }
+  | { type: 'CALLBACK_PICK'; read: number }
+  | { type: 'SHOOT_EPISODE' };
 
 export type GameEvent =
   | { type: 'ACTION_STARTED'; activity: Activity }
@@ -337,4 +392,12 @@ export type GameEvent =
   | { type: 'BEAT_MADE'; beat: Beat }
   | { type: 'BEAT_LEASED'; beatId: string; title: string; fee: number }
   | { type: 'PLACEMENT'; recordId: string; title: string; client: string; fee: number; rp: number }
-  | { type: 'SOUNDTRACK_SET'; title: string; bonus: number };
+  | { type: 'SOUNDTRACK_SET'; title: string; bonus: number }
+  | { type: 'PILOT_SEASON_OPENED' }
+  | { type: 'CALLBACK_STARTED'; showTitle: string; network: string }
+  | { type: 'CALLBACK_READ'; beat: number; read: number; right: boolean }
+  | { type: 'CALLBACK_DONE'; showTitle: string; right: number; odds: number; booked: boolean; pay: number }
+  | { type: 'PILOT_DECIDED'; showTitle: string; network: string; pickedUp: boolean; odds: number; tookIt: boolean }
+  | { type: 'EPISODE_SHOT'; showTitle: string; episode: number; rp: number }
+  | { type: 'EPISODE_WEEK'; showTitle: string; episode: number; pay: number; missed: boolean; rpLost: number }
+  | { type: 'SERIES_WRAPPED'; showTitle: string; episodes: number; missed: number };

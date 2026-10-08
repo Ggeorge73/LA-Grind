@@ -117,6 +117,29 @@ export function describeEvent(e: GameEvent): string | null {
       return `Sync placement: "${e.title}" in ${e.client}. +${formatMoney(e.fee)}, +${e.rp} RP.`;
     case 'SOUNDTRACK_SET':
       return `"${e.title}" is on the soundtrack: film quality +${e.bonus}.`;
+    case 'PILOT_SEASON_OPENED':
+      return 'Pilot season is open: pilot auditions are on the Gigs board for the next 10 days.';
+    case 'CALLBACK_STARTED':
+      return `Callback for "${e.showTitle}" (${e.network}). Three notes from the director: pick your reads.`;
+    case 'CALLBACK_READ':
+      return `Callback beat ${e.beat}: ${e.right ? 'the room leaned in.' : 'the room checked its phone.'}`;
+    case 'CALLBACK_DONE':
+      return e.booked
+        ? `BOOKED the pilot "${e.showTitle}" (${e.right}/3 reads, ${pct(e.odds)} odds): +${formatMoney(e.pay)}. Network decision in a week.`
+        : `Passed on for "${e.showTitle}" (${e.right}/3 reads, ${pct(e.odds)} odds).`;
+    case 'PILOT_DECIDED':
+      if (!e.pickedUp) return `${e.network} passed on "${e.showTitle}" (${pct(e.odds)} odds).`;
+      return e.tookIt
+        ? `"${e.showTitle}" PICKED UP by ${e.network}! You're a series regular. Shoot an episode each week in Burbank.`
+        : `"${e.showTitle}" got picked up, but you're already on a show. Your agent passed.`;
+    case 'EPISODE_SHOT':
+      return `Episode ${e.episode} of "${e.showTitle}" in the can: +${e.rp} RP.`;
+    case 'EPISODE_WEEK':
+      return e.missed
+        ? `You missed set on "${e.showTitle}": reduced pay (+${formatMoney(e.pay)}), −${e.rpLost} RP.`
+        : `"${e.showTitle}" episode ${e.episode} paid: +${formatMoney(e.pay)}.`;
+    case 'SERIES_WRAPPED':
+      return `That's a wrap on "${e.showTitle}": ${e.episodes} episodes${e.missed ? ` (${e.missed} missed)` : ''}.`;
     case 'ACTION_REJECTED':
     case 'HEADLINE':
       return null;

@@ -154,7 +154,7 @@ function NoProject() {
                   <h3 className="font-semibold leading-snug">“{c.title}”</h3>
                   <p className={`text-sm ${isRelease(c.outcome) ? 'font-semibold text-good' : 'text-muted'}`}>{c.outcome}</p>
                   <p className="text-xs text-muted">
-                    {c.medium === 'music' ? 'Music' : 'Film'} · {c.scale} · Quality {c.quality}/100 · Day {day(c.minute)}
+                    {c.medium === 'music' ? 'Music' : c.medium === 'tv' ? 'TV' : 'Film'} · {c.scale} · Quality {c.quality}/100 · Day {day(c.minute)}
                   </p>
                 </Card>
               </li>

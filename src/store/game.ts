@@ -53,6 +53,30 @@ function feedback(events: GameEvent[]): Toast | null {
     } else if (e.type === 'OVERDRAFT_STARTED') {
       haptics.pulse('warning');
       toast = { id: ++toastId, tone: 'bad', text: 'Overdraft! 3 days to get back to $0.' };
+    } else if (e.type === 'CALLBACK_DONE') {
+      haptics.pulse(e.booked ? 'success' : 'warning');
+      toast = e.booked
+        ? { id: ++toastId, tone: 'good', text: `Booked the pilot “${e.showTitle}” (${e.right}/3 reads)! Network decides in a week.` }
+        : { id: ++toastId, tone: 'bad', text: `Passed on for “${e.showTitle}” (${e.right}/3 reads).` };
+    } else if (e.type === 'PILOT_DECIDED') {
+      haptics.pulse(e.tookIt ? 'success' : 'warning');
+      toast = !e.pickedUp
+        ? { id: ++toastId, tone: 'bad', text: `${e.network} passed on “${e.showTitle}”.` }
+        : e.tookIt
+          ? { id: ++toastId, tone: 'good', text: `“${e.showTitle}” picked up by ${e.network}! You're a series regular.` }
+          : { id: ++toastId, tone: 'info', text: `“${e.showTitle}” got picked up, but you're on a show. Your agent passed.` };
+    } else if (e.type === 'EPISODE_SHOT') {
+      haptics.pulse('success');
+      toast = { id: ++toastId, tone: 'good', text: `Episode ${e.episode} of “${e.showTitle}” in the can: +${e.rp} RP` };
+    } else if (e.type === 'EPISODE_WEEK') {
+      toast = e.missed
+        ? { id: ++toastId, tone: 'bad', text: `Missed set on “${e.showTitle}”: half pay, −${e.rpLost} RP.` }
+        : { id: ++toastId, tone: 'good', text: `“${e.showTitle}” ep. ${e.episode} paid: +$${e.pay.toLocaleString('en-US')}` };
+    } else if (e.type === 'SERIES_WRAPPED') {
+      haptics.pulse('success');
+      toast = { id: ++toastId, tone: 'good', text: `That's a wrap on “${e.showTitle}”: ${e.episodes} episodes. New TV credit!` };
+    } else if (e.type === 'PILOT_SEASON_OPENED') {
+      toast = { id: ++toastId, tone: 'info', text: 'Pilot season is open: pilots are on the Gigs board.' };
     } else if (e.type === 'TIER_CHANGED' && e.to > e.from) {
       haptics.pulse('success');
       toast = { id: ++toastId, tone: 'good', text: `Clout Tier ${e.to}!` };
