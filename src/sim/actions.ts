@@ -1,5 +1,20 @@
 // Read-only views for the UI: what the player can do right now, what it costs, what it pays,
 // and why not. Keeps every rule in src/sim so components only render and dispatch.
+import { CREW_ROLES, FILM_PIPELINE, FILM_SCALES, FILM_SCALE_IDS } from './content/film';
+import { INVESTORS } from './content/filmFlavor';
+import {
+  crewQuality,
+  fundingRoom,
+  hiredCrew,
+  pitchOddsFor,
+  pitchedToday,
+  productionValue,
+  projectQuality,
+  remainingBudget,
+  scaleOf,
+  scriptQuality,
+} from './project';
+import type { Project } from './types';
 import * as C from './constants';
 import { ARCHETYPES } from './content/archetypes';
 import { JOBS, JOB_IDS } from './content/jobs';
@@ -201,3 +216,101 @@ export function opportunityView(s: GameState, opp: Opportunity): OpportunityView
 export const todaysBill = (s: GameState): number => dailyBills(ARCHETYPES[s.player.archetype].rentPerDay);
 
 const pad = (n: number) => String(n).padStart(2, '0');
+
+// ---------- Projects (career engine) ----------
+
+
+export interface ScaleOption {
+  id: Project['scale'];
+  name: string;
+  budget: number;
+  minTier: number;
+  summary: string;
+  command: Command;
+  disabledReason: string | null;
+}
+
+export function projectScaleOptions(s: GameState): ScaleOption[] {
+  return FILM_SCALE_IDS.map((id) => {
+    const sc = FILM_SCALES[id];
+    const command: Command = { type: 'START_PROJECT', scale: id };
+    return {
+      id,
+      name: sc.name,
+      budget: sc.budget,
+      minTier: sc.minTier,
+      summary: `${sc.scriptSessions} writing sessions · ${sc.crewSlots} crew · ${sc.shootDays} shoot days · festivals up to tier ${sc.bestFestivalTier}`,
+      command,
+      disabledReason: whyNot(s, command),
+    };
+  });
+}
+
+export interface ProjectView {
+  project: Project;
+  scaleName: string;
+  stages: { id: string; label: string; status: 'done' | 'current' | 'upcoming' }[];
+  quality: number;
+  script: { quality: number; done: number; needed: number; scores: number[] };
+  write: { command: Command; disabledReason: string | null };
+  budget: { budget: number; raised: number; selfFunded: number; spent: number; remaining: number; room: number };
+  investors: { id: string; name: string; blurb: string; where: string; odds: number; pitchedToday: boolean; command: Command; disabledReason: string | null }[];
+  selfFundReason: (amount: number) => string | null;
+  crew: {
+    slots: number;
+    hired: number;
+    quality: number;
+    productionValue: number;
+    candidates: { id: string; name: string; role: string; skill: number; fee: number; quirk: string; hired: boolean; command: Command; disabledReason: string | null }[];
+  };
+  abandon: Command;
+}
+
+export function projectView(s: GameState): ProjectView | null {
+  const p = s.project;
+  if (!p) return null;
+  const sc = scaleOf(p);
+  const currentIdx = FILM_PIPELINE.findIndex((x) => x.id === p.stage);
+  const writeCmd: Command = { type: 'WRITE_SESSION' };
+  return {
+    project: p,
+    scaleName: sc.name,
+    stages: FILM_PIPELINE.map((x, i) => ({ id: x.id, label: x.label, status: i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'upcoming' })),
+    quality: projectQuality(p),
+    script: { quality: scriptQuality(p), done: p.scores.develop.length, needed: sc.scriptSessions, scores: p.scores.develop },
+    write: { command: writeCmd, disabledReason: whyNot(s, writeCmd) },
+    budget: {
+      budget: p.budget,
+      raised: p.raised,
+      selfFunded: p.selfFunded,
+      spent: p.spent,
+      remaining: remainingBudget(p),
+      room: Number.isFinite(fundingRoom(p)) ? fundingRoom(p) : 0,
+    },
+    investors: INVESTORS.map((inv) => {
+      const command: Command = { type: 'PITCH', investorId: inv.id };
+      return {
+        id: inv.id,
+        name: inv.name,
+        blurb: inv.blurb,
+        where: LOCATIONS[inv.location].name,
+        odds: pitchOddsFor(s, p, inv),
+        pitchedToday: pitchedToday(s, p),
+        command,
+        disabledReason: whyNot(s, command),
+      };
+    }),
+    selfFundReason: (amount: number) => whyNot(s, { type: 'SELF_FUND', amount }),
+    crew: {
+      slots: sc.crewSlots,
+      hired: hiredCrew(p).length,
+      quality: crewQuality(p),
+      productionValue: productionValue(p),
+      candidates: p.crewPool.map((c) => {
+        const command: Command = { type: 'HIRE_CREW', candidateId: c.id };
+        return { id: c.id, name: c.name, role: CREW_ROLES[c.role], skill: c.skill, fee: c.fee, quirk: c.quirk, hired: c.hired, command, disabledReason: whyNot(s, command) };
+      }),
+    },
+    abandon: { type: 'ABANDON_PROJECT' },
+  };
+}

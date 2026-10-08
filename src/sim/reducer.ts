@@ -11,6 +11,8 @@ import { Rng, seedToState } from './rng';
 import type { Activity, ArchetypeId, Command, GameEvent, GameState } from './types';
 import { addHeadline, addLog, formatMoney } from './world';
 import { describeEvent } from './describe';
+import { FILM_SCALES } from './content/film';
+import { abandonProject, fundingRoom, hiredCrew, investorById, pitchOddsFor, pitchedToday, scaleOf, selfFund, startProject } from './project';
 
 export interface StepResult {
   state: GameState;
@@ -57,6 +59,8 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
     },
     status: 'playing',
     nextId: 0,
+    project: null,
+    credits: [],
   };
   const rng = new Rng(s.rngState);
   s.board = generateBoard(s, rng);
@@ -129,6 +133,48 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       if (p.spark < C.PREP_SPARK_PER_HOUR * cmd.hours) return 'Not enough Creative Spark. Go recharge.';
       return tired;
     }
+    case 'START_PROJECT': {
+      if (s.project) return 'Finish or abandon your current project first.';
+      const sc = FILM_SCALES[cmd.scale];
+      if (!sc) return 'Unknown project.';
+      if (cloutTier(p.rp) < sc.minTier) return `${sc.name}s need Clout Tier ${sc.minTier}.`;
+      return null;
+    }
+    case 'ABANDON_PROJECT':
+      return s.project ? null : 'No project to abandon.';
+    case 'WRITE_SESSION': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'develop') return 'No script to write right now.';
+      if (p.spark < C.WRITE_SESSION_SPARK) return 'Not enough Creative Spark. Go recharge.';
+      return tired;
+    }
+    case 'PITCH': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'finance') return 'Nothing to pitch right now.';
+      const inv = investorById(cmd.investorId);
+      if (!inv) return 'Unknown investor.';
+      if (pitchedToday(s, pr)) return 'One pitch a day. Investors talk to each other.';
+      if (p.location !== inv.location) return `${inv.name} takes meetings in ${LOCATIONS[inv.location].name}.`;
+      return tired;
+    }
+    case 'SELF_FUND': {
+      const pr = s.project;
+      if (!pr || (pr.stage !== 'finance' && pr.stage !== 'crew')) return 'Nothing to fund right now.';
+      if (!Number.isInteger(cmd.amount) || cmd.amount <= 0) return 'Enter an amount.';
+      if (cmd.amount > p.cash) return "You don't have that much cash.";
+      if (cmd.amount > fundingRoom(pr)) return `The budget only needs ${formatMoney(fundingRoom(pr))} more.`;
+      return null;
+    }
+    case 'HIRE_CREW': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'crew') return 'Not hiring right now.';
+      const c = pr.crewPool.find((x) => x.id === cmd.candidateId);
+      if (!c) return 'That candidate is gone.';
+      if (c.hired) return 'Already hired.';
+      if (hiredCrew(pr).length >= scaleOf(pr).crewSlots) return 'Crew is full.';
+      if (c.fee > pr.raised - pr.spent) return `Not enough budget left (${formatMoney(pr.raised - pr.spent)}). Self-fund to top up.`;
+      return tired;
+    }
     case 'SUBMIT': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId);
       if (!opp || opp.status !== 'open') return 'That opportunity is gone.';
@@ -164,6 +210,15 @@ export function step(state: GameState, cmd: Command): StepResult {
     case 'SKIP_TO_DONE':
       advance(s, s.activity!.endMinute - s.minute, rng, events);
       break;
+    case 'START_PROJECT':
+      startProject(s, rng, cmd.scale, events);
+      break;
+    case 'ABANDON_PROJECT':
+      abandonProject(s, events);
+      break;
+    case 'SELF_FUND':
+      selfFund(s, rng, cmd.amount, events);
+      break;
     default: {
       const activity = begin(s, cmd);
       s.activity = activity;
@@ -180,7 +235,10 @@ export function step(state: GameState, cmd: Command): StepResult {
 }
 
 /** Pay the up-front costs and build the activity. Only called after whyNot() passed. */
-function begin(s: GameState, cmd: Exclude<Command, { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' }>): Activity {
+function begin(
+  s: GameState,
+  cmd: Exclude<Command, { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' }>,
+): Activity {
   const p = s.player;
   const make = (kind: Activity['kind'], label: string, minutes: number, extra: Partial<Activity> = {}): Activity => ({
     kind,
@@ -242,6 +300,29 @@ function begin(s: GameState, cmd: Exclude<Command, { type: 'ADVANCE' | 'SKIP_TO_
         hours: cmd.hours,
         energyPerMinute: C.PREP_ENERGY_PER_HOUR / H,
         sparkPerMinute: -C.PREP_SPARK_PER_HOUR / H,
+      });
+    }
+    case 'WRITE_SESSION':
+      return make('project', `Writing: ${s.project!.title}`, C.WRITE_SESSION_HOURS * H, {
+        projectAction: 'write',
+        energyPerMinute: C.WRITE_SESSION_ENERGY / (C.WRITE_SESSION_HOURS * H),
+        sparkPerMinute: -C.WRITE_SESSION_SPARK / (C.WRITE_SESSION_HOURS * H),
+      });
+    case 'PITCH': {
+      const inv = investorById(cmd.investorId)!;
+      return make('project', `Pitching ${inv.name}`, C.PITCH_HOURS * H, {
+        projectAction: 'pitch',
+        investorId: inv.id,
+        energyPerMinute: C.PITCH_ENERGY / (C.PITCH_HOURS * H),
+        odds: pitchOddsFor(s, s.project!, inv),
+      });
+    }
+    case 'HIRE_CREW': {
+      const c = s.project!.crewPool.find((x) => x.id === cmd.candidateId)!;
+      return make('project', `Meeting ${c.name}`, C.HIRE_HOURS * H, {
+        projectAction: 'hire',
+        candidateId: c.id,
+        energyPerMinute: C.HIRE_ENERGY / (C.HIRE_HOURS * H),
       });
     }
     case 'SUBMIT': {

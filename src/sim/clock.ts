@@ -21,6 +21,7 @@ import {
 import type { Rng } from './rng';
 import type { Activity, GameEvent, GameState } from './types';
 import { addHeadline, changeNetwork, changeRp, earn, ownHeadline } from './world';
+import { completeProjectAction } from './project';
 
 /** Advance `minutes` game minutes (stops early if the run ends). */
 export function advance(s: GameState, minutes: number, rng: Rng, events: GameEvent[]): void {
@@ -144,6 +145,9 @@ function complete(s: GameState, a: Activity, rng: Rng, events: GameEvent[]): voi
     }
     case 'submit':
       resolveSubmission(s, a, rng, events);
+      return;
+    case 'project':
+      completeProjectAction(s, a, rng, events);
       return;
   }
 }

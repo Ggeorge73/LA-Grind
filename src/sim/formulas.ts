@@ -140,3 +140,30 @@ export function nextCreativeBurnout(current: boolean, burnout: number): boolean 
 }
 
 export const dailyBills = (rentPerDay: number): number => rentPerDay + C.FOOD_PER_DAY + C.CAR_COSTS_PER_DAY;
+
+// ---------- Projects ----------
+
+export const average = (xs: readonly number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+
+/** Score for one script-writing session (0–100). `roll` is 0–1 luck. */
+export const writeScore = (writing: number, spark: number, roll: number): number =>
+  clamp(C.WRITE_SCORE_BASE + C.WRITE_SCORE_SKILL * writing + C.WRITE_SCORE_SPARK * spark + roll * C.WORK_SCORE_LUCK, 0, 100);
+
+export interface PitchInput {
+  script: number;
+  clout: number;
+  network: number;
+  difficulty: number;
+}
+
+/** Chance an investor says yes, clamped to 5–85%. */
+export function pitchOdds(i: PitchInput): number {
+  const score = C.PITCH_SCRIPT_WEIGHT * i.script + C.PITCH_CLOUT_WEIGHT * i.clout + C.PITCH_NETWORK_WEIGHT * i.network;
+  const p = 1 / (1 + Math.exp(-(score - i.difficulty) / C.PITCH_SPREAD));
+  return clamp(p, C.PITCH_FLOOR, C.PITCH_CEILING);
+}
+
+export const crewFee = (budget: number, skill: number): number => Math.round(budget * (C.CREW_FEE_BASE + C.CREW_FEE_PER_SKILL * skill));
+
+export const crewPoolSize = (network: number, slots: number): number =>
+  Math.min(C.CREW_POOL_MAX, Math.max(slots + 1, C.CREW_POOL_BASE + Math.floor(network / C.CREW_POOL_PER_NETWORK)));

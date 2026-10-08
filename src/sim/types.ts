@@ -26,6 +26,7 @@ export interface Player {
 
 /** What the player is busy doing. Rewards land when the clock reaches endMinute. */
 export type ActivityKind =
+  | 'project'
   | 'travel'
   | 'job'
   | 'sleep'
@@ -55,6 +56,52 @@ export interface Activity {
   opportunityId?: string;
   /** Booking chance locked in when a submission starts (what the player was shown). */
   odds?: number;
+  projectAction?: ProjectAction;
+  investorId?: string;
+  candidateId?: string;
+}
+
+// ---------- Projects (PI-2 career engine) ----------
+
+export type ProjectStage = 'develop' | 'finance' | 'crew' | 'shoot' | 'post' | 'festival';
+export type ProjectAction = 'write' | 'pitch' | 'hire' | 'shoot' | 'edit';
+
+export interface CrewCandidate {
+  id: string;
+  name: string;
+  role: 'dp' | 'sound' | 'editor' | 'gaffer' | 'ad' | 'designer' | 'composer';
+  skill: number;
+  fee: number;
+  quirk: string;
+  hired: boolean;
+}
+
+export interface Project {
+  id: string;
+  medium: Medium;
+  scale: 'short' | 'micro' | 'indie';
+  title: string;
+  location: LocationId;
+  stage: ProjectStage;
+  startedMinute: number;
+  /** Session scores per work stage (0–100 each). */
+  scores: { develop: number[]; shoot: number[]; post: number[] };
+  budget: number;
+  raised: number;
+  selfFunded: number;
+  spent: number;
+  pitches: { investorId: string; day: number; yes: boolean; amount: number }[];
+  crewPool: CrewCandidate[];
+}
+
+/** A finished (or abandoned) project on the player's record. */
+export interface ProjectCredit {
+  title: string;
+  medium: Medium;
+  scale: string;
+  quality: number;
+  outcome: string;
+  minute: number;
 }
 
 export interface Opportunity {
@@ -117,6 +164,8 @@ export interface GameState {
   stats: RunStats;
   status: 'playing' | 'movedHome';
   nextId: number;
+  project: Project | null;
+  credits: ProjectCredit[];
 }
 
 export type Command =
@@ -131,7 +180,13 @@ export type Command =
   | { type: 'SUBMIT'; opportunityId: string }
   | { type: 'SKIP_TO_DONE' }
   | { type: 'ADVANCE'; minutes: number }
-  | { type: 'NEW_RUN'; archetype: ArchetypeId; seed: number };
+  | { type: 'NEW_RUN'; archetype: ArchetypeId; seed: number }
+  | { type: 'START_PROJECT'; scale: Project['scale'] }
+  | { type: 'ABANDON_PROJECT' }
+  | { type: 'WRITE_SESSION' }
+  | { type: 'PITCH'; investorId: string }
+  | { type: 'SELF_FUND'; amount: number }
+  | { type: 'HIRE_CREW'; candidateId: string };
 
 export type GameEvent =
   | { type: 'ACTION_STARTED'; activity: Activity }
@@ -157,4 +212,11 @@ export type GameEvent =
   | { type: 'OVERDRAFT_STARTED'; deadlineMinute: number }
   | { type: 'OVERDRAFT_CLEARED' }
   | { type: 'MOVED_BACK_HOME' }
-  | { type: 'HEADLINE'; headline: Headline };
+  | { type: 'HEADLINE'; headline: Headline }
+  | { type: 'PROJECT_STARTED'; project: Project }
+  | { type: 'PROJECT_STAGE'; stage: ProjectStage }
+  | { type: 'PROJECT_ABANDONED'; title: string }
+  | { type: 'SESSION_SCORED'; stage: ProjectStage; score: number }
+  | { type: 'PITCHED'; investorId: string; yes: boolean; amount: number; odds: number }
+  | { type: 'SELF_FUNDED'; amount: number }
+  | { type: 'CREW_HIRED'; candidate: CrewCandidate };

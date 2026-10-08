@@ -54,6 +54,27 @@ export function describeEvent(e: GameEvent): string | null {
       return 'Out of overdraft. Breathe.';
     case 'MOVED_BACK_HOME':
       return 'You moved back home.';
+    case 'PROJECT_STARTED':
+      return `New project: "${e.project.title}". Start writing.`;
+    case 'PROJECT_STAGE':
+      return {
+        develop: 'Back to the script.',
+        finance: 'Script done. Time to find money: pitch investors or self-fund.',
+        crew: 'Fully financed! Hire your crew.',
+        shoot: 'Crew assembled. Ready to shoot.',
+        post: 'Picture wrap. Into the edit.',
+        festival: 'Locked cut. Festival season awaits.',
+      }[e.stage];
+    case 'PROJECT_ABANDONED':
+      return `Abandoned "${e.title}". It lives on as a Google Doc.`;
+    case 'SESSION_SCORED':
+      return `Writing session scored ${e.score}/100.`;
+    case 'PITCHED':
+      return e.yes ? `Pitch landed (${pct(e.odds)} odds): +${formatMoney(e.amount)} raised.` : `Pitch passed on (${pct(e.odds)} odds).`;
+    case 'SELF_FUNDED':
+      return `You put ${formatMoney(e.amount)} of your own money in. Bold.`;
+    case 'CREW_HIRED':
+      return `Hired ${e.candidate.name} (skill ${e.candidate.skill}) for ${formatMoney(e.candidate.fee)}.`;
     case 'ACTION_REJECTED':
     case 'HEADLINE':
       return null;
