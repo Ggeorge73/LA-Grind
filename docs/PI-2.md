@@ -76,6 +76,7 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 5. **Release week** (`circuit`): press *Release* any time after recording. For 7 days, at 06:00:
    - Streams `= round((1,000 + 4·Fans) × (Quality/50)² × scale multiplier × 0.75^day × (1 + 0.5·promo))`, where promo is 1 if you promoted the day before.
    - Royalties $0.004 per stream. Fans gained `= streams × 2% × Quality/100`.
+   - Streams are based on your Fans at release; fans won during the week help your next record.
    - Chart position on *The Billbored Hot 100* `= 101 − 25·log₁₀(streams / 500)`; above 100 means it didn't chart.
    - *Promo* (2h, −10 Energy, −10 Spark, once a day, anywhere) boosts the next day.
    - After day 7 the record becomes a credit ("Peaked at #N" / "Didn't chart") and pays RP `= 3 × (101 − peak)` if it charted. (LAG-62 balance pass: single budget $600 → $400 and chart RP 2 → 3 per place, so a single is roughly break-even for the Bedroom Producer and beats a Tier-1 gig for RP.)
