@@ -5,6 +5,8 @@ import {
   EDIT_ENERGY,
   EDIT_HOURS,
   HIRE_HOURS,
+  LABEL_PITCH_ENERGY,
+  LABEL_PITCH_HOURS,
   MINUTES_PER_DAY,
   PITCH_HOURS,
   PRODUCTION_VALUE_MAX,
@@ -20,34 +22,16 @@ import {
   WRITE_SESSION_HOURS,
 } from '../../sim/constants';
 import { LOCATIONS } from '../../sim/content/locations';
-import type { Command, ProjectCredit } from '../../sim/types';
+import type { ProjectCredit } from '../../sim/types';
 import { useGame } from '../../store/game';
 import { clock, compact, count, day, money, pct } from '../format';
 import type { Tab } from '../GameScreen';
 import { Button, Card, Meter, SectionTitle, Sheet } from '../kit';
+import { MusicBusiness } from './MusicBusiness';
+import { Reason, ReasonWithMap, needsTravel, useRun, wholePct } from './runKit';
 
 /** Preset self-fund amounts (UI shortcuts, not balance rules — the sim validates each). */
 const SELF_FUND_PRESETS = [100, 500, 1000] as const;
-/** Disabled reasons that are solved by travelling somewhere get a Map shortcut. */
-const needsTravel = (reason: string) => /takes meetings in|the set is in/i.test(reason) || / is in [A-Z]/.test(reason);
-
-/** Runs a command and keeps the rejection reason next to the button that caused it. */
-function useRun() {
-  const dispatch = useGame((g) => g.dispatch);
-  const [error, setError] = useState<string | null>(null);
-  return { error, run: (cmd: Command) => setError(dispatch(cmd)) };
-}
-
-function Reason({ id, text, error }: { id: string; text: string | null; error?: string | null }) {
-  const shown = text ?? error ?? null;
-  if (!shown) return null;
-  return (
-    <p id={id} className={`mt-1 text-xs ${text ? 'text-warn' : 'text-bad'}`} role={text ? undefined : 'status'}>
-      {shown}
-    </p>
-  );
-}
-
 // ---------- No active project ----------
 
 function ScaleCard({ option }: { option: ScaleOption }) {
@@ -454,21 +438,6 @@ function ScoreChips({ label, prefix, scores }: { label: string; prefix: string; 
   );
 }
 
-/** A reason line, plus a Map shortcut when the fix is "go somewhere". */
-function ReasonWithMap({ id, text, error, onNavigate }: { id: string; text: string | null; error: string | null; onNavigate: (tab: Tab) => void }) {
-  if (!text && !error) return null;
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <Reason id={id} text={text} error={error} />
-      {text && needsTravel(text) && (
-        <Button variant="ghost" className="shrink-0" onClick={() => onNavigate('map')}>
-          Map
-        </Button>
-      )}
-    </div>
-  );
-}
-
 function ShootCard({ view, onNavigate }: { view: ProjectView; onNavigate: (tab: Tab) => void }) {
   const { error, run } = useRun();
   const { shoot } = view;
@@ -556,7 +525,57 @@ function PostCard({ view }: { view: ProjectView }) {
         Edit ({EDIT_HOURS}h)
       </Button>
       <Reason id={reasonId} text={post.disabledReason} error={error} />
+      <SoundtrackPicker view={view} />
     </Card>
+  );
+}
+
+function SoundtrackOption({ o }: { o: ProjectView['soundtrack']['options'][number] }) {
+  const { error, run } = useRun();
+  const reasonId = `soundtrack-${o.id}-reason`;
+  return (
+    <li>
+      <p className="text-sm">
+        <span className="font-semibold">“{o.title}”</span> <span className="text-xs text-muted">Quality {o.quality}</span>
+      </p>
+      <Button
+        className="mt-1 w-full break-words"
+        disabled={o.disabledReason !== null}
+        aria-describedby={o.disabledReason || error ? reasonId : undefined}
+        aria-label={`Use ${o.title} on the soundtrack, plus ${o.bonus} quality`}
+        onClick={() => run(o.command)}
+      >
+        Use {o.title} (+{o.bonus})
+      </Button>
+      <Reason id={reasonId} text={o.disabledReason} error={error} />
+    </li>
+  );
+}
+
+/** Film post: put one of your released records on the soundtrack (once per film). */
+function SoundtrackPicker({ view }: { view: ProjectView }) {
+  const { current, options } = view.soundtrack;
+  if (current) {
+    return (
+      <p className="mt-3 rounded-lg border border-music/50 bg-music/10 px-2 py-2 text-sm">
+        <span aria-hidden>🎵 </span>On the soundtrack: <span className="font-semibold">“{current.title}”</span>{' '}
+        <span className="tabular-nums text-good">(+{current.bonus} quality)</span>
+      </p>
+    );
+  }
+  if (options.length === 0) return <p className="mt-3 text-xs text-muted">Release music of your own and you can put it on your film's soundtrack.</p>;
+  return (
+    <section aria-labelledby="soundtrack-title" className="mt-3 border-t border-line pt-2">
+      <h3 id="soundtrack-title" className="text-sm font-semibold">
+        Put a record on the soundtrack
+      </h3>
+      <p className="text-xs text-muted">One per film. Adds to the film's quality.</p>
+      <ul className="mt-1 flex flex-col gap-2">
+        {options.map((o) => (
+          <SoundtrackOption key={o.id} o={o} />
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -777,8 +796,99 @@ function StudioBooking({ view }: { view: ProjectView }) {
       <p className="mt-1 text-sm">
         <span className="font-semibold tabular-nums">{money(b.raised)}</span> of {money(b.budget)} booked
       </p>
-      <p className="text-xs text-muted">No label yet, so it's your money. Crew fees come out of it; the rest goes into the sound.</p>
+      <p className="text-xs text-muted">
+        {view.signedLabel
+          ? 'The label paid its advance; self-fund the rest. Crew fees come out of it; the rest goes into the sound.'
+          : "No label yet, so it's your money — or pitch a label below. Crew fees come out of it; the rest goes into the sound."}
+      </p>
     </Card>
+  );
+}
+
+function SignedLabelCard({ label }: { label: NonNullable<ProjectView['signedLabel']> }) {
+  return (
+    <section aria-labelledby="signed-label-title" className="rounded-2xl border-2 border-music/60 bg-music/10 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-music">Deal signed</p>
+      <h2 id="signed-label-title" className="font-[family-name:var(--font-display)] text-lg font-bold leading-snug">
+        Signed to {label.name}
+      </h2>
+      <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-lg border border-line bg-surface px-1 py-1.5">
+          <dt className="text-[11px] text-muted">Advance</dt>
+          <dd className="font-bold tabular-nums leading-tight text-good">{money(label.advance)}</dd>
+        </div>
+        <div className="rounded-lg border border-line bg-surface px-1 py-1.5">
+          <dt className="text-[11px] text-muted">Their cut</dt>
+          <dd className="font-bold tabular-nums leading-tight">{wholePct(label.royaltyCut)}</dd>
+        </div>
+        <div className="rounded-lg border border-line bg-surface px-1 py-1.5">
+          <dt className="text-[11px] text-muted">Marketing</dt>
+          <dd className="font-bold tabular-nums leading-tight">+{wholePct(label.marketing)}</dd>
+        </div>
+      </dl>
+      <p className="mt-1 text-xs text-muted">
+        They keep {wholePct(label.royaltyCut)} of royalties; their marketing adds +{wholePct(label.marketing)} to release-week streams.
+      </p>
+    </section>
+  );
+}
+
+function LabelCard({ label, onNavigate }: { label: ProjectView['labels'][number]; onNavigate: (tab: Tab) => void }) {
+  const { error, run } = useRun();
+  const reasonId = `label-${label.id}-reason`;
+  return (
+    <Card>
+      <article aria-label={label.name}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-bold leading-snug">{label.name}</h3>
+            <p className="text-xs text-muted">{label.blurb}</p>
+            <p className="mt-1 text-xs">Takes meetings in {label.where}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-2xl font-bold tabular-nums leading-none" aria-label={`Signing odds ${pct(label.odds)}`}>
+              {pct(label.odds)}
+            </p>
+            <p className="text-[11px] text-muted">odds</p>
+          </div>
+        </div>
+        <ul aria-label="Deal terms" className="mt-1 flex flex-wrap gap-1.5 text-xs">
+          <li className="rounded-md border border-line bg-surface-2 px-2 py-0.5">Advance {label.advance} of budget</li>
+          <li className="rounded-md border border-line bg-surface-2 px-2 py-0.5">Keeps {wholePct(label.royaltyCut)} of royalties</li>
+          <li className="rounded-md border border-line bg-surface-2 px-2 py-0.5">Marketing +{wholePct(label.marketing)} streams</li>
+        </ul>
+        <Button
+          variant="primary"
+          className="mt-2 w-full"
+          disabled={label.disabledReason !== null}
+          aria-describedby={label.disabledReason || error ? reasonId : undefined}
+          aria-label={`Pitch ${label.name}, ${LABEL_PITCH_HOURS} hours, minus ${LABEL_PITCH_ENERGY} Energy`}
+          onClick={() => run(label.command)}
+        >
+          Pitch {label.name} ({LABEL_PITCH_HOURS}h)
+        </Button>
+        <ReasonWithMap id={reasonId} text={label.disabledReason} error={error} onNavigate={onNavigate} />
+      </article>
+    </Card>
+  );
+}
+
+/** Music "Book the studio": pitch labels until one signs, then show the deal. */
+function LabelSection({ view, onNavigate }: { view: ProjectView; onNavigate: (tab: Tab) => void }) {
+  if (view.signedLabel) return <SignedLabelCard label={view.signedLabel} />;
+  if (view.labels.length === 0) return null;
+  return (
+    <section aria-label="Labels">
+      <SectionTitle>Labels</SectionTitle>
+      <p className="mb-2 text-xs text-muted">One label per record, one meeting a day. A yes pays an advance toward the studio; they take a cut and push the release.</p>
+      <ul className="flex flex-col gap-2">
+        {view.labels.map((l) => (
+          <li key={l.id}>
+            <LabelCard label={l} onNavigate={onNavigate} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -852,6 +962,12 @@ function MusicReleaseStage({ view }: { view: ProjectView }) {
             Each day's streams, royalties, new fans and chart spot on {r.chart} land at {pad2(BILLS_HOUR)}:00.
           </li>
           <li>Promo once a day to boost the next day's streams.</li>
+          {view.signedLabel && (
+            <li>
+              {view.signedLabel.name} keeps {wholePct(view.signedLabel.royaltyCut)} of royalties; their marketing adds +{wholePct(view.signedLabel.marketing)} to
+              streams.
+            </li>
+          )}
         </ul>
         <Button
           variant="primary"
@@ -874,6 +990,11 @@ function MusicReleaseStage({ view }: { view: ProjectView }) {
       <Card>
         <h2 className="font-bold">Release week</h2>
         <p className="text-xs text-muted">{r.chart}</p>
+        {view.signedLabel && (
+          <p className="text-xs text-music">
+            {view.signedLabel.name} keeps {wholePct(view.signedLabel.royaltyCut)} of royalties
+          </p>
+        )}
         <p className="mt-1 text-sm">
           Day <span className="font-semibold tabular-nums">{done} / {r.daysTotal}</span>
           {done === 0 && <span className="text-muted"> · first numbers at {pad2(BILLS_HOUR)}:00</span>}
@@ -1033,6 +1154,7 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
         {project.stage === 'finance' && music && (
           <>
             <StudioBooking view={view} />
+            <LabelSection view={view} onNavigate={onNavigate} />
             <SelfFund view={view} />
           </>
         )}
@@ -1098,5 +1220,10 @@ export function ProjectsScreen({ onNavigate }: { onNavigate: (tab: Tab) => void 
   const state = useGame((g) => g.state);
   if (!state) return null;
   const view = projectView(state);
-  return view ? <ActiveProject view={view} onNavigate={onNavigate} /> : <NoProject />;
+  return (
+    <>
+      {view ? <ActiveProject view={view} onNavigate={onNavigate} /> : <NoProject />}
+      <MusicBusiness onNavigate={onNavigate} />
+    </>
+  );
 }

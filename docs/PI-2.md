@@ -76,11 +76,29 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 5. **Release week** (`circuit`): press *Release* any time after recording. For 7 days, at 06:00:
    - Streams `= round((1,000 + 4·Fans) × (Quality/50)² × scale multiplier × 0.75^day × (1 + 0.5·promo))`, where promo is 1 if you promoted the day before.
    - Royalties $0.004 per stream. Fans gained `= streams × 2% × Quality/100`.
+   - Streams are based on your Fans at release; fans won during the week help your next record.
    - Chart position on *The Billbored Hot 100* `= 101 − 25·log₁₀(streams / 500)`; above 100 means it didn't chart.
    - *Promo* (2h, −10 Energy, −10 Spark, once a day, anywhere) boosts the next day.
    - After day 7 the record becomes a credit ("Peaked at #N" / "Didn't chart") and pays RP `= 3 × (101 − peak)` if it charted. (LAG-62 balance pass: single budget $600 → $400 and chart RP 2 → 3 per place, so a single is roughly break-even for the Bedroom Producer and beats a Tier-1 gig for RP.)
 
 **Music quality** `= 0.40·Songs + 0.45·Recording + 0.15·Crew + production value`. **Fans** is a new stat that persists across releases (the Bedroom Producer starts with some). Label deals, tours, beat sales and placements are Sprint 8.
+
+### Music business (Sprint 8)
+
+- **Label deals** (in *Book the studio*): pitch a label at its neighbourhood, once a day (2h, −10 Energy).
+  - Odds `= logistic((0.5·Songs + 10·Clout + min(40, Fans/100) − difficulty) / 12)`, clamped 5–85%. Difficulty: Single 40, EP 55, Album 75, plus the label's modifier.
+  - A yes signs the record: an advance of 60–100% of the studio budget (by label), the label keeps 30–70% of royalties, and marketing multiplies release-week streams by 1.1–1.5×. One label per record; self-fund the rest.
+- **Live shows**: `Play a show` at a venue, 19:00–22:00 start, 3h, −30 Energy, once a night, after your first release.
+  - Six venues from a 40-cap open mic (0 Fans needed, $5) to a 6,000-cap arena (20,000 Fans, $40).
+  - Tickets `= min(capacity, Fans × 2% × (0.8–1.2))`; you keep 45% of the door. Fans +15% of tickets; RP +1 per 50 tickets; a sold-out room +1 Network.
+  - At the club that is ~$135 a night at 1,000 Fans and ~$405 at 3,000 (1–3 barista shifts).
+- **Beat store**: `Make a beat` at home, 2h, −10 Energy, −10 Spark. Quality `= clamp(10 + 0.7·Music + rand(0–20))`. Up to 8 beats.
+  - Each 06:00 each beat may lease: chance `= min(20%, Quality/400 + Fans/50,000) × 0.9^leases`, fee `= $10 + 1.2·Quality`.
+  - Eight good beats (Quality 60, 2,000 Fans) earn ~$125 a day expected, under one barista shift.
+- **Catalogue and placements**: every finished record joins your catalogue.
+  - Each 06:00 each record may be licensed by a parody production: chance `= 1% × Quality/50` (×1.5 if it charted), fee `= $300 × stream multiplier × Quality/50`, +10 RP.
+  - In a film's post stage you can put one of your records on the soundtrack (once per film): film quality `+ min(8, round(record Quality/10))`.
+- Tuned in LAG-69 (see README "Balance"): show draw 3% → 2% and door 60% → 45%; beat fee, lease cap and Fans divisor; placement chance 2% → 1%; label advances up, top marketing ×2 → ×1.5.
 
 ## Sprint plan
 
@@ -89,7 +107,7 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 | 5 | **Greenlight** (Film I) — LAG-40…46 | Project engine + save migration v2; Develop, Financing, Crew stages; Projects tab |
 | 6 | **Festival Circuit** (Film II) — LAG-47…50 | Shoot, Post, festivals, distribution, film headlines; balance pass incl. LAG-33; film play-test |
 | 7 | **The Drop** (Music I) — LAG-51, LAG-57…62 | Write → record → release; Fans and Streams; release-week chart in The Trades |
-| 8 | **Deal Memo** (Music II) — LAG-52 | Label deal, tour, beat sales, song placements into film and TV projects |
+| 8 | **Deal Memo** (Music II) — LAG-52, LAG-63…69 | Label deal, tour, beat sales, song placements into film and TV projects |
 | 9 | **Pilot Season** (TV I) — LAG-53 | Callback mini-game; pilot season circuit |
 | 10 | **Writers' Room** (TV II) — LAG-54, LAG-55 | Pitch deck → agent meeting → writers' room; full guild and union membership |
 

@@ -6,12 +6,13 @@ import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LOCATIONS, REPAIR_LOCATION } from
 import { NPC_HEADLINES } from './content/headlines';
 import { SUBMISSION_NAME, generateBoard, oddsFor, submissionFee } from './board';
 import { advance, settleOverdraft } from './clock';
-import { atHour, commute, cloutTier, hourOf, minuteOfDay } from './formulas';
+import { atHour, commute, cloutTier, dayOf, hourOf, minuteOfDay } from './formulas';
 import { Rng, seedToState } from './rng';
 import type { Activity, ArchetypeId, Command, GameEvent, GameState } from './types';
 import { addHeadline, addLog, formatMoney } from './world';
 import { describeEvent } from './describe';
 import { PROJECT_SCALES } from './content/projects';
+import { labelById, labelName, playedShowToday, venueById, venueName } from './musicBiz';
 import {
   abandonProject,
   acceptOffer,
@@ -23,6 +24,8 @@ import {
   pendingSubmissions,
   pitchOddsFor,
   pitchedToday,
+  labelOddsFor,
+  placeSong,
   promotedToday,
   releaseRecord,
   scaleOf,
@@ -62,6 +65,7 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
       hasHeadshots: false,
       creativeBurnout: false,
       fans: a.fans,
+      lastShowDay: null,
     },
     activity: null,
     board: [],
@@ -81,6 +85,8 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
     nextId: 0,
     project: null,
     credits: [],
+    beats: [],
+    catalog: [],
   };
   const rng = new Rng(s.rngState);
   s.board = generateBoard(s, rng);
@@ -171,7 +177,7 @@ export function whyNot(s: GameState, cmd: Command): string | null {
     case 'PITCH': {
       const pr = s.project;
       if (!pr || pr.stage !== 'finance') return 'Nothing to pitch right now.';
-      if (pr.medium !== 'film') return 'No label meetings yet. Book the studio with your own money.';
+      if (pr.medium !== 'film') return 'Records get pitched to labels, not film investors.';
       const inv = investorById(cmd.investorId);
       if (!inv) return 'Unknown investor.';
       if (pitchedToday(s, pr)) return 'One pitch a day. Investors talk to each other.';
@@ -249,6 +255,38 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       if (p.spark < C.PROMO_SPARK) return 'Not enough Creative Spark. Go recharge.';
       return tired;
     }
+    case 'PITCH_LABEL': {
+      const pr = s.project;
+      if (!pr || pr.medium !== 'music' || pr.stage !== 'finance') return 'No record to shop around right now.';
+      if (pr.label) return `Already signed to ${pr.label.name}.`;
+      const label = labelById(cmd.labelId);
+      if (!label) return 'Unknown label.';
+      if (pitchedToday(s, pr)) return 'One meeting a day. A&Rs talk to each other.';
+      if (p.location !== label.location) return `${labelName(label.id)} takes meetings in ${LOCATIONS[label.location].name}.`;
+      return tired;
+    }
+    case 'PLAY_SHOW': {
+      const v = venueById(cmd.venueId);
+      if (!v) return 'Unknown venue.';
+      if (s.catalog.length === 0) return 'Release a record first. Nobody books a band with no songs out.';
+      if (p.fans < v.minFans) return `${venueName(v.id)} books acts with ${v.minFans.toLocaleString('en-US')}+ fans.`;
+      if (playedShowToday(s)) return 'One show a night. Your voice has limits.';
+      if (p.location !== v.location) return `${venueName(v.id)} is in ${LOCATIONS[v.location].name}.`;
+      const [from, to] = C.SHOW_START_WINDOW;
+      if (hour < from || hour > to) return `Doors are ${pad(from)}:00–${pad(to)}:00.`;
+      return tired;
+    }
+    case 'MAKE_BEAT':
+      if (p.location !== p.home) return 'Beats get made at home, on headphones, at 2am energy.';
+      if (s.beats.length >= C.BEAT_MAX) return `Your beat store is full (${C.BEAT_MAX}).`;
+      if (p.spark < C.BEAT_SPARK) return 'Not enough Creative Spark. Go recharge.';
+      return tired;
+    case 'PLACE_SONG': {
+      const pr = s.project;
+      if (!pr || pr.medium !== 'film' || pr.stage !== 'post') return 'Soundtracks get picked in post-production.';
+      if (pr.soundtrack) return `"${pr.soundtrack.title}" is already on the soundtrack.`;
+      return s.catalog.some((r) => r.id === cmd.recordId) ? null : 'That record is not in your catalogue.';
+    }
     case 'SUBMIT': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId);
       if (!opp || opp.status !== 'open') return 'That opportunity is gone.';
@@ -306,6 +344,9 @@ export function step(state: GameState, cmd: Command): StepResult {
     case 'RELEASE_RECORD':
       releaseRecord(s, rng, events);
       break;
+    case 'PLACE_SONG':
+      placeSong(s, rng, cmd.recordId, events);
+      break;
     default: {
       const activity = begin(s, cmd);
       s.activity = activity;
@@ -326,7 +367,7 @@ function begin(
   s: GameState,
   cmd: Exclude<
     Command,
-    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' }
+    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' | 'PLACE_SONG' }
   >,
 ): Activity {
   const p = s.player;
@@ -435,6 +476,28 @@ function begin(
         projectAction: 'promo',
         energyPerMinute: C.PROMO_ENERGY / (C.PROMO_HOURS * H),
         sparkPerMinute: -C.PROMO_SPARK / (C.PROMO_HOURS * H),
+      });
+    case 'PITCH_LABEL': {
+      const label = labelById(cmd.labelId)!;
+      return make('project', `Meeting ${labelName(label.id)}`, C.LABEL_PITCH_HOURS * H, {
+        projectAction: 'labelPitch',
+        investorId: label.id,
+        energyPerMinute: C.LABEL_PITCH_ENERGY / (C.LABEL_PITCH_HOURS * H),
+        odds: labelOddsFor(s, s.project!, label),
+      });
+    }
+    case 'PLAY_SHOW': {
+      const v = venueById(cmd.venueId)!;
+      p.lastShowDay = dayOf(s.minute);
+      return make('show', `Playing ${venueName(v.id)}`, C.SHOW_HOURS * H, {
+        venueId: v.id,
+        energyPerMinute: C.SHOW_ENERGY / (C.SHOW_HOURS * H),
+      });
+    }
+    case 'MAKE_BEAT':
+      return make('beat', 'Making a beat', C.BEAT_HOURS * H, {
+        energyPerMinute: C.BEAT_ENERGY / (C.BEAT_HOURS * H),
+        sparkPerMinute: -C.BEAT_SPARK / (C.BEAT_HOURS * H),
       });
     case 'SUBMIT': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId)!;

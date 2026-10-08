@@ -57,6 +57,12 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     (await page.getByText(/Fans/).count()) ? ok(`${arch}: Fans shown in the HUD`) : fail(`${arch}: no Fans in the HUD`);
     await tab('Projects');
 
+    // 0. Make a beat at home (beat store)
+    await tab('Projects');
+    if (await press(/^Make a beat/)) {
+      (await S()).beats.length === 1 ? ok(`${arch}: made a beat "${(await S()).beats[0].title}"`) : fail(`${arch}: beat not stored`);
+    } else fail(`${arch}: Make a beat disabled`);
+
     // 1. Start a single
     if (!(await press(/^Start Single/))) { fail(`${arch}: could not start a single`); await ctx.close(); continue; }
     const p0 = (await S()).project;
@@ -68,13 +74,25 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
 
     // 3. Book the studio: no investors for music; self-fund, working barista shifts until cash allows
     await tab('Projects');
-    (await main().getByRole('button', { name: /^Pitch / }).count()) ? fail(`${arch}: investor pitches shown for music`) : ok(`${arch}: no investor pitches for music`);
+    (await main().getByRole('button', { name: /^Pitch Brentwood Dentists/ }).count()) ? fail(`${arch}: film investors shown for music`) : ok(`${arch}: no film investors for music`);
+    (await main().getByRole('button', { name: /^Pitch Garage Press Records/ }).count()) ? ok(`${arch}: label pitches shown`) : fail(`${arch}: no label pitch cards`);
+    let labelTries = 0;
     for (let day = 0; day < 15 && (await stage()) === 'finance'; day++) {
       await tab('Projects');
       const all = main().getByRole('button', { name: /^Self-fund All remaining/ });
       const s = await S();
-      if ((await all.count()) && !(await all.isDisabled()) && s.player.cash - (s.project.budget - s.project.raised) > 300) { await all.click(); break; }
+      // Self-fund the rest only once a label has signed or we've given up shopping it.
+      const doneShopping = s.project.label || labelTries >= 3;
+      if (doneShopping && (await all.count()) && !(await all.isDisabled()) && s.player.cash - (s.project.budget - s.project.raised) > 300) { await all.click(); break; }
       await rest(70);
+      // Shop the record to the easiest label once a day until someone signs it.
+      if (!(await S()).project.label && labelTries < 3) {
+        await advanceTo(10);
+        await travel('noho');
+        await tab('Projects');
+        if (await press(/^Pitch Garage Press Records/)) labelTries++;
+        if ((await stage()) !== 'finance') break;
+      }
       await advanceTo(7);
       await travel('weho');
       await d({ type: 'START_JOB', jobId: 'barista' });
@@ -85,6 +103,8 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
       if ((await stage()) === 'finance') await advanceTo(5);
     }
     (await stage()) === 'crew' ? ok(`${arch}: studio booked`) : fail(`${arch}: stuck booking the studio`);
+    const signed = (await S()).project?.label;
+    ok(`${arch}: ${signed ? `signed to ${signed.name} ($${signed.advance} advance) after ${labelTries} pitch(es)` : `unsigned after ${labelTries} pitch(es), self-funded`}`);
 
     // 4. Crew
     for (let n = 0; n < 5 && (await stage()) === 'crew'; n++) { await rest(); await tab('Projects'); if (!(await press(/^Hire /))) break; }
@@ -128,6 +148,18 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     overflow ? fail(`${arch}: horizontal overflow`) : ok(`${arch}: no horizontal overflow`);
     await tab('Projects');
     await page.screenshot({ path: `${OUT}/${arch}-3-done.png` });
+
+    // 7b. Catalogue + a live show at the open mic
+    end.catalog.length === 1 && end.catalog[0].title === title ? ok(`${arch}: record in the catalogue`) : fail(`${arch}: catalogue missing the record`);
+    await rest(60);
+    await travel('noho');
+    await advanceTo(20);
+    await tab('Projects');
+    const cashShow = (await S()).player.cash;
+    if (await press(/^Play The Thirsty Mic/)) {
+      const t = await S();
+      t.player.cash > cashShow ? ok(`${arch}: played The Thirsty Mic (+$${Math.round(t.player.cash - cashShow)})`) : fail(`${arch}: show paid nothing`);
+    } else fail(`${arch}: Play The Thirsty Mic disabled`);
 
     // 8. Reload restores fans and credits
     const before = JSON.stringify([(await S()).player.fans, (await S()).credits]);

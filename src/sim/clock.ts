@@ -22,6 +22,7 @@ import type { Rng } from './rng';
 import type { Activity, GameEvent, GameState } from './types';
 import { addHeadline, changeNetwork, changeRp, earn, ownHeadline } from './world';
 import { completeProjectAction, resolveFestivals, resolveRelease } from './project';
+import { completeBeat, completeShow, resolveBeatLeases, resolvePlacements } from './musicBiz';
 
 /** Advance `minutes` game minutes (stops early if the run ends). */
 export function advance(s: GameState, minutes: number, rng: Rng, events: GameEvent[]): void {
@@ -85,6 +86,8 @@ function newDay(s: GameState, rng: Rng, events: GameEvent[]): void {
 
   resolveFestivals(s, rng, events);
   resolveRelease(s, rng, events);
+  resolveBeatLeases(s, rng, events);
+  resolvePlacements(s, rng, events);
 }
 
 /** Instant commands that pay out (e.g. accepting a distribution offer) settle an overdraft right away. */
@@ -159,6 +162,12 @@ function complete(s: GameState, a: Activity, rng: Rng, events: GameEvent[]): voi
       return;
     case 'project':
       completeProjectAction(s, a, rng, events);
+      return;
+    case 'show':
+      completeShow(s, a, rng, events);
+      return;
+    case 'beat':
+      completeBeat(s, a, rng, events);
       return;
   }
 }

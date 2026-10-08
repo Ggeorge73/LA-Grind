@@ -24,6 +24,8 @@ export interface Player {
   creativeBurnout: boolean;
   /** Music fanbase. Persists across releases; drives release-week streams. */
   fans: number;
+  /** Day index of the last live show (one a night). */
+  lastShowDay: number | null;
 }
 
 /** What the player is busy doing. Rewards land when the clock reaches endMinute. */
@@ -37,7 +39,9 @@ export type ActivityKind =
   | 'headshots'
   | 'repair'
   | 'prep'
-  | 'submit';
+  | 'submit'
+  | 'show'
+  | 'beat';
 
 export interface Activity {
   kind: ActivityKind;
@@ -59,14 +63,16 @@ export interface Activity {
   /** Booking chance locked in when a submission starts (what the player was shown). */
   odds?: number;
   projectAction?: ProjectAction;
+  /** Film investor or music label being pitched. */
   investorId?: string;
   candidateId?: string;
+  venueId?: string;
 }
 
 // ---------- Projects (PI-2 career engine) ----------
 
 export type ProjectStage = 'develop' | 'finance' | 'crew' | 'shoot' | 'post' | 'festival' | 'record' | 'release';
-export type ProjectAction = 'write' | 'pitch' | 'hire' | 'shoot' | 'edit' | 'record' | 'promo';
+export type ProjectAction = 'write' | 'pitch' | 'labelPitch' | 'hire' | 'shoot' | 'edit' | 'record' | 'promo';
 export type ProjectScaleId = 'short' | 'micro' | 'indie' | 'single' | 'ep' | 'album';
 
 export interface CrewCandidate {
@@ -103,6 +109,39 @@ export interface Project {
   offers: DistributionOffer[];
   /** Music release week (stage 'release'); null until released. */
   release: MusicRelease | null;
+  /** Music: the label that signed this record, if any. */
+  label: SignedLabel | null;
+  /** Film: one of your records on the soundtrack. */
+  soundtrack: { recordId: string; title: string; bonus: number } | null;
+}
+
+export interface SignedLabel {
+  id: string;
+  name: string;
+  advance: number;
+  royaltyCut: number;
+  marketing: number;
+}
+
+export interface Beat {
+  id: string;
+  title: string;
+  quality: number;
+  madeMinute: number;
+  leases: number;
+  earned: number;
+}
+
+/** A finished record in your catalogue: earns sync placements and can soundtrack your films. */
+export interface CatalogRecord {
+  id: string;
+  title: string;
+  scale: ProjectScaleId;
+  quality: number;
+  peak: number | null;
+  releasedMinute: number;
+  placements: number;
+  label: string | null;
 }
 
 export interface ReleaseDay {
@@ -116,6 +155,9 @@ export interface ReleaseDay {
 
 export interface MusicRelease {
   releasedMinute: number;
+  /** Fans when the record came out. The whole week's streams are based on this, so fans won during
+   * the week grow your next record, not this one (no runaway snowball). Optional for older saves. */
+  fansAtRelease?: number;
   /** Day index (dayOf) of the last promo, so promo is once a day. */
   lastPromoDay: number | null;
   /** A promo since the last 06:00 boosts the next day. */
@@ -215,6 +257,8 @@ export interface GameState {
   nextId: number;
   project: Project | null;
   credits: ProjectCredit[];
+  beats: Beat[];
+  catalog: CatalogRecord[];
 }
 
 export type Command =
@@ -243,7 +287,11 @@ export type Command =
   | { type: 'SELF_RELEASE' }
   | { type: 'RECORD_SESSION' }
   | { type: 'RELEASE_RECORD' }
-  | { type: 'PROMO' };
+  | { type: 'PROMO' }
+  | { type: 'PITCH_LABEL'; labelId: string }
+  | { type: 'PLAY_SHOW'; venueId: string }
+  | { type: 'MAKE_BEAT' }
+  | { type: 'PLACE_SONG'; recordId: string };
 
 export type GameEvent =
   | { type: 'ACTION_STARTED'; activity: Activity }
@@ -283,4 +331,10 @@ export type GameEvent =
   | { type: 'RECORD_RELEASED'; title: string; quality: number }
   | { type: 'PROMO_DONE'; stunt: string }
   | { type: 'RELEASE_DAY'; day: number; streams: number; fans: number; royalties: number; position: number | null }
-  | { type: 'RELEASE_WEEK_ENDED'; title: string; peak: number | null; rp: number; totalStreams: number };
+  | { type: 'RELEASE_WEEK_ENDED'; title: string; peak: number | null; rp: number; totalStreams: number }
+  | { type: 'LABEL_PITCHED'; labelId: string; label: string; yes: boolean; advance: number; odds: number }
+  | { type: 'SHOW_PLAYED'; venueId: string; venue: string; tickets: number; soldOut: boolean; pay: number; fans: number; rp: number }
+  | { type: 'BEAT_MADE'; beat: Beat }
+  | { type: 'BEAT_LEASED'; beatId: string; title: string; fee: number }
+  | { type: 'PLACEMENT'; recordId: string; title: string; client: string; fee: number; rp: number }
+  | { type: 'SOUNDTRACK_SET'; title: string; bonus: number };

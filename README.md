@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173 — open at a phone size in devtool
 | `npm run dev` | Start the web game with hot reload |
 | `npm test` | Run the Vitest suite (reference odds, payouts, commute, tiers, bills, invariants, determinism, saves) |
 | `npm run typecheck` | TypeScript strict check |
-| `npm run balance` | Headless balance run: 4 archetypes × 4 strategies × 30 days, plus no-income runway |
+| `npm run balance` | Headless balance run: 4 archetypes × 6 strategies × 30 days, film, music and music-business tables, plus no-income runway |
 | `node tools/acceptance-playtest.cjs shots` | With `npm run dev` running: plays every "Done means" item for all 4 archetypes through the UI (needs Playwright + Chromium) |
 | `node tools/film-playtest.cjs shots` | With `npm run dev` running: takes a short film from script to release for all 4 archetypes through the Projects tab |
 | `node tools/music-playtest.cjs shots` | With `npm run dev` running: takes a single from songwriting to the end of release week for all 4 archetypes |
@@ -62,7 +62,8 @@ Needs **Android Studio** (with an SDK and an emulator image) and JDK 21.
 - **Hustle** tab: what you can do *here, now*, with time, costs, rewards, and why a button is disabled.
 - **Map** tab: tap a neighbourhood to see the live travel time, energy and gas before you go. Crossing the 405 at rush hour costs triple.
 - **Gigs** tab: today's film, TV and music opportunities. Prep raises your odds; the odds are shown before you submit. Tier 2+ needs headshots (Hollywood, $400).
-- **Projects** tab: make your own film. Write the script, pitch investors or self-fund, hire a crew, shoot on set (call time 05:00–10:00), edit, then submit to festivals. Results land at 06:00 days later; take a distribution offer or self-release. Or make music: write songs, book a studio, hire a studio crew, record, then release it and ride a 7-day release week (streams, royalties, Fans and a chart position every 06:00; promo once a day boosts tomorrow). One project at a time.
+- **Projects** tab: make your own film. Write the script, pitch investors or self-fund, hire a crew, shoot on set (call time 05:00–10:00), edit, then submit to festivals. Results land at 06:00 days later; take a distribution offer or self-release. Or make music: write songs, book a studio, hire a studio crew, record, then release it and ride a 7-day release week (streams, royalties, Fans and a chart position every 06:00; promo once a day boosts tomorrow). Pitch record labels for a studio advance (they keep a cut). One project at a time.
+- **Music business** (Projects tab): play live shows once you have a record out (bigger rooms open as Fans grow), make beats at home that lease out each morning, and grow a catalogue that earns sync placements, or put one of your songs on your own film's soundtrack.
 - **Trades** tab: the satirical trade paper. Your bookings, rejections and exposures land here.
 - Bills of rent + $20 food + $10 car are charged at **06:00**. Below $0 starts a 3-day overdraft countdown, and if it runs out you've **Moved Back Home**.
 - **Pause / 1x / 4x** in the header; **Skip to done** finishes the current action instantly.
@@ -112,17 +113,39 @@ Music runs: one record next to a weekday barista job, stopping at the end of rel
 
 | Archetype | Strategy | Days to week end | Quality | Peak | Streams | Fans gained | Royalties | Music RP | Cash vs barista-only |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| The Nepo Baby | Single + promo | 7.9 | 63 | #74 | 26,220 | 331 | $104 | 81 | -$456 |
-| The Nepo Baby | Single, no promo | 7.9 | 63 | #77 | 18,520 | 234 | $73 | 72 | -$473 |
-| The Nepo Baby | EP + promo | 10.9 | 62 | #64 | 80,554 | 1,006 | $322 | 111 | -$3,874 |
-| The Midwest Transplant | Single + promo | 8.9 | 61 | #87 | 8,159 | 99 | $33 | 42 | -$375 |
-| The Midwest Transplant | Single, no promo | 8.9 | 61 | #89 | 5,791 | 70 | $23 | 36 | -$373 |
-| The Indie Hustler | Single + promo | 9.0 | 64 | #81 | 14,529 | 187 | $58 | 60 | -$486 |
-| The Indie Hustler | Single, no promo | 8.9 | 64 | #83 | 10,233 | 131 | $40 | 54 | -$368 |
-| The Bedroom Producer | Single + promo | 8.9 | 73 | #64 | 74,102 | 1,081 | $295 | 111 | -$113 |
-| The Bedroom Producer | Single, no promo | 8.9 | 73 | #66 | 51,089 | 746 | $204 | 105 | -$192 |
+| The Nepo Baby | Single + promo | 7.9 | 63 | #75 | 22,417 | 283 | $89 | 78 | -$471 |
+| The Nepo Baby | Single, no promo | 7.9 | 63 | #77 | 16,533 | 208 | $66 | 72 | -$480 |
+| The Nepo Baby | EP + promo | 10.9 | 62 | #65 | 54,981 | 685 | $220 | 108 | -$3,976 |
+| The Midwest Transplant | Single + promo | 8.9 | 61 | #88 | 7,079 | 88 | $29 | 39 | -$379 |
+| The Midwest Transplant | Single, no promo | 8.9 | 61 | #89 | 5,224 | 63 | $21 | 36 | -$375 |
+| The Midwest Transplant | EP + promo (after 3 singles) | > 60 | — | — | 29,959 | 362 | $118 | 156 | -$746 |
+| The Indie Hustler | Single + promo | 9.0 | 64 | #82 | 12,318 | 158 | $50 | 57 | -$494 |
+| The Indie Hustler | Single, no promo | 8.9 | 64 | #83 | 9,086 | 117 | $35 | 54 | -$373 |
+| The Indie Hustler | EP + promo (after 2 singles) | > 60 | — | — | 28,825 | 366 | $117 | 123 | -$743 |
+| The Bedroom Producer | Single + promo | 8.9 | 73 | #65 | 58,098 | 847 | $232 | 108 | -$176 |
+| The Bedroom Producer | Single, no promo | 8.9 | 73 | #66 | 42,851 | 625 | $172 | 105 | -$224 |
+| The Bedroom Producer | EP + promo (after 1 single) | > 60 | — | — | 58,098 | 847 | $232 | 108 | -$180 |
 
-A single takes ~8–9 days for everyone (most of it is the 7-day release week), costs $100–500 net and pays 36–111 RP; the Bedroom Producer's 1,200 starting fans make it the strongest (#64 peak, ~1,000 new fans, Clout 2 from one single). Daily promo adds ~40% streams and fans but is optional. Only the Nepo Baby can self-fund an EP in 60 days: the others reach Clout 2 (after 1–3 singles) but cannot save $4,000 on barista pay, which label advances (Sprint 8) are meant to solve. Tuned in LAG-62: single budget $600 → $400, chart RP 2 → 3 per place.
+A single takes ~8–9 days for everyone (most of it is the 7-day release week), costs $100–500 net and pays 36–108 RP; the Bedroom Producer's 1,200 starting fans make it the strongest (#65 peak, ~850 new fans, Clout 2 from one single). Daily promo adds ~35% streams and fans but is optional. Streams are based on your Fans at release; fans won during the week help your next record (LAG-69 follow-up, which also lowered these numbers by ~10–25%). Only the Nepo Baby can self-fund an EP in 60 days: the others reach Clout 2 (after 1–3 singles) but cannot save $4,000 on barista pay, which label advances (Sprint 8) are meant to solve. Tuned in LAG-62: single budget $600 → $400, chart RP 2 → 3 per place.
+
+Music business (LAG-69): 45 days next to a weekday barista job, compared with barista alone. **Signed EP** puts out singles (one label meeting each, self-funding on a no) until Clout 2, then shops the EP to labels daily until one signs and self-funds what the advance leaves. **Beat grinder** makes a beat a day at home until the store holds 8. **Gig the catalogue** releases a single, then plays the best venue it can book every night.
+
+| Archetype | Strategy | Cash vs barista-only | Advances / leases / door | Fans | Clout | EP released | Notes |
+|---|---|---:|---:|---:|---:|---|---|
+| The Nepo Baby | Signed EP | -$607 | $2,425 | 1,139 | 3 | day 11 | Garage Press, 1 meeting |
+| The Nepo Baby | Beat grinder | $919 | $933 | 500 | 3 | — | avg Q26, $21/day |
+| The Nepo Baby | Gig the catalogue | $2,160 | $2,797 | 877 | 3 | — | basement, $76/show |
+| The Midwest Transplant | Signed EP | -$928 | $3,072 | 496 | 2 | day 34 | Garage Press, 7 meetings |
+| The Midwest Transplant | Beat grinder | $882 | $892 | 0 | 1 | — | avg Q31, $20/day |
+| The Midwest Transplant | Gig the catalogue | $28 | $171 | 88 | 1 | — | open mic, $5/show |
+| The Indie Hustler | Signed EP | -$1,768 | $2,978 | 839 | 2 | day 30 | Garage Press, 3 meetings |
+| The Indie Hustler | Beat grinder | $1,076 | $1,090 | 150 | 1 | — | avg Q26, $24/day |
+| The Indie Hustler | Gig the catalogue | $948 | $1,062 | 344 | 1 | — | basement, $30/show |
+| The Bedroom Producer | Signed EP | $1,001 | $2,737 | 4,961 | 2 | day 20 | Tape Hiss, 2 meetings |
+| The Bedroom Producer | Beat grinder | $2,419 | $2,437 | 1,200 | 1 | — | avg Q48, $54/day |
+| The Bedroom Producer | Gig the catalogue | $8,894 | $8,894 | 2,245 | 2 | — | club, $287/show |
+
+With a label every archetype finishes an EP inside ~40 days (day 11–41 over 8 seeds; the Midwest Transplant is slowest at day 33–41). Beats are pocket money: $20–30/day for most, ~$55/day for the Bedroom Producer, under one $130 barista shift. Shows scale with Fans: the club pays ~$135 at 1,000 Fans and ~$400 at 3,000, but an act with a few hundred Fans earns almost nothing. Placements ($300–1,100) land in roughly half of the runs. With streams fixed to Fans at release, the Bedroom Producer's EP takes Fans from ~2,200 to ~5,000 (it was 7–14k when the week compounded). Tuned in LAG-69: show draw 3% → 2% and door split 60% → 45% (2,000 Fans at the club was ~$540 a night); beat lease cap 40% → 20%, Fans divisor 20,000 → 50,000, fee $20 + 1.5·Q → $10 + 1.2·Q; placement chance 2% → 1%; label advances 40–100% → 60–100% and marketing ×1.1–2 → ×1.1–1.5.
 
 No-income runway (days before cash first drops below $0):
 
@@ -150,7 +173,7 @@ No-income runway (days before cash first drops below $0):
 
 ## Deliberately missing (Phase 1 scope)
 
-- Label deals, tours, beat sales, TV careers, pilot season, guild membership (**Phase 2, Sprints 8–10**)
+- TV careers, pilot season, writers' rooms, guild membership (**Phase 2, Sprints 9–10**)
 - Accounts, server-side rules, shared Trades feed, leaderboards, shared clock (**Phase 3**)
 - Presence, chat, co-op productions (**Phase 4**)
 - Purchases, ads, analytics, account deletion, moderation tools: not needed until accounts and social features exist

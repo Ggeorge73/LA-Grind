@@ -114,7 +114,7 @@ export const TRADES_MAX = 60;
 export const LOG_MAX = 120;
 export const NPC_HEADLINES_PER_DAY = 3;
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 // Projects (PI-2 career engine) — film numbers; scales live in content/film.ts
 export const WRITE_SESSION_HOURS = 3;
@@ -227,3 +227,48 @@ export const CHART_SLOPE = 25;
 export const CHART_SIZE = 100;
 /** RP at the end of release week = this × (101 − peak). 2 → 3 (LAG-62): at 2 a newcomer's single (#85–90) paid less RP than one Tier-1 gig. */
 export const CHART_RP_PER_PLACE = 3;
+
+// Music business (Sprint 8) — labels and venues live in content/musicBiz.ts
+export const LABEL_PITCH_HOURS = 2;
+export const LABEL_PITCH_ENERGY = 10;
+export const LABEL_SONGS_WEIGHT = 0.5;
+export const LABEL_CLOUT_WEIGHT = 10;
+export const LABEL_FANS_PER_POINT = 100;
+export const LABEL_FANS_MAX_POINTS = 40;
+
+export const SHOW_HOURS = 3;
+export const SHOW_ENERGY = 30;
+/** A show must start in this window (hours). */
+export const SHOW_START_WINDOW = [19, 22] as const;
+/** Share of Fans who buy a ticket (× 0.8–1.2 luck). 3% → 2% (LAG-69): with the 60% split, 2,000 fans at the club paid ~$540 (4 barista shifts) a night. */
+export const SHOW_DRAW = 0.02;
+/** Share of the door you keep. 60% → 45% (LAG-69): the club now pays ~1 shift at 1,000 fans and ~3 at 3,000. */
+export const SHOW_DOOR_SPLIT = 0.45;
+export const SHOW_FAN_GAIN = 0.15;
+export const SHOW_TICKETS_PER_RP = 50;
+
+export const BEAT_HOURS = 2;
+export const BEAT_ENERGY = 10;
+export const BEAT_SPARK = 10;
+export const BEAT_MAX = 8;
+export const BEAT_QUALITY_BASE = 10;
+export const BEAT_QUALITY_MUSIC = 0.7;
+export const BEAT_QUALITY_LUCK = 20;
+export const BEAT_LEASE_QUALITY_DIVISOR = 400;
+/** 20,000 → 50,000 (LAG-69): an EP can take Fans past 10k, which pinned every beat at the 40% cap. */
+export const BEAT_LEASE_FANS_DIVISOR = 50000;
+/** 40% → 20% (LAG-69): eight good beats (Q60) now earn ~$110/day, under one barista shift. */
+export const BEAT_LEASE_CHANCE_MAX = 0.2;
+/** Each lease makes the next one less likely (the beat gets around). */
+export const BEAT_LEASE_DECAY = 0.9;
+/** Fee $20 + 1.5·Q → $10 + 1.2·Q (LAG-69): a lease is pocket money ($46–130), not a shift's pay. */
+export const BEAT_FEE_BASE = 10;
+export const BEAT_FEE_PER_QUALITY = 1.2;
+
+/** 2% → 1% (LAG-69): at 2% a 3-record catalogue was licensed every ~10 days; now about once a month. */
+export const PLACEMENT_CHANCE = 0.01;
+export const PLACEMENT_CHARTED_BONUS = 1.5;
+export const PLACEMENT_FEE_BASE = 300;
+export const PLACEMENT_RP = 10;
+export const SOUNDTRACK_BONUS_MAX = 8;
+export const SOUNDTRACK_QUALITY_DIVISOR = 10;
