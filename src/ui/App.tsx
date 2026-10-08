@@ -1,7 +1,24 @@
+import { useEffect } from 'react';
+import { startGameLoop } from '../store/loop';
+import { useGame } from '../store/game';
+import { GameScreen } from './GameScreen';
+import { ArchetypeSelect } from './screens/ArchetypeSelect';
+
 export function App() {
-  return (
-    <main className="min-h-dvh bg-[#0f0a1e] text-amber-100 grid place-items-center p-6">
-      <h1 className="text-3xl font-bold">LA Grind</h1>
-    </main>
-  );
+  const loaded = useGame((g) => g.loaded);
+  const hasGame = useGame((g) => g.state !== null);
+
+  useEffect(() => {
+    void useGame.getState().load();
+    return startGameLoop();
+  }, []);
+
+  if (!loaded) {
+    return (
+      <main className="grid h-full place-items-center">
+        <p className="font-[family-name:var(--font-display)] text-2xl font-bold text-accent">LA Grind</p>
+      </main>
+    );
+  }
+  return hasGame ? <GameScreen /> : <ArchetypeSelect />;
 }
