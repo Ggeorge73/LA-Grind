@@ -155,6 +155,9 @@ export interface ReleaseDay {
 
 export interface MusicRelease {
   releasedMinute: number;
+  /** Fans when the record came out. The whole week's streams are based on this, so fans won during
+   * the week grow your next record, not this one (no runaway snowball). Optional for older saves. */
+  fansAtRelease?: number;
   /** Day index (dayOf) of the last promo, so promo is once a day. */
   lastPromoDay: number | null;
   /** A promo since the last 06:00 boosts the next day. */

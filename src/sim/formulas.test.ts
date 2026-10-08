@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { ARCHETYPES } from './content/archetypes';
 import {
+  beatFee,
+  beatLeaseChance,
+  beatQuality,
+  labelOdds,
+  placementChance,
+  placementFee,
+  showPay,
+  showTickets,
+  soundtrackBonus,
   awardChance,
   bookingPayout,
   chartPosition,
@@ -239,5 +248,62 @@ describe('music formulas (Sprint 7 reference values)', () => {
     expect(chartRp(100)).toBe(3);
     expect(chartRp(64)).toBe(111);
     expect(chartRp(1)).toBe(300);
+  });
+});
+
+// LAG-69: Sprint 8 music business reference values (tuned numbers in docs/PI-2.md).
+describe('music business formulas', () => {
+  it('label odds = logistic((0.5·Songs + 10·Clout + min(40, Fans/100) − difficulty) / 12), clamped 5–85%', () => {
+    expect(labelOdds({ songs: 50, clout: 2, fans: 500, difficulty: 45 })).toBeCloseTo(0.6027, 4);
+    expect(labelOdds({ songs: 60, clout: 1, fans: 0, difficulty: 40 })).toBeCloseTo(0.5, 10);
+    // Fans count for at most 40 points (4,000 Fans).
+    expect(labelOdds({ songs: 40, clout: 2, fans: 4000, difficulty: 75 })).toBe(labelOdds({ songs: 40, clout: 2, fans: 1_000_000, difficulty: 75 }));
+    expect(labelOdds({ songs: 100, clout: 10, fans: 1_000_000, difficulty: 40 })).toBe(0.85);
+    expect(labelOdds({ songs: 0, clout: 1, fans: 0, difficulty: 87 })).toBe(0.05);
+  });
+
+  it('show tickets = min(capacity, round(Fans × 2% × (0.8 + 0.4·roll))); you keep 45% of the door', () => {
+    expect(showTickets(1000, 300, 0.5)).toBe(20);
+    expect(showTickets(1000, 300, 0)).toBe(16);
+    expect(showTickets(1000, 300, 1)).toBe(24);
+    expect(showTickets(100_000, 300, 0.5)).toBe(300);
+    expect(showTickets(0, 40, 1)).toBe(0);
+    expect(showPay(20, 15)).toBe(135); // the club at 1,000 Fans ≈ one barista shift
+    expect(showPay(60, 15)).toBe(405); // …and at 3,000 Fans ≈ three
+    expect(showPay(40, 5)).toBe(90);
+  });
+
+  it('beat quality = clamp(10 + 0.7·Music + 20·roll), rounded', () => {
+    expect(beatQuality(40, 0)).toBe(38);
+    expect(beatQuality(40, 1)).toBe(58);
+    expect(beatQuality(15, 0.5)).toBe(31);
+    expect(beatQuality(100, 1)).toBe(100);
+    expect(beatQuality(0, 0)).toBe(10);
+  });
+
+  it('beat leases: chance = min(20%, Q/400 + Fans/50,000) × 0.9^leases; fee = $10 + 1.2·Q', () => {
+    expect(beatLeaseChance(60, 2000, 0)).toBeCloseTo(0.19, 10);
+    expect(beatLeaseChance(60, 2000, 2)).toBeCloseTo(0.1539, 10);
+    expect(beatLeaseChance(100, 50_000, 0)).toBe(0.2);
+    expect(beatLeaseChance(0, 0, 0)).toBe(0);
+    expect(beatFee(60)).toBe(82);
+    expect(beatFee(48)).toBe(68);
+    expect(beatFee(0)).toBe(10);
+  });
+
+  it('placements: chance = 1% × Q/50 (×1.5 if it charted); fee = $300 × stream multiplier × Q/50', () => {
+    expect(placementChance(50, false)).toBeCloseTo(0.01, 10);
+    expect(placementChance(75, true)).toBeCloseTo(0.0225, 10);
+    expect(placementChance(0, true)).toBe(0);
+    expect(placementFee(50, 1)).toBe(300);
+    expect(placementFee(75, 2.5)).toBe(1125);
+    expect(placementFee(60, 6)).toBe(2160);
+  });
+
+  it('soundtrack bonus = min(8, round(Q/10))', () => {
+    expect(soundtrackBonus(73)).toBe(7);
+    expect(soundtrackBonus(45)).toBe(5);
+    expect(soundtrackBonus(100)).toBe(8);
+    expect(soundtrackBonus(0)).toBe(0);
   });
 });

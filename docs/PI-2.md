@@ -86,15 +86,18 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 
 - **Label deals** (in *Book the studio*): pitch a label at its neighbourhood, once a day (2h, −10 Energy).
   - Odds `= logistic((0.5·Songs + 10·Clout + min(40, Fans/100) − difficulty) / 12)`, clamped 5–85%. Difficulty: Single 40, EP 55, Album 75, plus the label's modifier.
-  - A yes signs the record: an advance of 40–100% of the studio budget (by label), the label keeps 30–70% of royalties, and marketing multiplies release-week streams by 1.1–2×. One label per record; self-fund the rest.
+  - A yes signs the record: an advance of 60–100% of the studio budget (by label), the label keeps 30–70% of royalties, and marketing multiplies release-week streams by 1.1–1.5×. One label per record; self-fund the rest.
 - **Live shows**: `Play a show` at a venue, 19:00–22:00 start, 3h, −30 Energy, once a night, after your first release.
   - Six venues from a 40-cap open mic (0 Fans needed, $5) to a 6,000-cap arena (20,000 Fans, $40).
-  - Tickets `= min(capacity, Fans × 3% × (0.8–1.2))`; you keep 60% of the door. Fans +15% of tickets; RP +1 per 50 tickets.
+  - Tickets `= min(capacity, Fans × 2% × (0.8–1.2))`; you keep 45% of the door. Fans +15% of tickets; RP +1 per 50 tickets; a sold-out room +1 Network.
+  - At the club that is ~$135 a night at 1,000 Fans and ~$405 at 3,000 (1–3 barista shifts).
 - **Beat store**: `Make a beat` at home, 2h, −10 Energy, −10 Spark. Quality `= clamp(10 + 0.7·Music + rand(0–20))`. Up to 8 beats.
-  - Each 06:00 each beat may lease: chance `= min(40%, Quality/400 + Fans/20,000) × 0.9^leases`, fee `= $20 + 1.5·Quality`.
+  - Each 06:00 each beat may lease: chance `= min(20%, Quality/400 + Fans/50,000) × 0.9^leases`, fee `= $10 + 1.2·Quality`.
+  - Eight good beats (Quality 60, 2,000 Fans) earn ~$125 a day expected, under one barista shift.
 - **Catalogue and placements**: every finished record joins your catalogue.
-  - Each 06:00 each record may be licensed by a parody production: chance `= 2% × Quality/50` (×1.5 if it charted), fee `= $300 × stream multiplier × Quality/50`, +10 RP.
-  - In a film's post stage you can put one of your records on the soundtrack (once per film): film quality `+ min(8, record Quality/10)`.
+  - Each 06:00 each record may be licensed by a parody production: chance `= 1% × Quality/50` (×1.5 if it charted), fee `= $300 × stream multiplier × Quality/50`, +10 RP.
+  - In a film's post stage you can put one of your records on the soundtrack (once per film): film quality `+ min(8, round(record Quality/10))`.
+- Tuned in LAG-69 (see README "Balance"): show draw 3% → 2% and door 60% → 45%; beat fee, lease cap and Fans divisor; placement chance 2% → 1%; label advances up, top marketing ×2 → ×1.5.
 
 ## Sprint plan
 

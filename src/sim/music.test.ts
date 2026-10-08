@@ -24,6 +24,11 @@ function run(s: GameState, ...cmds: Command[]): { state: GameState; events: Game
   return { state, events };
 }
 const types = (e: GameEvent[]) => e.map((x) => x.type);
+const tweak = (s: GameState, f: (t: GameState) => void): GameState => {
+  const t = structuredClone(s);
+  f(t);
+  return t;
+};
 const rested = (s: GameState) => {
   const t = structuredClone(s);
   t.player.energy = 100;
@@ -224,7 +229,7 @@ describe('RELEASE_RECORD', () => {
     expect(whyNot(s, { type: 'PROMO' })).toMatch(/Release something first/);
     const r = run(s, { type: 'RELEASE_RECORD' });
     expect(r.state.minute).toBe(s.minute);
-    expect(r.state.project!.release).toEqual({ releasedMinute: s.minute, lastPromoDay: null, promoPending: false, days: [] });
+    expect(r.state.project!.release).toEqual({ releasedMinute: s.minute, fansAtRelease: s.player.fans, lastPromoDay: null, promoPending: false, days: [] });
     expect(types(r.events)).toContain('RECORD_RELEASED');
     expect(whyNot(r.state, { type: 'RELEASE_RECORD' })).toMatch(/Already out/);
     expect(types(step(r.state, { type: 'RELEASE_RECORD' }).events)).toEqual(['ACTION_REJECTED']);
@@ -256,11 +261,13 @@ describe('release week', () => {
     const r = run(s, { type: 'ADVANCE', minutes: 7 * 1440 });
     const days = releaseDays(r.events);
     expect(days.map((d) => d.day)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    let fans = s.player.fans;
+    // Every day's streams use the Fans you had at release; the week's new fans still land on the player.
+    const fans = p.release!.fansAtRelease!;
+    expect(fans).toBe(s.player.fans);
     days.forEach((d, i) => {
       expect(d.streams).toBe(releaseStreams({ fans, quality: q, multiplier: 1, day: i, promoted: false }));
-      fans += d.fans;
     });
+    expect(r.state.player.fans).toBe(fans + days.reduce((a, d) => a + d.fans, 0));
     expect(r.state.project).toBeNull();
     const ended = r.events.find((e) => e.type === 'RELEASE_WEEK_ENDED');
     expect(ended).toMatchObject({ title: p.title, totalStreams: days.reduce((a, d) => a + d.streams, 0) });
@@ -356,8 +363,38 @@ describe('promo', () => {
     expect(next.state.project!.release!.days[1]!.promoted).toBe(false);
     const d2 = releaseDays(next.events)[0]!;
     expect(d2.streams).toBe(
-      releaseStreams({ fans: dayA.state.player.fans, quality: q, multiplier: 1, day: 1, promoted: false }),
+      releaseStreams({ fans: s.project!.release!.fansAtRelease!, quality: q, multiplier: 1, day: 1, promoted: false }),
     );
+  });
+});
+
+describe('release week: Fans at release', () => {
+  it('fans gained mid-week do not change later days of the same week (A/B: bump Fans mid-week)', () => {
+    const s = toNextSix(released()).state; // day 1 has landed
+    const bumped = tweak(s, (t) => (t.player.fans += 50_000));
+    const a = releaseDays(run(s, { type: 'ADVANCE', minutes: 6 * 1440 }).events);
+    const b = releaseDays(run(bumped, { type: 'ADVANCE', minutes: 6 * 1440 }).events);
+    expect(a).toHaveLength(6);
+    expect(b.map((d) => d.streams)).toEqual(a.map((d) => d.streams));
+  });
+
+  it('a v4 save mid release week (no fansAtRelease) still resolves, using current Fans', () => {
+    const s = toNextSix(released()).state;
+    const { fansAtRelease: _f, ...release } = s.project!.release!;
+    const { label: _l, soundtrack: _st, ...project } = s.project!;
+    const { lastShowDay: _d, ...player } = s.player;
+    const { beats: _b, catalog: _c, ...rest } = s;
+    const v4 = JSON.stringify({ version: 4, savedAt: 0, state: { ...rest, version: 4, player, project: { ...project, release } } });
+    const m = deserialize(v4)!;
+    expect(m.version).toBe(C.SAVE_VERSION);
+    expect(m.project!.release!.fansAtRelease).toBeUndefined();
+    const q = projectQuality(m.project!);
+    const r = toNextSix(m);
+    const [d] = releaseDays(r.events);
+    expect(d!.streams).toBe(releaseStreams({ fans: m.player.fans, quality: q, multiplier: 1, day: 1, promoted: false }));
+    const end = run(r.state, { type: 'ADVANCE', minutes: 6 * 1440 }).state;
+    expect(end.project).toBeNull();
+    expect(end.catalog).toHaveLength(1);
   });
 });
 
@@ -445,13 +482,12 @@ describe('music saves and determinism', () => {
     expect(days).toHaveLength(C.RELEASE_DAYS);
     const q = state.credits[0]!.quality;
     expect(state.credits[0]!.medium).toBe('music');
-    let fans = ARCHETYPES.producer.fans;
+    const fans = ARCHETYPES.producer.fans;
     days.forEach((d, i) => {
       const plain = releaseStreams({ fans, quality: q, multiplier: 1, day: i, promoted: false });
       expect(d.streams / plain).toBeGreaterThan(1.45);
-      fans += d.fans;
     });
-    expect(state.player.fans).toBe(fans);
+    expect(state.player.fans).toBe(fans + days.reduce((a, d) => a + d.fans, 0));
   });
 
   it('daily bills are the only other cash movement during the week', () => {

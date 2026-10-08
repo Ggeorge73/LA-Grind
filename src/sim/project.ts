@@ -440,7 +440,7 @@ export const promotedToday = (s: GameState, p: Project): boolean => p.release?.l
 
 export function releaseRecord(s: GameState, rng: Rng, events: GameEvent[]): void {
   const p = s.project!;
-  p.release = { releasedMinute: s.minute, lastPromoDay: null, promoPending: false, days: [] };
+  p.release = { releasedMinute: s.minute, fansAtRelease: s.player.fans, lastPromoDay: null, promoPending: false, days: [] };
   events.push({ type: 'RECORD_RELEASED', title: p.title, quality: Math.round(projectQuality(p)) });
   musicHeadline(s, rng, events, 'released');
 }
@@ -454,7 +454,7 @@ export function resolveRelease(s: GameState, rng: Rng, events: GameEvent[]): voi
   const day = r.days.length;
   const promoted = r.promoPending;
   const marketing = 1 + (p.label?.marketing ?? 0);
-  const streams = releaseStreams({ fans: s.player.fans, quality, multiplier: musicScaleOf(p).streamMultiplier * marketing, day, promoted });
+  const streams = releaseStreams({ fans: r.fansAtRelease ?? s.player.fans, quality, multiplier: musicScaleOf(p).streamMultiplier * marketing, day, promoted });
   const fans = fansGained(streams, quality);
   // The label keeps its cut of the royalties.
   const pay = Math.round(royalties(streams) * (1 - (p.label?.royaltyCut ?? 0)));

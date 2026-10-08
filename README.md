@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173 — open at a phone size in devtool
 | `npm run dev` | Start the web game with hot reload |
 | `npm test` | Run the Vitest suite (reference odds, payouts, commute, tiers, bills, invariants, determinism, saves) |
 | `npm run typecheck` | TypeScript strict check |
-| `npm run balance` | Headless balance run: 4 archetypes × 4 strategies × 30 days, plus no-income runway |
+| `npm run balance` | Headless balance run: 4 archetypes × 6 strategies × 30 days, film, music and music-business tables, plus no-income runway |
 | `node tools/acceptance-playtest.cjs shots` | With `npm run dev` running: plays every "Done means" item for all 4 archetypes through the UI (needs Playwright + Chromium) |
 | `node tools/film-playtest.cjs shots` | With `npm run dev` running: takes a short film from script to release for all 4 archetypes through the Projects tab |
 | `node tools/music-playtest.cjs shots` | With `npm run dev` running: takes a single from songwriting to the end of release week for all 4 archetypes |
@@ -123,6 +123,25 @@ Music runs: one record next to a weekday barista job, stopping at the end of rel
 | The Bedroom Producer | Single, no promo | 8.9 | 73 | #66 | 51,089 | 746 | $204 | 105 | -$192 |
 
 A single takes ~8–9 days for everyone (most of it is the 7-day release week), costs $100–500 net and pays 36–111 RP; the Bedroom Producer's 1,200 starting fans make it the strongest (#64 peak, ~1,000 new fans, Clout 2 from one single). Daily promo adds ~40% streams and fans but is optional. Only the Nepo Baby can self-fund an EP in 60 days: the others reach Clout 2 (after 1–3 singles) but cannot save $4,000 on barista pay, which label advances (Sprint 8) are meant to solve. Tuned in LAG-62: single budget $600 → $400, chart RP 2 → 3 per place.
+
+Music business (LAG-69): 45 days next to a weekday barista job, compared with barista alone. **Signed EP** puts out singles (one label meeting each, self-funding on a no) until Clout 2, then shops the EP to labels daily until one signs and self-funds what the advance leaves. **Beat grinder** makes a beat a day at home until the store holds 8. **Gig the catalogue** releases a single, then plays the best venue it can book every night.
+
+| Archetype | Strategy | Cash vs barista-only | Advances / leases / door | Fans | Clout | EP released | Notes |
+|---|---|---:|---:|---:|---:|---|---|
+| The Nepo Baby | Signed EP | -$539 | $2,425 | 1,412 | 3 | day 11 | Garage Press, 1 meeting |
+| The Nepo Baby | Beat grinder | $919 | $933 | 500 | 3 | — | avg Q26, $21/day |
+| The Nepo Baby | Gig the catalogue | $2,363 | $2,985 | 933 | 3 | — | basement, $81/show |
+| The Midwest Transplant | Signed EP | -$883 | $3,072 | 656 | 2 | day 34 | Garage Press, 7 meetings in all |
+| The Midwest Transplant | Beat grinder | $882 | $892 | 0 | 1 | — | avg Q31, $20/day |
+| The Midwest Transplant | Gig the catalogue | $41 | $180 | 99 | 1 | — | open mic, $5/show |
+| The Indie Hustler | Signed EP | -$1,718 | $2,978 | 1,023 | 2 | day 30 | Garage Press, 3 meetings |
+| The Indie Hustler | Beat grinder | $1,076 | $1,090 | 150 | 1 | — | avg Q26, $24/day |
+| The Indie Hustler | Gig the catalogue | $1,070 | $1,176 | 373 | 1 | — | basement, $33/show |
+| The Bedroom Producer | Signed EP | $1,553 | $2,737 | 7,638 | 2 | day 20 | Tape Hiss, 2 meetings |
+| The Bedroom Producer | Beat grinder | $2,419 | $2,437 | 1,200 | 1 | — | avg Q48, $54/day |
+| The Bedroom Producer | Gig the catalogue | $9,969 | $9,906 | 2,505 | 2 | — | club, $320/show |
+
+With a label every archetype finishes an EP inside ~40 days (day 11–41 over 8 seeds; the Midwest Transplant is slowest at day 33–41). Beats are pocket money: $20–30/day for most, ~$55/day for the Bedroom Producer, under one $130 barista shift. Shows scale with Fans: the club pays ~$135 at 1,000 Fans and ~$400 at 3,000, but an act with a few hundred Fans earns almost nothing. Placements ($300–1,100) land in roughly half of the runs. Tuned in LAG-69: show draw 3% → 2% and door split 60% → 45% (2,000 Fans at the club was ~$540 a night); beat lease cap 40% → 20%, Fans divisor 20,000 → 50,000, fee $20 + 1.5·Q → $10 + 1.2·Q; placement chance 2% → 1%; label advances 40–100% → 60–100% and marketing ×1.1–2 → ×1.1–1.5.
 
 No-income runway (days before cash first drops below $0):
 
