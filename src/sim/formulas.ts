@@ -259,3 +259,16 @@ export const placementFee = (quality: number, streamMultiplier: number): number 
 
 export const soundtrackBonus = (recordQuality: number): number =>
   Math.min(C.SOUNDTRACK_BONUS_MAX, Math.round(recordQuality / C.SOUNDTRACK_QUALITY_DIVISOR));
+
+/** 1-based day within the pilot-season cycle. */
+export const cycleDay = (day: number): number => ((day - 1) % C.PILOT_SEASON_CYCLE_DAYS) + 1;
+export const isPilotSeason = (day: number): boolean => cycleDay(day) >= C.PILOT_SEASON_FIRST && cycleDay(day) <= C.PILOT_SEASON_LAST;
+
+export const callbackSenseChance = (acting: number): number => clamp(acting / 100, C.CALLBACK_SENSE_MIN, C.CALLBACK_SENSE_MAX);
+
+/** Booking odds after a callback: base ± per read, clamped like normal odds. */
+export const callbackOdds = (base: number, right: number, beats = C.CALLBACK_BEATS): number =>
+  clamp(base + C.CALLBACK_RIGHT_BONUS * right - C.CALLBACK_WRONG_PENALTY * (beats - right), C.ODDS_FLOOR, C.ODDS_CEILING);
+
+export const pickupOdds = (right: number, clout: number, tier: number): number =>
+  clamp(C.PICKUP_BASE + C.PICKUP_PER_RIGHT * right + C.PICKUP_PER_CLOUT * clout - C.PICKUP_PER_TIER * (tier - 1), C.PICKUP_MIN, C.PICKUP_MAX);

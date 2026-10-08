@@ -23,6 +23,7 @@ import type { Activity, GameEvent, GameState } from './types';
 import { addHeadline, changeNetwork, changeRp, earn, ownHeadline } from './world';
 import { completeProjectAction, resolveFestivals, resolveRelease } from './project';
 import { completeBeat, completeShow, resolveBeatLeases, resolvePlacements } from './musicBiz';
+import { announcePilotSeason, completeEpisode, resolveCallback, resolveContractWeek, resolvePilots, startCallback } from './tv';
 
 /** Advance `minutes` game minutes (stops early if the run ends). */
 export function advance(s: GameState, minutes: number, rng: Rng, events: GameEvent[]): void {
@@ -88,6 +89,12 @@ function newDay(s: GameState, rng: Rng, events: GameEvent[]): void {
   resolveRelease(s, rng, events);
   resolveBeatLeases(s, rng, events);
   resolvePlacements(s, rng, events);
+
+  // TV: an unfinished callback resolves with the reads you made; networks decide; series weeks pay.
+  if (s.callback) resolveCallback(s, rng, events);
+  resolvePilots(s, rng, events);
+  resolveContractWeek(s, rng, events);
+  announcePilotSeason(s, rng, events, dayOf(s.minute));
 }
 
 /** Instant commands that pay out (e.g. accepting a distribution offer) settle an overdraft right away. */
@@ -169,6 +176,9 @@ function complete(s: GameState, a: Activity, rng: Rng, events: GameEvent[]): voi
     case 'beat':
       completeBeat(s, a, rng, events);
       return;
+    case 'episode':
+      completeEpisode(s, rng, events);
+      return;
   }
 }
 
@@ -176,6 +186,10 @@ function resolveSubmission(s: GameState, a: Activity, rng: Rng, events: GameEven
   const p = s.player;
   const opp = s.board.find((o) => o.id === a.opportunityId);
   if (!opp) return;
+  if (opp.pilot) {
+    startCallback(s, a, opp, rng, events);
+    return;
+  }
   const odds = a.odds ?? 0;
 
   if (rng.chance(odds)) {

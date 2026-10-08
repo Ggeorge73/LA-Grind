@@ -13,6 +13,8 @@ import { addHeadline, addLog, formatMoney } from './world';
 import { describeEvent } from './describe';
 import { PROJECT_SCALES } from './content/projects';
 import { labelById, labelName, playedShowToday, venueById, venueName } from './musicBiz';
+import { pickRead } from './tv';
+import { STUDIO_LOT } from './content/tv';
 import {
   abandonProject,
   acceptOffer,
@@ -87,6 +89,9 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
     credits: [],
     beats: [],
     catalog: [],
+    callback: null,
+    pilots: [],
+    contract: null,
   };
   const rng = new Rng(s.rngState);
   s.board = generateBoard(s, rng);
@@ -105,6 +110,11 @@ export function whyNot(s: GameState, cmd: Command): string | null {
   if (cmd.type === 'ADVANCE') return null;
   if (cmd.type === 'SKIP_TO_DONE') return s.activity ? null : 'Nothing to skip.';
   if (s.activity) return `Busy: ${s.activity.label}.`;
+  if (cmd.type === 'CALLBACK_PICK') {
+    if (!s.callback) return 'No callback right now.';
+    return Number.isInteger(cmd.read) && cmd.read >= 0 && cmd.read <= 2 ? null : 'Pick one of the three reads.';
+  }
+  if (s.callback) return 'Finish your callback first. The casting director is waiting.';
 
   const hour = hourOf(s.minute);
   const tired = p.energy < C.MIN_ENERGY_TO_START ? 'Too exhausted. Sleep first.' : null;
@@ -281,6 +291,13 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       if (s.beats.length >= C.BEAT_MAX) return `Your beat store is full (${C.BEAT_MAX}).`;
       if (p.spark < C.BEAT_SPARK) return 'Not enough Creative Spark. Go recharge.';
       return tired;
+    case 'SHOOT_EPISODE': {
+      const c = s.contract;
+      if (!c) return "You're not on a show. Yet.";
+      if (c.shotThisWeek) return "This week's episode is in the can.";
+      if (p.location !== STUDIO_LOT) return `Report to set in ${LOCATIONS[STUDIO_LOT].name}.`;
+      return tired;
+    }
     case 'PLACE_SONG': {
       const pr = s.project;
       if (!pr || pr.medium !== 'film' || pr.stage !== 'post') return 'Soundtracks get picked in post-production.';
@@ -347,6 +364,9 @@ export function step(state: GameState, cmd: Command): StepResult {
     case 'PLACE_SONG':
       placeSong(s, rng, cmd.recordId, events);
       break;
+    case 'CALLBACK_PICK':
+      pickRead(s, rng, cmd.read, events);
+      break;
     default: {
       const activity = begin(s, cmd);
       s.activity = activity;
@@ -367,7 +387,7 @@ function begin(
   s: GameState,
   cmd: Exclude<
     Command,
-    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' | 'PLACE_SONG' }
+    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' | 'PLACE_SONG' | 'CALLBACK_PICK' }
   >,
 ): Activity {
   const p = s.player;
@@ -494,6 +514,10 @@ function begin(
         energyPerMinute: C.SHOW_ENERGY / (C.SHOW_HOURS * H),
       });
     }
+    case 'SHOOT_EPISODE':
+      return make('episode', `On set: ${s.contract!.showTitle}`, C.EPISODE_HOURS * H, {
+        energyPerMinute: C.EPISODE_ENERGY / (C.EPISODE_HOURS * H),
+      });
     case 'MAKE_BEAT':
       return make('beat', 'Making a beat', C.BEAT_HOURS * H, {
         energyPerMinute: C.BEAT_ENERGY / (C.BEAT_HOURS * H),

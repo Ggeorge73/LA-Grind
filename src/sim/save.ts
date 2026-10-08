@@ -50,6 +50,8 @@ const MIGRATIONS: Record<number, Migration> = {
       state: { ...file.state, version: 5, player: { ...file.state.player, lastShowDay: null }, project, beats: [], catalog: [] },
     };
   },
+  // v5 → v6 (Sprint 9): pilot season. No open callback, no pending pilots, no show yet.
+  5: (file) => ({ ...file, version: 6, state: { ...file.state, version: 6, callback: null, pilots: [], contract: null } }),
 };
 
 export function migrate(file: SaveFile): SaveFile | null {

@@ -303,6 +303,8 @@ describe('release week', () => {
           fans += e.fans;
         }
         if (e.type === 'BILLS_CHARGED') cash -= e.amount;
+        // The finished record joins the catalogue at the same 06:00 and may land a sync placement.
+        if (e.type === 'PLACEMENT') cash += e.fee;
         expect(['JOB_PAID', 'BOOKED', 'SELF_FUNDED']).not.toContain(e.type);
       }
       expect(r.state.player.cash).toBe(cash);
@@ -312,8 +314,11 @@ describe('release week', () => {
       const peak = Math.min(...releaseDays(r.events).flatMap((d) => (d.position === null ? [] : [d.position])));
       expect(ended.peak).toBe(Number.isFinite(peak) ? peak : null);
       expect(ended.rp).toBe(chartRp(ended.peak));
-      expect(r.state.player.rp - s.player.rp).toBe(ended.rp);
-      expect(r.state.stats.totalEarned - s.stats.totalEarned).toBe(releaseDays(r.events).reduce((a, d) => a + d.royalties, 0));
+      const placements = r.events.flatMap((e) => (e.type === 'PLACEMENT' ? [e] : []));
+      expect(r.state.player.rp - s.player.rp).toBe(ended.rp + placements.reduce((a, e) => a + e.rp, 0));
+      expect(r.state.stats.totalEarned - s.stats.totalEarned).toBe(
+        releaseDays(r.events).reduce((a, d) => a + d.royalties, 0) + placements.reduce((a, e) => a + e.fee, 0),
+      );
     }
   });
 
