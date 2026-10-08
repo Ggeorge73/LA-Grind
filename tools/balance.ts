@@ -1,6 +1,7 @@
 // Headless balance run: every archetype × scripted strategies × 30 in-game days,
 // plus a film table (one short film end-to-end next to a survival job), a music table (a single / an EP)
 // and a music-business table (signed EP, beat store, nightly shows; LAG-69).
+// and a pilot-season table (chase every pilot season next to the barista job; LAG-76).
 // Usage: npm run balance
 import * as C from '../src/sim/constants';
 import { ARCHETYPES, ARCHETYPE_IDS } from '../src/sim/content/archetypes';
@@ -10,8 +11,9 @@ import { MUSIC_SCALES, type MusicScaleId } from '../src/sim/content/music';
 import { HEADSHOTS_LOCATION } from '../src/sim/content/locations';
 import { LABELS, VENUES, type LabelDeal, type Venue } from '../src/sim/content/musicBiz';
 import { playedShowToday } from '../src/sim/musicBiz';
-import { oddsFor } from '../src/sim/board';
-import { bookingPayout, cloutTier, dailyBills, dayOf, hourOf, isExposure, showPay } from '../src/sim/formulas';
+import { STUDIO_LOT } from '../src/sim/content/tv';
+import { oddsFor, submissionFee, visibleTier } from '../src/sim/board';
+import { bookingPayout, cloutTier, dailyBills, dayOf, hourOf, isExposure, isPilotSeason, showPay } from '../src/sim/formulas';
 import {
   eligibleFestivals,
   festivalOddsFor,
@@ -310,8 +312,8 @@ interface Result {
   state: GameState;
 }
 
-function simulate(archetype: ArchetypeId, makePolicy: () => Policy, days: number, stopWhen?: (s: GameState) => boolean): Result {
-  let s = newGame(archetype, SEED);
+function simulate(archetype: ArchetypeId, makePolicy: () => Policy, days: number, stopWhen?: (s: GameState) => boolean, seed = SEED): Result {
+  let s = newGame(archetype, seed);
   const policy = makePolicy();
   const endMinute = s.minute + days * 1440;
   let lowest = s.player.cash;
@@ -607,6 +609,153 @@ function leasesLastDays(events: GameEvent[], days: number): number {
   const bills = events.map((e, i) => (e.type === 'BILLS_CHARGED' ? i : -1)).filter((i) => i >= 0);
   const from = bills[Math.max(0, bills.length - days)] ?? 0;
   return events.slice(from).reduce((a, e) => a + (e.type === 'BEAT_LEASED' ? e.fee : 0), 0) / days;
+}
+
+// ---------- Pilot season table (LAG-76) ----------
+// Weekday barista as "normal life", plus: every pilot-season day, prep 2h and submit to the best pilot you can
+// afford (expected value = odds × 2× TV fee); buy headshots once Tier 2 pilots are visible and affordable;
+// at a callback pick the read your instinct senses, else read 0 ("perfect" models a player who reads the
+// director's note right every time); on a show, shoot every week's episode first thing.
+
+/** Best open pilot on today's board: tier you can submit to, fee affordable, by odds × pilot fee. */
+function bestPilot(s: GameState): Opportunity | null {
+  const pl = s.player;
+  const options = s.board.filter(
+    (o) => o.pilot && o.status === 'open' && (o.tier < 2 || pl.hasHeadshots) && pl.cash >= submissionFee(pl, o),
+  );
+  let best: Opportunity | null = null;
+  let bestValue = -1;
+  for (const o of options) {
+    const value = oddsFor(pl, o, 2) * bookingPayout('tv', o.tier).pay;
+    if (value > bestValue) [best, bestValue] = [o, value];
+  }
+  return best;
+}
+
+function chasePilots(perfect = false): () => Policy {
+  return () => chasePilotsPolicy(perfect);
+}
+
+function chasePilotsPolicy(perfect: boolean): Policy {
+  const job = baristaWeekdays();
+  let pilotDay = -1;
+  return (s) => {
+    const pl = s.player;
+    const h = hour(s);
+    const d = day(s);
+    if (s.callback) {
+      const beat = s.callback.beats[s.callback.picks.length]!;
+      return { type: 'CALLBACK_PICK', read: perfect ? beat.best : (beat.sensed ?? 0) };
+    }
+    if (h >= 22 || h < 5) return sleepUntil(s, 5);
+    // On a show: this week's episode comes first (05:00 call, before the barista shift would start).
+    const c = s.contract;
+    if (c && !c.shotThisWeek && h >= 5 && h <= 14) {
+      if (pl.energy < 45) return go(s, pl.home) ?? sleepUntil(s, h + 2);
+      return go(s, STUDIO_LOT) ?? { type: 'SHOOT_EPISODE' };
+    }
+    const reserve = 10 * dailyBills(ARCHETYPES[pl.archetype].rentPerDay);
+    const pilotsVisible = visibleTier(pl) >= 2;
+    if (!pl.hasHeadshots && pilotsVisible && pl.cash >= C.HEADSHOTS_COST + reserve && h >= 9 && h < 15 && pl.energy > 20)
+      return go(s, HEADSHOTS_LOCATION) ?? { type: 'BUY_HEADSHOTS' };
+    if (isPilotSeason(d) && pilotDay !== d && h >= 5 && h < 16) {
+      const opp = bestPilot(s);
+      if (!opp) pilotDay = d;
+      else {
+        const cmd = chaseOpp(s, opp, 8);
+        if (cmd?.type === 'SUBMIT') pilotDay = d;
+        if (cmd) return cmd;
+        if (h >= opp.windowEnd - 1) pilotDay = d;
+        return null;
+      }
+    }
+    return job(s);
+  };
+}
+
+const PILOT_DAYS = 60;
+const PILOT_SEEDS = Number(process.env.PILOT_SEEDS ?? 6);
+
+interface PilotStats {
+  submitted: number;
+  booked: number;
+  decided: number;
+  pickups: number;
+  pickupOdds: number[];
+  callbackRight: number[];
+  shot: number;
+  weeks: number;
+  missed: number;
+  pilotPay: number;
+  seriesPay: number;
+  firstSeasonBooked: boolean;
+}
+
+function pilotStats(r: Result): PilotStats {
+  const ev = <T extends GameEvent['type']>(t: T) => r.events.filter((e): e is Extract<GameEvent, { type: T }> => e.type === t);
+  const done = ev('CALLBACK_DONE');
+  const decided = ev('PILOT_DECIDED');
+  const weeks = ev('EPISODE_WEEK');
+  // First season = days 8–17 (a callback left open on day 17 resolves at 06:00 on day 18).
+  // Runs start on day 1 and the bills land at 06:00 each morning, so the day is 1 + bills charged so far.
+  let gameDay = 1;
+  let firstSeasonBooked = false;
+  for (const e of r.events) {
+    if (e.type === 'BILLS_CHARGED') gameDay += 1;
+    if (e.type === 'CALLBACK_DONE' && e.booked && gameDay <= C.PILOT_SEASON_LAST + 1) firstSeasonBooked = true;
+  }
+  return {
+    submitted: ev('CALLBACK_STARTED').length,
+    booked: done.filter((e) => e.booked).length,
+    decided: decided.length,
+    pickups: decided.filter((e) => e.pickedUp).length,
+    pickupOdds: decided.map((e) => e.odds),
+    callbackRight: done.map((e) => e.right),
+    shot: ev('EPISODE_SHOT').length,
+    weeks: weeks.length,
+    missed: weeks.filter((e) => e.missed).length,
+    pilotPay: done.reduce((a, e) => a + e.pay, 0),
+    seriesPay: weeks.reduce((a, e) => a + e.pay, 0),
+    firstSeasonBooked,
+  };
+}
+
+const pct = (x: number) => `${Math.round(100 * x)}%`;
+const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+
+console.log(`\nPilot season: chase pilots next to a weekday barista job for ${PILOT_DAYS} days (two seasons, days 8–17 and 38–47), vs barista alone\n`);
+console.log('| Archetype | Pilots sent / booked | Pickups | Episodes shot / weeks | Pilot fees | Series pay | Cash vs barista-only | RP | Clout | Credit |');
+console.log('|---|---:|---:|---:|---:|---:|---:|---:|---:|---|');
+for (const id of ARCHETYPE_IDS) {
+  const base = simulate(id, baristaWeekdays, PILOT_DAYS);
+  const r = simulate(id, chasePilots(), PILOT_DAYS);
+  const st = pilotStats(r);
+  const credit = r.state.credits.find((c) => c.medium === 'tv');
+  const onShow = r.state.contract ? `on ${r.state.contract.showTitle} (${r.state.contract.episodesDone}/${r.state.contract.episodesTotal})` : '—';
+  console.log(
+    `| ${ARCHETYPES[id].name} | ${st.submitted} / ${st.booked} | ${st.pickups}/${st.decided} | ${st.shot} / ${st.weeks} | ${money(st.pilotPay)} | ${money(st.seriesPay)} | ${money(r.endCash - base.endCash)} | ${r.rp} | ${r.tier} | ${credit ? `${credit.scale}, Q${credit.quality}` : onShow} |`,
+  );
+}
+
+console.log(`\nPilot season over ${PILOT_SEEDS} seeds (${PILOT_DAYS} days each, seeds ${SEED}…${SEED + PILOT_SEEDS - 1}): sensed-or-0 reads vs perfect reads\n`);
+console.log('| Archetype | Reads | Booked a pilot in season 1 | Right reads | Pickup odds (avg) | Pickup rate | Runs with a series | Episodes shot / weeks | Cash vs barista-only (avg / min / max) | RP (avg) |');
+console.log('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|');
+for (const id of ARCHETYPE_IDS) {
+  const bases = Array.from({ length: PILOT_SEEDS }, (_, k) => simulate(id, baristaWeekdays, PILOT_DAYS, undefined, SEED + k).endCash);
+  for (const perfect of [false, true]) {
+    const rows = bases.map((baseCash, k) => {
+      const r = simulate(id, chasePilots(perfect), PILOT_DAYS, undefined, SEED + k);
+      const st = pilotStats(r);
+      return { st, diff: r.endCash - baseCash, rp: r.rp, series: st.weeks > 0 || r.state.contract !== null };
+    });
+    const odds = rows.flatMap((x) => x.st.pickupOdds);
+    const decided = rows.reduce((a, x) => a + x.st.decided, 0);
+    const picks = rows.reduce((a, x) => a + x.st.pickups, 0);
+    const diffs = rows.map((x) => x.diff);
+    console.log(
+      `| ${ARCHETYPES[id].name} | ${perfect ? 'perfect' : 'sensed or 0'} | ${pct(rows.filter((x) => x.st.firstSeasonBooked).length / rows.length)} | ${avg(rows.flatMap((x) => x.st.callbackRight)).toFixed(1)} / 3 | ${pct(avg(odds))} | ${decided ? `${picks}/${decided} (${pct(picks / decided)})` : '—'} | ${rows.filter((x) => x.series).length}/${rows.length} | ${rows.reduce((a, x) => a + x.st.shot, 0)} / ${rows.reduce((a, x) => a + x.st.weeks, 0)} | ${money(Math.round(avg(diffs)))} / ${money(Math.min(...diffs))} / ${money(Math.max(...diffs))} | ${Math.round(avg(rows.map((x) => x.rp)))} |`,
+    );
+  }
 }
 
 console.log('\nNo-income runway (days before cash first drops below $0):\n');

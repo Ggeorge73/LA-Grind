@@ -83,7 +83,8 @@ export function resolveCallback(s: GameState, rng: Rng, events: GameEvent[]): vo
   const booked = rng.chance(odds);
   let pay = 0;
   if (booked) {
-    const base = bookingPayout('tv', cb.tier);
+    // Same union rate as any other booking (and as the board's pilot fee shows).
+    const base = bookingPayout('tv', cb.tier, s.player.guildVouchers >= C.GUILD_VOUCHERS_NEEDED);
     pay = base.pay * C.PILOT_FEE_MULTIPLIER;
     earn(s, pay);
     s.stats.bookings += 1;
@@ -161,7 +162,8 @@ export function resolveContractWeek(s: GameState, rng: Rng, events: GameEvent[])
   if (!c || s.minute < c.weekEndMinute) return;
   const missed = !c.shotThisWeek;
   const pay = Math.round(c.weeklyPay * (missed ? C.MISSED_EPISODE_PAY : 1));
-  const rpLost = missed ? C.EPISODE_RP_PER_TIER * c.tier : 0;
+  // Report what is actually lost: RP never goes below 0.
+  const rpLost = missed ? Math.min(s.player.rp, C.EPISODE_RP_PER_TIER * c.tier) : 0;
   c.episodesDone += 1;
   if (missed) c.episodesMissed += 1;
   earn(s, pay);

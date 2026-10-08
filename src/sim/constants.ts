@@ -281,15 +281,15 @@ export const PILOT_SEASON_LAST = 17;
 export const PILOTS_PER_DAY = 2;
 export const PILOT_MAX_TIER = 4;
 export const CALLBACK_BEATS = 3;
-export const CALLBACK_RIGHT_BONUS = 0.12;
-export const CALLBACK_WRONG_PENALTY = 0.06;
+export const CALLBACK_RIGHT_BONUS = 0.06;
+export const CALLBACK_WRONG_PENALTY = 0.08;
 export const CALLBACK_SENSE_MIN = 0.15;
 export const CALLBACK_SENSE_MAX = 0.7;
 /** A booked pilot pays this × the normal TV fee for its tier. */
-export const PILOT_FEE_MULTIPLIER = 2;
+export const PILOT_FEE_MULTIPLIER = 1.5;
 export const PILOT_DECISION_DAYS = 7;
-export const PICKUP_BASE = 0.2;
-export const PICKUP_PER_RIGHT = 0.1;
+export const PICKUP_BASE = 0.15;
+export const PICKUP_PER_RIGHT = 0.08;
 export const PICKUP_PER_CLOUT = 0.03;
 export const PICKUP_PER_TIER = 0.04;
 export const PICKUP_MIN = 0.05;
@@ -298,4 +298,4 @@ export const EPISODE_HOURS = 8;
 export const EPISODE_ENERGY = 35;
 export const EPISODE_RP_PER_TIER = 10;
 /** Share of the week's pay you get if you missed the episode. */
-export const MISSED_EPISODE_PAY = 0.5;
+export const MISSED_EPISODE_PAY = 0.25;
