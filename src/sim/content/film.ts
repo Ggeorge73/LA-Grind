@@ -66,10 +66,12 @@ export interface Festival {
   rp: number;
 }
 
+// RP ×1.5 in the Sprint 6 balance pass: a short film (~8–15 days, ~$1.5k net cost) was earning less RP per day than
+// chasing Tier-1 gigs, which also pay. Kept proportional so micro and indie stay the same step-up over a short.
 export const FESTIVALS: readonly Festival[] = [
-  { id: 'noho-shorts', name: 'NoHo Shorts Night', tier: 1, fee: 25, waitDays: 3, offerMultiplier: 0.2, rp: 40 },
-  { id: 'silverlake-underground', name: 'Silver Lake Underground', tier: 2, fee: 50, waitDays: 5, offerMultiplier: 0.4, rp: 80 },
-  { id: 'slamdunce', name: 'SlamDunce', tier: 3, fee: 100, waitDays: 7, offerMultiplier: 0.8, rp: 150 },
-  { id: 'sunburnt', name: 'Sunburnt', tier: 4, fee: 150, waitDays: 10, offerMultiplier: 1.2, rp: 250 },
-  { id: 'canned', name: 'Canned', tier: 5, fee: 200, waitDays: 14, offerMultiplier: 1.8, rp: 400 },
+  { id: 'noho-shorts', name: 'NoHo Shorts Night', tier: 1, fee: 25, waitDays: 3, offerMultiplier: 0.2, rp: 60 },
+  { id: 'silverlake-underground', name: 'Silver Lake Underground', tier: 2, fee: 50, waitDays: 5, offerMultiplier: 0.4, rp: 120 },
+  { id: 'slamdunce', name: 'SlamDunce', tier: 3, fee: 100, waitDays: 7, offerMultiplier: 0.8, rp: 225 },
+  { id: 'sunburnt', name: 'Sunburnt', tier: 4, fee: 150, waitDays: 10, offerMultiplier: 1.2, rp: 375 },
+  { id: 'canned', name: 'Canned', tier: 5, fee: 200, waitDays: 14, offerMultiplier: 1.8, rp: 600 },
 ];
