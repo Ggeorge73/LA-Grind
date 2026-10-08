@@ -53,6 +53,8 @@ export interface Activity {
   skill?: Skill;
   leisureId?: LeisureId;
   opportunityId?: string;
+  /** Booking chance locked in when a submission starts (what the player was shown). */
+  odds?: number;
 }
 
 export interface Opportunity {
@@ -86,9 +88,13 @@ export interface LogEntry {
 }
 
 export interface RunStats {
+  startMinute: number;
   bestBooking: { title: string; pay: number } | null;
   peakTier: number;
   totalEarned: number;
+  bookings: number;
+  brokeMinute: number | null;
+  endHeadline: string | null;
 }
 
 export interface Overdraft {
