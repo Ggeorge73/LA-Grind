@@ -67,13 +67,13 @@ function ActionCard({
       <p className="mt-0.5 text-xs text-muted">{option.detail}</p>
       {(option.costs.length > 0 || option.rewards.length > 0) && (
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-          {option.costs.length > 0 && <span className="sr-only">Costs:</span>}
+          {option.costs.length > 0 && <span className="text-xs text-muted">Costs:</span>}
           {option.costs.map((c) => (
             <Chip key={c} tone="bad">
               {c}
             </Chip>
           ))}
-          {option.rewards.length > 0 && <span className="sr-only">Rewards:</span>}
+          {option.rewards.length > 0 && <span className="text-xs text-muted">Rewards:</span>}
           {option.rewards.map((r) => (
             <Chip key={r} tone="good">
               {r}

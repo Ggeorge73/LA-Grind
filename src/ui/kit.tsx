@@ -1,5 +1,5 @@
 // Shared UI building blocks. Every tappable thing is at least 44px tall.
-import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { Medium } from '../sim/types';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -83,17 +83,50 @@ export function Chip({ children, tone = 'muted' }: { children: ReactNode; tone?:
 
 /** Bottom sheet for confirmations. Rendered above the bottom nav, inside thumb reach. */
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Captured on first render, before a child's autoFocus moves focus into the sheet.
+  const [opener] = useState(() => {
+    const el = document.activeElement;
+    return el instanceof HTMLElement || el instanceof SVGElement ? el : null;
+  });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+  // Move focus into the sheet on open (unless a child autofocused), keep Tab inside it, and hand focus back to the opener on close.
+  useEffect(() => {
+    const box = ref.current;
+    const focusables = () => [...(box?.querySelectorAll<HTMLElement>('button:not(:disabled), [href], input, [tabindex]:not([tabindex="-1"])') ?? [])];
+    if (box && !box.contains(document.activeElement)) (focusables()[0] ?? box).focus();
+    const trap = (e: KeyboardEvent) => {
+      const els = focusables();
+      if (e.key !== 'Tab' || els.length === 0) return;
+      const first = els[0]!;
+      const last = els[els.length - 1]!;
+      if (e.shiftKey && (document.activeElement === first || !box?.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !box?.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', trap);
+    return () => {
+      window.removeEventListener('keydown', trap);
+      // Only when the sheet has really unmounted (StrictMode's dev re-run leaves it in the DOM).
+      if (!box?.isConnected && opener?.isConnected) opener.focus();
+    };
+  }, [opener]);
   return (
     <div className="fixed inset-0 z-40 flex items-end bg-black/60" onClick={onClose} role="presentation">
       <div
+        ref={ref}
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
         className="screen-in safe-bottom w-full rounded-t-3xl border-t border-line bg-surface p-4"
         onClick={(e) => e.stopPropagation()}
       >

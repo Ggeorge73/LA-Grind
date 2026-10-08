@@ -18,7 +18,7 @@ export function ArchetypeSelect() {
   const movedHome = useGame((g) => g.state?.status === 'movedHome');
 
   return (
-    <div className="h-full overflow-y-auto overscroll-contain">
+    <main className="h-full overflow-y-auto overscroll-contain">
       <div className="safe-top safe-bottom mx-auto max-w-xl px-4 pb-6">
         <header className="pb-4 pt-4 text-center">
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-black tracking-tight text-accent">LA Grind</h1>
@@ -92,6 +92,6 @@ export function ArchetypeSelect() {
           })}
         </ul>
       </div>
-    </div>
+    </main>
   );
 }

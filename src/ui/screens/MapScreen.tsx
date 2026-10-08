@@ -13,6 +13,9 @@ import { duration, money } from '../format';
 /** Hit radius in viewBox units: ≥ 44px once the map is ~320px wide. */
 const HIT_R = 7.5;
 const NODE_R = 3.6;
+/** "You are here" pill size in viewBox units: opaque so it stays legible over route lines. */
+const PILL_W = 21;
+const PILL_H = 4.6;
 
 interface Badge {
   text: string;
@@ -32,6 +35,9 @@ function badgesFor(opt: TravelOption, hour: number): Badge[] {
     out.push({ text: `Weak car ×${C.CAR_POOR_MULTIPLIER}`, tone: 'warn' });
   return out;
 }
+
+/** Surface-coloured outline behind label glyphs so route lines don't cut through them. */
+const HALO = { strokeWidth: 0.9, strokeLinejoin: 'round', paintOrder: 'stroke' } as const;
 
 const quoteLabel = (o: TravelOption) =>
   `${duration(o.quote.minutes)}, ${o.quote.energy} energy, ${money(o.quote.gas)} gas`;
@@ -90,7 +96,7 @@ export function MapScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
 
   return (
     <div>
-      <SectionTitle>Greater Los Angeles (abridged)</SectionTitle>
+      <h1 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">Greater Los Angeles (abridged)</h1>
       <div className="rounded-2xl border border-line bg-surface p-1">
         <svg
           viewBox="0 0 100 100"
@@ -136,21 +142,19 @@ export function MapScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
             const nameY = below ? L.y + NODE_R + 4.2 : L.y - NODE_R - 1.6;
 
             if (isHere) {
+              // Pill above the node (route lines leave NoHo et al. sideways/down), below if there's no room or the name sits above.
+              const pillAbove = below && L.y - NODE_R - 1.6 - PILL_H >= 1;
+              const pillY = pillAbove ? L.y - NODE_R - 1.8 - PILL_H : (below ? nameY + 1.4 : L.y + NODE_R + 1.8);
+              const pillX = Math.min(100 - PILL_W / 2 - 1, Math.max(PILL_W / 2 + 1, L.x));
               return (
                 <g key={id} aria-label={`You are here: ${L.name}`} role="img">
                   <circle cx={L.x} cy={L.y} r={NODE_R + 1.6} className="fill-accent/25" />
                   <circle cx={L.x} cy={L.y} r={NODE_R} className="fill-accent stroke-ink" strokeWidth={0.5} />
-                  <text x={tx} y={nameY} textAnchor={anchor} fontSize={3.6} fontWeight={700} className="fill-ink">
+                  <text x={tx} y={nameY} textAnchor={anchor} fontSize={3.6} fontWeight={700} className="fill-ink stroke-surface" {...HALO}>
                     {L.short}
                   </text>
-                  <text
-                    x={tx}
-                    y={below ? nameY + 3.6 : nameY - 3.8}
-                    textAnchor={anchor}
-                    fontSize={2.9}
-                    fontWeight={700}
-                    className="fill-accent"
-                  >
+                  <rect x={pillX - PILL_W / 2} y={pillY} width={PILL_W} height={PILL_H} rx={PILL_H / 2} className="fill-accent" />
+                  <text x={pillX} y={pillY + PILL_H / 2 + 1.05} textAnchor="middle" fontSize={2.9} fontWeight={700} className="fill-accent-ink">
                     You are here
                   </text>
                 </g>
@@ -174,11 +178,11 @@ export function MapScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
                 <circle cx={L.x} cy={L.y} r={HIT_R} fill="transparent" />
                 {isFocused && <circle cx={L.x} cy={L.y} r={NODE_R + 2} fill="none" className="stroke-accent" strokeWidth={0.7} />}
                 <circle cx={L.x} cy={L.y} r={NODE_R} className="fill-surface-2 stroke-muted" strokeWidth={0.5} />
-                <text x={tx} y={nameY} textAnchor={anchor} fontSize={3.6} className="fill-ink">
+                <text x={tx} y={nameY} textAnchor={anchor} fontSize={3.6} className="fill-ink stroke-surface" {...HALO}>
                   {L.short}
                 </text>
                 {opt && (
-                  <text x={tx} y={below ? nameY + 3.4 : nameY - 3.6} textAnchor={anchor} fontSize={2.7} className="fill-muted">
+                  <text x={tx} y={below ? nameY + 3.4 : nameY - 3.6} textAnchor={anchor} fontSize={2.7} className="fill-muted stroke-surface" {...HALO}>
                     {duration(opt.quote.minutes)}
                   </text>
                 )}

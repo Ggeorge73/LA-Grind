@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LA Grind</string>
+    <string name="title_activity_main">LA Grind</string>
+    <string name="package_name">com.example.lagrind</string>
+    <string name="custom_url_scheme">com.example.lagrind</string>
+</resources>
