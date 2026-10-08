@@ -225,5 +225,5 @@ export const FAN_CONVERSION = 0.02;
 export const CHART_BASE_STREAMS = 500;
 export const CHART_SLOPE = 25;
 export const CHART_SIZE = 100;
-/** RP at the end of release week = this × (101 − peak). */
-export const CHART_RP_PER_PLACE = 2;
+/** RP at the end of release week = this × (101 − peak). 2 → 3 (LAG-62): at 2 a newcomer's single (#85–90) paid less RP than one Tier-1 gig. */
+export const CHART_RP_PER_PLACE = 3;

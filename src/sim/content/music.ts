@@ -16,7 +16,8 @@ export interface MusicScale {
 }
 
 export const MUSIC_SCALES: Record<MusicScaleId, MusicScale> = {
-  single: { id: 'single', name: 'Single', short: 'single', minTier: 1, budget: 600, songs: 1, crewSlots: 1, recordSessions: 2, streamMultiplier: 1 },
+  // Single budget $600 → $400 (LAG-62): royalties only cover $25–300, so at $600 every archetype lost $300–700; now the Bedroom Producer roughly breaks even.
+  single: { id: 'single', name: 'Single', short: 'single', minTier: 1, budget: 400, songs: 1, crewSlots: 1, recordSessions: 2, streamMultiplier: 1 },
   ep: { id: 'ep', name: 'EP', short: 'EP', minTier: 2, budget: 4000, songs: 4, crewSlots: 2, recordSessions: 5, streamMultiplier: 2.5 },
   album: { id: 'album', name: 'Album', short: 'album', minTier: 4, budget: 15000, songs: 10, crewSlots: 3, recordSessions: 12, streamMultiplier: 6 },
 };

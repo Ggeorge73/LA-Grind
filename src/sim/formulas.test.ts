@@ -3,6 +3,12 @@ import { ARCHETYPES } from './content/archetypes';
 import {
   awardChance,
   bookingPayout,
+  chartPosition,
+  chartRp,
+  fansGained,
+  recordScore,
+  releaseStreams,
+  royalties,
   cloutTier,
   commute,
   dailyBills,
@@ -169,5 +175,69 @@ describe('film formulas (Sprint 6 reference values)', () => {
     expect(offerAmount(2000, 50, 0.2)).toBe(320);
     expect(offerAmount(20000, 50, 0.8)).toBe(12800);
     expect(offerAmount(80000, 70, 1.8)).toBe(144000);
+  });
+});
+
+describe('music formulas (Sprint 7 reference values)', () => {
+  const streams = (fans: number, quality: number, day = 0, promoted = false, multiplier = 1) =>
+    releaseStreams({ fans, quality, multiplier, day, promoted });
+
+  it('record score = 15 + 0.5·Music + 0.25·Crew + 0.1·Spark + 0–15 luck, clamped', () => {
+    expect(recordScore(40, 40, 60, 0.5)).toBeCloseTo(58.5, 5);
+    expect(recordScore(15, 20, 60, 0)).toBeCloseTo(33.5, 5);
+    expect(recordScore(15, 20, 60, 1)).toBeCloseTo(48.5, 5);
+    expect(recordScore(0, 0, 0, 0)).toBe(15);
+    expect(recordScore(100, 100, 100, 1)).toBe(100);
+  });
+
+  it('streams = (1,000 + 4·Fans) × (Q/50)² × multiplier × 0.75^day × promo', () => {
+    expect(streams(0, 50)).toBe(1000);
+    expect(streams(1200, 50)).toBe(5800);
+    expect(streams(0, 100)).toBe(4000);
+    expect(streams(0, 25)).toBe(250);
+    expect(streams(1200, 73)).toBe(12363);
+  });
+
+  it('streams decay 25% a day over the release week', () => {
+    expect([0, 1, 2, 3, 4, 5, 6].map((d) => streams(0, 50, d))).toEqual([1000, 750, 563, 422, 316, 237, 178]);
+  });
+
+  it('a promo multiplies that day by 1.5; the scale multiplier stacks (EP 2.5×, album 6×)', () => {
+    expect(streams(0, 50, 0, true)).toBe(1500);
+    expect(streams(1200, 50, 1, true)).toBe(6525);
+    expect(streams(0, 50, 0, false, 2.5)).toBe(2500);
+    expect(streams(0, 50, 0, true, 6)).toBe(9000);
+  });
+
+  it('chart position = 101 − 25·log10(streams / 500): null above 100, clamped at #1', () => {
+    expect(chartPosition(500)).toBeNull();
+    expect(chartPosition(520)).toBeNull();
+    expect(chartPosition(550)).toBe(100);
+    expect(chartPosition(5_000)).toBe(76);
+    expect(chartPosition(12_363)).toBe(66);
+    expect(chartPosition(50_000)).toBe(51);
+    expect(chartPosition(500_000)).toBe(26);
+    expect(chartPosition(5_000_000)).toBe(1);
+    expect(chartPosition(50_000_000)).toBe(1);
+    expect(chartPosition(0)).toBeNull();
+  });
+
+  it('fans gained = streams × 2% × Q/100', () => {
+    expect(fansGained(10_000, 50)).toBe(100);
+    expect(fansGained(12_363, 73)).toBe(180);
+    expect(fansGained(1_000, 0)).toBe(0);
+  });
+
+  it('royalties = $0.004 per stream, rounded to the dollar', () => {
+    expect(royalties(10_000)).toBe(40);
+    expect(royalties(12_363)).toBe(49);
+    expect(royalties(100)).toBe(0);
+  });
+
+  it('chart RP = 3 × (101 − peak), 0 if it never charted', () => {
+    expect(chartRp(null)).toBe(0);
+    expect(chartRp(100)).toBe(3);
+    expect(chartRp(64)).toBe(111);
+    expect(chartRp(1)).toBe(300);
   });
 });

@@ -65,7 +65,7 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 
 | Scale | Min Clout | Studio budget | Songs | Crew slots | Studio sessions | Stream multiplier |
 |---|---:|---:|---:|---:|---:|---:|
-| Single | 1 | $600 | 1 | 1 | 2 | 1× |
+| Single | 1 | $400 | 1 | 1 | 2 | 1× |
 | EP | 2 | $4,000 | 4 | 2 | 5 | 2.5× |
 | Album | 4 | $15,000 | 10 | 3 | 12 | 6× |
 
@@ -78,7 +78,7 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
    - Royalties $0.004 per stream. Fans gained `= streams × 2% × Quality/100`.
    - Chart position on *The Billbored Hot 100* `= 101 − 25·log₁₀(streams / 500)`; above 100 means it didn't chart.
    - *Promo* (2h, −10 Energy, −10 Spark, once a day, anywhere) boosts the next day.
-   - After day 7 the record becomes a credit ("Peaked at #N" / "Didn't chart") and pays RP `= 2 × (101 − peak)` if it charted.
+   - After day 7 the record becomes a credit ("Peaked at #N" / "Didn't chart") and pays RP `= 3 × (101 − peak)` if it charted. (LAG-62 balance pass: single budget $600 → $400 and chart RP 2 → 3 per place, so a single is roughly break-even for the Bedroom Producer and beats a Tier-1 gig for RP.)
 
 **Music quality** `= 0.40·Songs + 0.45·Recording + 0.15·Crew + production value`. **Fans** is a new stat that persists across releases (the Bedroom Producer starts with some). Label deals, tours, beat sales and placements are Sprint 8.
 
