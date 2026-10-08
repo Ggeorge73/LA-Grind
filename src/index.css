@@ -1,1 +1,71 @@
 @import "tailwindcss";
+
+/* LA Grind design tokens: night-time LA, sunset accent. Use these, not raw hex, in components. */
+@theme {
+  --color-bg: #120c22;
+  --color-surface: #1d1533;
+  --color-surface-2: #2a2047;
+  --color-line: #3d3163;
+  --color-ink: #f6efe2;
+  --color-muted: #b8acd6;
+  --color-accent: #ff8a3d;
+  --color-accent-ink: #1a0f05;
+  --color-pink: #ff5c93;
+  --color-good: #4ade80;
+  --color-bad: #fb7185;
+  --color-warn: #fbbf24;
+  --color-film: #fbbf24;
+  --color-tv: #38bdf8;
+  --color-music: #c084fc;
+  --font-display: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overscroll-behavior: none; /* no rubber-band bounce */
+}
+
+body {
+  margin: 0;
+  -webkit-user-select: none; /* no text-selection popups on long-press */
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation; /* no double-tap zoom, instant taps */
+}
+
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), 0.5rem);
+}
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.25rem);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.screen-in {
+  animation: screen-in 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
