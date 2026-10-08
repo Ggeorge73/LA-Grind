@@ -36,8 +36,8 @@ A project's **quality** is the weighted average of its stage scores. The payoff 
    - Each has skill 1–5 and a fee of `budget × (0.04 + 0.03·skill)`, paid from the raised budget.
    - *Hire*: 1h meeting, −5 Energy. Filling every slot unlocks the shoot.
    - **Crew quality** = average skill × 20. Money left in the budget becomes **production value** (up to +10).
-4. **Shoot** (Sprint 6). *Shoot day*: 10h, −45 Energy, at the project's location. Score `= clamp(15 + 0.5·Directing + 0.25·Crew + 0.1·Acting + rand(0–15))`. Directing +1 per day.
-5. **Post** (Sprint 6). *Edit*: 4h, −20 Energy. Score uses Directing, plus a bonus if you hired an Editor.
+4. **Shoot** (Sprint 6). *Shoot day*: 10h, −45 Energy, on set at the project's location, call time 05:00–10:00. Score `= clamp(15 + 0.5·Directing + 0.25·Crew + 0.1·Acting + rand(0–15))`. Directing +1 per day.
+5. **Post** (Sprint 6). *Edit*: 4h, −20 Energy, anywhere. Score `= clamp(20 + 0.5·Directing + 4·Editor skill + rand(0–10))`; Editor skill is 0 if you didn't hire one.
 6. **Festival circuit** (Sprint 6). Five parody festivals:
 
    | Tier | Festival | Fee | Wait |
@@ -51,7 +51,11 @@ A project's **quality** is the weighted average of its stage scores. The payoff 
    - Results land at 06:00.
    - Acceptance odds `= logistic((Quality + 5·Clout − 20 − 15·tier) / 12)`.
    - An acceptance pays RP and a headline, and may bring an award and a **distribution offer** worth `budget × (0.3 + Quality/100) × [0.2, 0.4, 0.8, 1.2, 1.8][tier]`.
-   - Accepting an offer releases the film and ends the project.
+   - One submission per festival; the fee is paid up front and the odds are locked when you submit.
+   - Award chance `= clamp((Quality − 50 − 5·tier) / 50, 0, 60%)`; an award doubles the festival's RP (40 / 80 / 150 / 250 / 400).
+   - Offer chance on acceptance `= 50% + Quality/200`. Parody distributors make the offers.
+   - **Accepting an offer** releases the film: cash in, Network +5, and the project ends as a credit.
+   - **Self-release** (once no results are pending): no cash, RP `= Quality × 0.5`.
 
 **Film quality** `= 0.35·Script + 0.40·Shoot + 0.15·Post + 0.10·Crew + production value`, clamped to 0–100.
 
