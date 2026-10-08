@@ -296,6 +296,8 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       if (!c) return "You're not on a show. Yet.";
       if (c.shotThisWeek) return "This week's episode is in the can.";
       if (p.location !== STUDIO_LOT) return `Report to set in ${LOCATIONS[STUDIO_LOT].name}.`;
+      // An episode has to wrap before the week's 06:00 payday to count for this week.
+      if (s.minute + C.EPISODE_HOURS * C.MINUTES_PER_HOUR > c.weekEndMinute) return "Too late for this week's episode: it wraps at 06:00. Shoot earlier next week.";
       return tired;
     }
     case 'PLACE_SONG': {

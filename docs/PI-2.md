@@ -104,15 +104,16 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 
 ### Pilot season and callbacks (Sprint 9, the actor's side)
 
-- **Pilot season** runs days 8–17 of every 30-day cycle (days 8–17, 38–47, …). Each 06:00 during it, 2 extra **pilot auditions** (TV, Acting) join the board at the casting offices in Burbank or Hollywood, tiered 1–4 up to what you can see: web series, cable, streaming, network.
+- **Pilot season** runs days 8–17 of every 30-day cycle (days 8–17, 38–47, …). Each 06:00 during it, 2 extra **pilot auditions** (TV, Acting) join the board at the casting offices in Burbank or Hollywood, tiered 1–4 up to your Clout tier (a manager's extra visible tier doesn't count for pilots): web series, cable, streaming, network.
 - **Submitting to a pilot** works like any submission (window, fee, headshots for tier 2+, prep helps), but instead of an instant roll it opens a **callback**: three beats, each a director's note with three reads. One read is right.
-  - Each right read adds 12 points to your booking odds, each wrong one takes off 6 (clamped 2–90%).
+  - Each right read adds 6 points to your booking odds, each wrong one takes off 6 (clamped 2–90%).
   - Your Acting gives a chance per beat to *sense* the right read: `clamp(Acting/100, 15%, 70%)`.
   - While a callback is open you can't start anything else; an unfinished callback resolves at 06:00 with the reads you made.
-- **Booked pilot**: pays twice the normal TV fee for its tier now. Seven days later at 06:00 the network decides: pickup odds `= clamp(20% + 10%·right reads + 3%·Clout − 4%·(tier − 1), 5%, 75%)`.
+- **Booked pilot**: pays 1.5× the normal TV fee for its tier now (union rate included). Seven days later at 06:00 the network decides: pickup odds `= clamp(15% + 8%·right reads + 3%·Clout − 4%·(tier − 1), 5%, 75%)`. Pilots never expose you.
 - **Picked up → series regular**: one game week per episode (web 4 / cable 6 / streaming 8 / network 10), paid weekly ($300 / $800 / $1,600 / $3,000).
-  - Each week you must **Shoot an episode** (8h, −35 Energy, at the studio lot in Burbank): +10·tier RP. Miss it and that week pays half and costs 10·tier RP.
+  - Each week you must **Shoot an episode** (8h, −35 Energy, at the studio lot in Burbank, wrapping before the week's 06:00 payday): +10·tier RP. Miss it and that week pays a quarter and costs 10·tier RP.
   - One show at a time; a second pickup while you're on a show is passed on by your agent. When the season wraps, it becomes a credit.
+- Tuned in LAG-76 (see README "Balance"): right read +12 → +6 points; pilot fee 2× → 1.5×; pickup base 20% → 15% and +10% → +8% per right read; a missed week pays 25% (was 50%).
 
 ## Sprint plan
 

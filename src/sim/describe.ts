@@ -136,7 +136,7 @@ export function describeEvent(e: GameEvent): string | null {
       return `Episode ${e.episode} of "${e.showTitle}" in the can: +${e.rp} RP.`;
     case 'EPISODE_WEEK':
       return e.missed
-        ? `You missed set on "${e.showTitle}": half pay (+${formatMoney(e.pay)}), −${e.rpLost} RP.`
+        ? `You missed set on "${e.showTitle}": reduced pay (+${formatMoney(e.pay)}), −${e.rpLost} RP.`
         : `"${e.showTitle}" episode ${e.episode} paid: +${formatMoney(e.pay)}.`;
     case 'SERIES_WRAPPED':
       return `That's a wrap on "${e.showTitle}": ${e.episodes} episodes${e.missed ? ` (${e.missed} missed)` : ''}.`;

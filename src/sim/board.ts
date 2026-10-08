@@ -54,7 +54,9 @@ export function generateBoard(s: GameState, rng: Rng): Opportunity[] {
     } satisfies Opportunity;
   });
   // Pilot season: extra pilot auditions on top of the normal board.
-  return [...regular, ...generatePilots(s, rng, Math.min(maxTier, C.PILOT_MAX_TIER), day, isPilotSeason(day))];
+  // Pilots are cast on your own Clout, not on what a manager can show you (no tier-4 pilots at Acting 10).
+  const pilotTier = Math.min(cloutTier(s.player.rp), C.PILOT_MAX_TIER);
+  return [...regular, ...generatePilots(s, rng, pilotTier, day, isPilotSeason(day))];
 }
 
 /** Favour rows near the top of what the player can see, but keep lower rungs in play. */

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ARCHETYPES } from './content/archetypes';
 import {
+  callbackOdds,
+  callbackSenseChance,
+  cycleDay,
+  isPilotSeason,
+  pickupOdds,
   beatFee,
   beatLeaseChance,
   beatQuality,
@@ -305,5 +310,38 @@ describe('music business formulas', () => {
     expect(soundtrackBonus(45)).toBe(5);
     expect(soundtrackBonus(100)).toBe(8);
     expect(soundtrackBonus(0)).toBe(0);
+  });
+});
+
+describe('pilot season formulas (LAG-76)', () => {
+  it('cycle day is 1-based in a 30-day cycle; pilot season is cycle days 8–17', () => {
+    expect([1, 7, 8, 17, 18, 30, 31, 37, 38, 47, 48].map(cycleDay)).toEqual([1, 7, 8, 17, 18, 30, 1, 7, 8, 17, 18]);
+    expect([1, 7, 8, 12, 17, 18, 37, 38, 47, 48].map(isPilotSeason)).toEqual([false, false, true, true, true, false, false, true, true, false]);
+  });
+
+  it('sense chance = clamp(Acting/100, 15%, 70%)', () => {
+    expect(callbackSenseChance(0)).toBe(0.15);
+    expect(callbackSenseChance(20)).toBe(0.2);
+    expect(callbackSenseChance(55)).toBe(0.55);
+    expect(callbackSenseChance(100)).toBe(0.7);
+  });
+
+  it('callback odds = clamp(base + 6 pts per right read − 6 pts per wrong one, 2%, 90%)', () => {
+    expect(callbackOdds(0.3, 3)).toBeCloseTo(0.48, 10);
+    expect(callbackOdds(0.3, 2)).toBeCloseTo(0.36, 10);
+    expect(callbackOdds(0.3, 1)).toBeCloseTo(0.24, 10);
+    expect(callbackOdds(0.3, 0)).toBeCloseTo(0.12, 10);
+    expect(callbackOdds(0.02, 3)).toBeCloseTo(0.2, 10); // a floor-odds audition read perfectly
+    expect(callbackOdds(0.1, 0)).toBe(0.02);
+    expect(callbackOdds(0.85, 3)).toBe(0.9);
+  });
+
+  it('pickup odds = clamp(15% + 8%·right + 3%·Clout − 4%·(tier − 1), 5%, 75%)', () => {
+    expect(pickupOdds(2, 1, 1)).toBeCloseTo(0.34, 10);
+    expect(pickupOdds(3, 1, 1)).toBeCloseTo(0.42, 10);
+    expect(pickupOdds(3, 3, 4)).toBeCloseTo(0.36, 10);
+    expect(pickupOdds(0, 1, 4)).toBeCloseTo(0.06, 10);
+    expect(pickupOdds(0, 1, 5)).toBe(0.05);
+    expect(pickupOdds(3, 15, 1)).toBe(0.75);
   });
 });

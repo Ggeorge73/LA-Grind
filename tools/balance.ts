@@ -674,7 +674,7 @@ function chasePilotsPolicy(perfect: boolean): Policy {
 }
 
 const PILOT_DAYS = 60;
-const PILOT_SEEDS = Number(process.env.PILOT_SEEDS ?? 6);
+const PILOT_SEEDS = Number(process.env.PILOT_SEEDS ?? 10);
 
 interface PilotStats {
   submitted: number;

@@ -58,7 +58,8 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     await advanceTo(8);
     await tab('Gigs');
     (await main().getByText(/Pilot season/).count()) ? ok(`${arch}: pilot season banner on day ${await day()}`) : fail(`${arch}: no pilot season banner`);
-    (await S()).trades.some((h) => /pilot/i.test(h.text)) ? ok(`${arch}: pilot season in The Trades`) : fail(`${arch}: no pilot season headline`);
+    // The season-open event writes a log line (Trades headlines vary and don't all say "pilot").
+    (await S()).log.some((l) => /Pilot season is open/.test(l.text)) ? ok(`${arch}: pilot season announced`) : fail(`${arch}: pilot season not announced`);
 
     // 2. Pick the lowest-tier open pilot; headshots first if it needs them
     let s = await S();

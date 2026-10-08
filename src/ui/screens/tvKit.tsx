@@ -1,7 +1,7 @@
 // TV, the actor's side (Sprint 9): pilot-season banner, pending pilots, the series-regular card and the callback sheet.
 import { useEffect, useRef } from 'react';
 import { tvView, type TvView } from '../../sim/actions';
-import { CALLBACK_BEATS, EPISODE_ENERGY, EPISODE_HOURS, PILOT_DECISION_DAYS } from '../../sim/constants';
+import { CALLBACK_BEATS, EPISODE_ENERGY, EPISODE_HOURS, MISSED_EPISODE_PAY, PILOT_DECISION_DAYS } from '../../sim/constants';
 import { useGame } from '../../store/game';
 import { clock, day, money, pct } from '../format';
 import type { Tab } from '../GameScreen';
@@ -86,7 +86,7 @@ export function YourShowCard({ contract, onNavigate, idPrefix }: { contract: Non
       </p>
       {!c.shotThisWeek && (
         <p className="mt-0.5 text-xs text-muted">
-          On set at the studio lot in {c.where} · −{EPISODE_ENERGY} Energy. Miss it and the week pays half and costs RP.
+          On set at the studio lot in {c.where} · −{EPISODE_ENERGY} Energy. Miss it and the week pays {Math.round(MISSED_EPISODE_PAY * 100)}% and costs RP.
         </p>
       )}
       {c.shotThisWeek ? (
