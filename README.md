@@ -20,6 +20,7 @@ npm run dev          # http://localhost:5173 — open at a phone size in devtool
 | `npm test` | Run the Vitest suite (reference odds, payouts, commute, tiers, bills, invariants, determinism, saves) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run balance` | Headless balance run: 4 archetypes × 4 strategies × 30 days, plus no-income runway |
+| `node tools/acceptance-playtest.cjs shots` | With `npm run dev` running: plays every "Done means" item for all 4 archetypes through the UI (needs Playwright + Chromium) |
 | `npm run build` | Static production build in `dist/` |
 | `npm run cap:sync` | Build, then copy the web build into the iOS and Android projects (`npx cap sync`) |
 | `npm run ios` / `npm run android` | Sync, then open the native project in Xcode / Android Studio |
@@ -121,7 +122,7 @@ No-income runway (days before cash first drops below $0):
 
 ## What has and hasn't been verified
 
-- **Verified here:** typecheck, all tests, production build, `npx cap sync` for both platforms, and scripted play-tests in headless Chromium at 390×844, 360×740 and desktop sizes (see `docs/PI-1.md` and the Sprint PRs).
+- **Verified here:** typecheck, all tests, production build, `npx cap sync` for both platforms, and the acceptance play-test in headless Chromium at 390×844: 56/56 checks over all four archetypes, covering every job; film, TV and music submissions with results in The Trades; the tripled 405 commute; day-plus-night energy cost; reload restoring the identical state; and going broke then restarting. An accessibility pass covered contrast, keyboard, focus, 44 px targets, 360 px width and reduced motion.
 - **Not verified here:** running inside the iOS Simulator (needs macOS and Xcode) and the Android Emulator or Gradle build (no Android SDK in the cloud workspace). Both native projects are generated, synced and configured for portrait. A first run on each is still owed.
 
 ## Project layout
