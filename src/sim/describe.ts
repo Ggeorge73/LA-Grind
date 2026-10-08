@@ -33,7 +33,9 @@ export function describeEvent(e: GameEvent): string | null {
     case 'REJECTED':
       return `Passed on (${pct(e.odds)} odds): ${e.opportunity.title}.`;
     case 'EXPOSED':
-      return `Exposed as out of your depth on ${e.opportunity.title}: −${e.rpLost} RP.`;
+      return e.rpLost > 0
+        ? `Exposed as out of your depth on ${e.opportunity.title}: −${e.rpLost} RP.`
+        : `Exposed as out of your depth on ${e.opportunity.title}. Luckily you had no RP to lose.`;
     case 'BILLS_CHARGED':
       return `06:00 bills: −${formatMoney(e.amount)}.`;
     case 'BOARD_REFRESHED':

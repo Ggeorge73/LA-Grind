@@ -46,7 +46,7 @@ function feedback(events: GameEvent[]): Toast | null {
       toast = { id: ++toastId, tone: 'bad', text: `Passed on: ${e.opportunity.title}` };
     } else if (e.type === 'EXPOSED') {
       haptics.pulse('warning');
-      toast = { id: ++toastId, tone: 'bad', text: `Exposed: −${e.rpLost} RP` };
+      toast = { id: ++toastId, tone: 'bad', text: e.rpLost > 0 ? `Exposed: −${e.rpLost} RP` : `Exposed on ${e.opportunity.title}` };
     } else if (e.type === 'BILLS_CHARGED') {
       haptics.pulse('tap');
       toast ??= { id: ++toastId, tone: 'info', text: `06:00 — bills: −$${e.amount}` };
