@@ -50,7 +50,7 @@ function OpportunityCard({ view, onNavigate }: { view: OpportunityView; onNaviga
           )}
         </div>
 
-        <h3 className="mt-1.5 font-bold leading-snug">{opp.title}</h3>
+        <h2 className="mt-1.5 font-bold leading-snug">{opp.title}</h2>
         <p className="text-xs text-muted">
           {view.where} · {view.window}
         </p>
