@@ -203,3 +203,30 @@ export const offerChance = (quality: number): number => clamp(C.OFFER_CHANCE_BAS
 
 export const offerAmount = (budget: number, quality: number, multiplier: number): number =>
   Math.round(budget * (C.OFFER_QUALITY_BASE + quality / 100) * multiplier);
+
+export const recordScore = (music: number, crew: number, spark: number, roll: number): number =>
+  clamp(
+    C.RECORD_SCORE_BASE + C.RECORD_SCORE_MUSIC * music + C.RECORD_SCORE_CREW * crew + C.RECORD_SCORE_SPARK * spark + roll * C.RECORD_SCORE_LUCK,
+    0,
+    100,
+  );
+
+/** Streams on release-week day `day` (0-based). */
+export function releaseStreams(i: { fans: number; quality: number; multiplier: number; day: number; promoted: boolean }): number {
+  const base = C.STREAM_BASE + C.STREAMS_PER_FAN * i.fans;
+  const q = (i.quality / C.STREAM_QUALITY_PIVOT) ** 2;
+  return Math.round(base * q * i.multiplier * C.STREAM_DECAY ** i.day * (i.promoted ? 1 + C.PROMO_BOOST : 1));
+}
+
+/** Chart position for a day's streams, or null if it didn't make the chart. */
+export function chartPosition(streams: number): number | null {
+  if (streams <= 0) return null;
+  const pos = Math.round(101 - C.CHART_SLOPE * Math.log10(streams / C.CHART_BASE_STREAMS));
+  return pos > C.CHART_SIZE ? null : Math.max(1, pos);
+}
+
+export const fansGained = (streams: number, quality: number): number => Math.round(streams * C.FAN_CONVERSION * (quality / 100));
+
+export const royalties = (streams: number): number => Math.round(streams * C.ROYALTY_PER_STREAM);
+
+export const chartRp = (peak: number | null): number => (peak === null ? 0 : C.CHART_RP_PER_PLACE * (101 - peak));

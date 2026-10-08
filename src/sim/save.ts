@@ -34,6 +34,12 @@ const MIGRATIONS: Record<number, Migration> = {
     const project = file.state.project ? { ...file.state.project, submissions: [], offers: [] } : null;
     return { ...file, version: 3, state: { ...file.state, version: 3, project } };
   },
+  // v3 → v4 (Sprint 7): music. Fans start at 0 for old runs; projects gain record scores, studio and release.
+  3: (file) => {
+    const old = file.state.project;
+    const project = old ? { ...old, studio: null, release: null, scores: { ...old.scores, record: [] } } : null;
+    return { ...file, version: 4, state: { ...file.state, version: 4, player: { ...file.state.player, fans: 0 }, project } };
+  },
 };
 
 export function migrate(file: SaveFile): SaveFile | null {
