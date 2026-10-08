@@ -240,10 +240,10 @@ export const SHOW_HOURS = 3;
 export const SHOW_ENERGY = 30;
 /** A show must start in this window (hours). */
 export const SHOW_START_WINDOW = [19, 22] as const;
-/** Share of Fans who buy a ticket (× 0.8–1.2 luck). */
-export const SHOW_DRAW = 0.03;
-/** Share of the door you keep. */
-export const SHOW_DOOR_SPLIT = 0.6;
+/** Share of Fans who buy a ticket (× 0.8–1.2 luck). 3% → 2% (LAG-69): with the 60% split, 2,000 fans at the club paid ~$540 (4 barista shifts) a night. */
+export const SHOW_DRAW = 0.02;
+/** Share of the door you keep. 60% → 45% (LAG-69): the club now pays ~1 shift at 1,000 fans and ~3 at 3,000. */
+export const SHOW_DOOR_SPLIT = 0.45;
 export const SHOW_FAN_GAIN = 0.15;
 export const SHOW_TICKETS_PER_RP = 50;
 
@@ -255,14 +255,18 @@ export const BEAT_QUALITY_BASE = 10;
 export const BEAT_QUALITY_MUSIC = 0.7;
 export const BEAT_QUALITY_LUCK = 20;
 export const BEAT_LEASE_QUALITY_DIVISOR = 400;
-export const BEAT_LEASE_FANS_DIVISOR = 20000;
-export const BEAT_LEASE_CHANCE_MAX = 0.4;
+/** 20,000 → 50,000 (LAG-69): an EP can take Fans past 10k, which pinned every beat at the 40% cap. */
+export const BEAT_LEASE_FANS_DIVISOR = 50000;
+/** 40% → 20% (LAG-69): eight good beats (Q60) now earn ~$110/day, under one barista shift. */
+export const BEAT_LEASE_CHANCE_MAX = 0.2;
 /** Each lease makes the next one less likely (the beat gets around). */
 export const BEAT_LEASE_DECAY = 0.9;
-export const BEAT_FEE_BASE = 20;
-export const BEAT_FEE_PER_QUALITY = 1.5;
+/** Fee $20 + 1.5·Q → $10 + 1.2·Q (LAG-69): a lease is pocket money ($46–130), not a shift's pay. */
+export const BEAT_FEE_BASE = 10;
+export const BEAT_FEE_PER_QUALITY = 1.2;
 
-export const PLACEMENT_CHANCE = 0.02;
+/** 2% → 1% (LAG-69): at 2% a 3-record catalogue was licensed every ~10 days; now about once a month. */
+export const PLACEMENT_CHANCE = 0.01;
 export const PLACEMENT_CHARTED_BONUS = 1.5;
 export const PLACEMENT_FEE_BASE = 300;
 export const PLACEMENT_RP = 10;

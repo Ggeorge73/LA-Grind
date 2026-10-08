@@ -7,13 +7,16 @@ import { FILM_SCALES, type FilmScaleId } from '../src/sim/content/film';
 import { INVESTORS } from '../src/sim/content/filmFlavor';
 import { MUSIC_SCALES, type MusicScaleId } from '../src/sim/content/music';
 import { HEADSHOTS_LOCATION } from '../src/sim/content/locations';
+import { LABELS, VENUES, type LabelDeal, type Venue } from '../src/sim/content/musicBiz';
+import { playedShowToday } from '../src/sim/musicBiz';
 import { oddsFor } from '../src/sim/board';
-import { bookingPayout, cloutTier, dailyBills, dayOf, hourOf, isExposure } from '../src/sim/formulas';
+import { bookingPayout, cloutTier, dailyBills, dayOf, hourOf, isExposure, showPay } from '../src/sim/formulas';
 import {
   eligibleFestivals,
   festivalOddsFor,
   fundingRoom,
   hiredCrew,
+  labelOddsFor,
   musicScaleOf,
   pendingSubmissions,
   pitchOddsFor,
@@ -386,7 +389,15 @@ for (const id of ARCHETYPE_IDS) {
 // budget allows → record at the studio → release at once → (optionally) one promo a day through release week.
 // An EP needs Clout 2: until then the policy keeps putting out singles (same loop) and starts the EP once it can.
 
-function makeRecord(scale: MusicScaleId, promo: boolean): () => Policy {
+/** Label with the best expected advance (odds × mid advance share) for this record. */
+function bestLabel(s: GameState): LabelDeal {
+  const p = s.project!;
+  const value = (l: LabelDeal) => labelOddsFor(s, p, l) * (l.advanceMin + l.advanceMax);
+  return [...LABELS].sort((a, b) => value(b) - value(a))[0]!;
+}
+
+/** `label`: shop every record to labels (one meeting a day) and self-fund only what the advance leaves. */
+function makeRecord(scale: MusicScaleId, promo: boolean, label = false): () => Policy {
   return () => {
     const job = baristaWeekdays();
     return (s) => {
@@ -395,12 +406,16 @@ function makeRecord(scale: MusicScaleId, promo: boolean): () => Policy {
       const pl = s.player;
       const reserve = 10 * dailyBills(ARCHETYPES[pl.archetype].rentPerDay);
       if (!p) {
+        // One record of the target scale, then back to the day job.
+        if (s.credits.some((c) => c.scale === MUSIC_SCALES[scale].name)) return h >= 22 || h < 6 ? sleepUntil(s, 6) : job(s);
         const want = cloutTier(pl.rp) >= MUSIC_SCALES[scale].minTier ? scale : 'single';
-        if (pl.cash >= MUSIC_SCALES[want].budget + reserve / 2 || want === 'single') return { type: 'START_PROJECT', scale: want };
+        // With a label in view, start writing at once: the advance pays for most of the studio.
+        if (pl.cash >= MUSIC_SCALES[want].budget + reserve / 2 || want === 'single' || label) return { type: 'START_PROJECT', scale: want };
         return h >= 22 || h < 6 ? sleepUntil(s, 6) : job(s);
       }
+      const shop = label && p.stage === 'finance' && !p.label;
       // Instant moves first.
-      if (p.stage === 'finance') {
+      if (p.stage === 'finance' && !shop) {
         const amount = Math.min(fundingRoom(p), Math.floor(pl.cash - reserve / 2));
         if (amount > 0) return { type: 'SELF_FUND', amount };
       }
@@ -418,6 +433,11 @@ function makeRecord(scale: MusicScaleId, promo: boolean): () => Policy {
         case 'develop':
           if (pl.spark >= C.WRITE_SESSION_SPARK) return { type: 'WRITE_SESSION' };
           return go(s, 'hollywood') ?? { type: 'LEISURE', leisureId: 'records' };
+        case 'finance': {
+          if (!shop || p.pitches.some((x) => x.day === day(s)) || h > 18) return job(s);
+          const l = bestLabel(s);
+          return go(s, l.location) ?? { type: 'PITCH_LABEL', labelId: l.id };
+        }
         case 'crew': {
           const left = musicScaleOf(p).crewSlots - hiredCrew(p).length;
           const open = p.crewPool.filter((c) => !c.hired);
@@ -476,6 +496,116 @@ for (const id of ARCHETYPE_IDS) {
       `| ${ARCHETYPES[id].name} | ${label} | ${credit ? daysTaken.toFixed(1) : `> ${MUSIC_DAYS}`} | ${credit?.quality ?? '—'} | ${peak} | ${streams.toLocaleString('en-US')} | ${fans.toLocaleString('en-US')} | ${money(pay)} | ${money(cost)} | ${rp} | ${r.tier} | ${money(r.endCash - base.endCash)} |`,
     );
   }
+}
+
+// ---------- Music business table (LAG-69) ----------
+// Three side hustles around a record, each next to the weekday barista job, compared with barista alone.
+
+/** Barista on weekdays, plus one beat a day at home until the store is full (record digging when Spark runs out). */
+function beatGrinder(): Policy {
+  const job = baristaWeekdays();
+  return (s) => {
+    const h = hour(s);
+    const pl = s.player;
+    if (h >= 22 || h < 6) return sleepUntil(s, 6);
+    const workday = day(s) % 7 >= 1 && day(s) % 7 <= 5;
+    if (workday && h <= 11) {
+      const cmd = job(s);
+      if (cmd?.type === 'START_JOB' || cmd?.type === 'TRAVEL') return cmd;
+    }
+    if (s.beats.length >= C.BEAT_MAX || pl.energy < 30) return go(s, pl.home);
+    if (pl.spark < C.BEAT_SPARK) return go(s, 'hollywood') ?? { type: 'LEISURE', leisureId: 'records' };
+    return go(s, pl.home) ?? { type: 'MAKE_BEAT' };
+  };
+}
+
+/** Venue with the best expected take at today's Fans (among those that will book you). */
+function bestVenue(s: GameState): Venue {
+  const fans = s.player.fans;
+  const take = (v: Venue) => showPay(Math.min(v.capacity, Math.round(fans * C.SHOW_DRAW)), v.ticketPrice);
+  return [...VENUES].filter((v) => fans >= v.minFans).sort((a, b) => take(b) - take(a))[0]!;
+}
+
+/** A single + promo (with the barista job), then the barista job by day and the best venue every night. */
+function gigCatalogue(): Policy {
+  const single = makeRecord('single', true)();
+  const job = baristaWeekdays();
+  return (s) => {
+    if (s.catalog.length === 0) return single(s);
+    const h = hour(s);
+    const pl = s.player;
+    if (h < 7 || (h >= 1 && h < 7)) return sleepUntil(s, 7);
+    const workday = day(s) % 7 >= 1 && day(s) % 7 <= 5;
+    if (workday && h >= 7 && h <= 11) {
+      const cmd = job(s);
+      if (cmd?.type === 'START_JOB' || cmd?.type === 'TRAVEL') return cmd;
+    }
+    if (!playedShowToday(s) && h >= 17 && h <= 21) {
+      const v = bestVenue(s);
+      const travel = go(s, v.location);
+      if (travel) return travel;
+      return h >= 19 ? { type: 'PLAY_SHOW', venueId: v.id } : null;
+    }
+    if (h >= 22 || playedShowToday(s)) return sleepUntil(s, 7);
+    return go(s, pl.home);
+  };
+}
+
+const BIZ_DAYS = 45;
+const BIZ_RUNS: Array<[string, () => Policy]> = [
+  ['Signed EP', makeRecord('ep', true, true)],
+  ['Beat grinder', beatGrinder],
+  ['Gig the catalogue', gigCatalogue],
+];
+console.log(`\nMusic business: ${BIZ_DAYS} days next to a weekday barista job, vs barista alone\n`);
+console.log('| Archetype | Strategy | Cash vs barista-only | Side income | Fans | RP | Clout | EP released | Notes |');
+console.log('|---|---|---:|---:|---:|---:|---:|---|---|');
+const bizRows: string[] = [];
+for (const id of ARCHETYPE_IDS) {
+  const base = simulate(id, baristaWeekdays, BIZ_DAYS);
+  for (const [name, policy] of BIZ_RUNS) {
+    const r = simulate(id, policy, BIZ_DAYS);
+    if (process.env.TRACE === id + name) { let st = newGame(id, SEED); for (const e of r.events) { if (['PROJECT_STARTED','PROJECT_STAGE','LABEL_PITCHED','SELF_FUNDED','RELEASE_WEEK_ENDED','RANK_CHANGED','TIER_CHANGED'].includes(e.type)) console.log(JSON.stringify(e).slice(0,160)); } }
+    const start = newGame(id, SEED).minute;
+    const sumOf = <T extends GameEvent['type']>(t: T, f: (e: Extract<GameEvent, { type: T }>) => number) =>
+      r.events.filter((e): e is Extract<GameEvent, { type: T }> => e.type === t).reduce((a, e) => a + f(e), 0);
+    const advance = sumOf('LABEL_PITCHED', (e) => e.advance);
+    const pitches = r.events.filter((e) => e.type === 'LABEL_PITCHED');
+    const shows = r.events.filter((e) => e.type === 'SHOW_PLAYED');
+    const showPayTotal = sumOf('SHOW_PLAYED', (e) => e.pay);
+    const leases = sumOf('BEAT_LEASED', (e) => e.fee);
+    const placements = sumOf('PLACEMENT', (e) => e.fee);
+    const ep = r.state.credits.find((c) => c.scale === MUSIC_SCALES.ep.name);
+    const epDay = ep ? ((ep.minute - start) / 1440).toFixed(0) : null;
+    let side = 0;
+    let notes = '';
+    if (name === 'Signed EP') {
+      side = advance;
+      const signed = r.events.find((e) => e.type === 'LABEL_PITCHED' && e.yes);
+      notes = signed?.type === 'LABEL_PITCHED' ? `${signed.label} after ${pitches.length} meeting${pitches.length > 1 ? 's' : ''}` : pitches.length ? `${pitches.length} pitches, no deal` : 'no EP yet';
+    } else if (name === 'Beat grinder') {
+      side = leases;
+      const days = BIZ_DAYS;
+      notes = `${r.state.beats.length} beats, avg Q${Math.round(r.state.beats.reduce((a, b) => a + b.quality, 0) / Math.max(1, r.state.beats.length))}, ${money(Math.round(leases / days))}/day avg, last 10 days ${money(Math.round(sumLast(r.events, 'BEAT_LEASED', 10)))} /day`;
+    } else {
+      side = showPayTotal;
+      const best = shows.reduce((a, e) => Math.max(a, e.type === 'SHOW_PLAYED' ? e.pay : 0), 0);
+      notes = `${shows.length} shows, ${money(Math.round(showPayTotal / Math.max(1, shows.length)))}/show avg, best ${money(best)}`;
+    }
+    if (placements) notes += `; placements ${money(placements)}`;
+    bizRows.push(
+      `| ${ARCHETYPES[id].name} | ${name} | ${money(r.endCash - base.endCash)} | ${money(side)} | ${r.state.player.fans.toLocaleString('en-US')} | ${r.rp} | ${r.tier} | ${epDay ? `day ${epDay}` : '—'} | ${notes} |`,
+    );
+  }
+}
+console.log(bizRows.join('\n'));
+
+/** Average per-day total of a fee event over the last `days` days of a run. */
+function sumLast(events: GameEvent[], type: 'BEAT_LEASED', days: number): number {
+  // BEAT_LEASED events land at 06:00; count those after the last `days` bill events.
+  const bills = events.map((e, i) => (e.type === 'BILLS_CHARGED' ? i : -1)).filter((i) => i >= 0);
+  const from = bills[Math.max(0, bills.length - days)] ?? 0;
+  return events.slice(from).reduce((a, e) => a + (e.type === type ? e.fee : 0), 0) / days;
 }
 
 console.log('\nNo-income runway (days before cash first drops below $0):\n');
