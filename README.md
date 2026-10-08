@@ -2,9 +2,9 @@
 
 A satirical life-sim about trying to make it in Los Angeles's film, TV and music industries. Pick an archetype, pay rent, chase gigs, try not to move back home.
 
-**Phase 1: playable single-player slice.** One codebase runs in a web browser and packages as iOS and Android apps with Capacitor.
+**Phase 1: playable single-player slice**, plus **Phase 2 careers in progress**: you can now make a film from script to festival release. One codebase runs in a web browser and packages as iOS and Android apps with Capacitor.
 
-- Plan and team: [`docs/PI-1.md`](docs/PI-1.md) · Jira project **LAG**
+- Plans and team: [`docs/PI-1.md`](docs/PI-1.md) (Phase 1) · [`docs/PI-2.md`](docs/PI-2.md) (careers: Film → Music → TV) · Jira project **LAG**
 - How it is built: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ## Quick start (web)
@@ -21,6 +21,7 @@ npm run dev          # http://localhost:5173 — open at a phone size in devtool
 | `npm run typecheck` | TypeScript strict check |
 | `npm run balance` | Headless balance run: 4 archetypes × 4 strategies × 30 days, plus no-income runway |
 | `node tools/acceptance-playtest.cjs shots` | With `npm run dev` running: plays every "Done means" item for all 4 archetypes through the UI (needs Playwright + Chromium) |
+| `node tools/film-playtest.cjs shots` | With `npm run dev` running: takes a short film from script to release for all 4 archetypes through the Projects tab |
 | `npm run build` | Static production build in `dist/` |
 | `npm run cap:sync` | Build, then copy the web build into the iOS and Android projects (`npx cap sync`) |
 | `npm run ios` / `npm run android` | Sync, then open the native project in Xcode / Android Studio |
@@ -60,32 +61,51 @@ Needs **Android Studio** (with an SDK and an emulator image) and JDK 21.
 - **Hustle** tab: what you can do *here, now*, with time, costs, rewards, and why a button is disabled.
 - **Map** tab: tap a neighbourhood to see the live travel time, energy and gas before you go. Crossing the 405 at rush hour costs triple.
 - **Gigs** tab: today's film, TV and music opportunities. Prep raises your odds; the odds are shown before you submit. Tier 2+ needs headshots (Hollywood, $400).
+- **Projects** tab: make your own film. Write the script, pitch investors or self-fund, hire a crew, shoot on set (call time 05:00–10:00), edit, then submit to festivals. Results land at 06:00 days later; take a distribution offer or self-release. One project at a time.
 - **Trades** tab: the satirical trade paper. Your bookings, rejections and exposures land here.
 - Bills of rent + $20 food + $10 car are charged at **06:00**. Below $0 starts a 3-day overdraft countdown, and if it runs out you've **Moved Back Home**.
 - **Pause / 1x / 4x** in the header; **Skip to done** finishes the current action instantly.
 
 ## Balance (output of `npm run balance`)
 
-30 in-game days, seed 2026.
+30 in-game days, seed 2026 (override with `BALANCE_SEED=n npm run balance`).
 
-| Archetype | Strategy | End cash | Lowest cash | Tier | Bookings | Went broke | Moved home |
-|---|---|---:|---:|---:|---:|---:|---:|
-| The Nepo Baby | No job | $20,800 | $20,800 | 3 | 0 | — | — |
-| The Nepo Baby | Barista 5 days/week | $23,790 | $23,660 | 3 | 0 | — | — |
-| The Nepo Baby | Bar back + 1 music gig/day | $24,931 | $24,908 | 3 | 1 | — | — |
-| The Nepo Baby | PA when rested + 1 screen gig/day | $24,492 | $24,492 | 3 | 3 | — | — |
-| The Midwest Transplant | No job | -$175 | -$175 | 1 | 0 | day 23 | day 26 |
-| The Midwest Transplant | Barista 5 days/week | $2,360 | $1,196 | 1 | 0 | — | — |
-| The Midwest Transplant | Bar back + 1 music gig/day | $1,530 | $1,160 | 2 | 4 | — | — |
-| The Midwest Transplant | PA when rested + 1 screen gig/day | $2,946 | $1,158 | 2 | 2 | — | — |
-| The Indie Hustler | No job | $1,000 | $1,000 | 1 | 0 | — | — |
-| The Indie Hustler | Barista 5 days/week | $3,810 | $3,636 | 1 | 0 | — | — |
-| The Indie Hustler | Bar back + 1 music gig/day | $5,290 | $3,996 | 3 | 10 | — | — |
-| The Indie Hustler | PA when rested + 1 screen gig/day | $5,523 | $3,958 | 3 | 10 | — | — |
-| The Bedroom Producer | No job | $400 | $400 | 1 | 0 | — | — |
-| The Bedroom Producer | Barista 5 days/week | $3,210 | $2,496 | 1 | 0 | — | — |
-| The Bedroom Producer | Bar back + 1 music gig/day | $4,658 | $2,460 | 2 | 10 | — | — |
-| The Bedroom Producer | PA when rested + 1 screen gig/day | $4,468 | $2,456 | 2 | 5 | — | — |
+| Archetype | Strategy | End cash | Lowest cash | Tier | Bookings | Top tier booked | Exposed | Went broke | Moved home |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| The Nepo Baby | No job | $20,800 | $20,800 | 3 | 0 | — | 0 | — | — |
+| The Nepo Baby | Barista 5 days/week | $23,790 | $23,660 | 3 | 0 | — | 0 | — | — |
+| The Nepo Baby | Bar back + 1 music gig/day | $24,931 | $24,908 | 3 | 1 | 1 | 0 | — | — |
+| The Nepo Baby | PA when rested + 1 screen gig/day | $24,492 | $24,492 | 3 | 3 | 1 | 0 | — | — |
+| The Nepo Baby | Headshots + bar back + 1 screen gig/day | $24,321 | $24,321 | 3 | 1 | 1 | 0 | — | — |
+| The Nepo Baby | Make a short film + barista | $22,096 | $21,966 | 3 | 0 | — | 0 | — | — |
+| The Midwest Transplant | No job | -$175 | -$175 | 1 | 0 | — | 0 | day 23 | day 26 |
+| The Midwest Transplant | Barista 5 days/week | $2,360 | $1,196 | 1 | 0 | — | 0 | — | — |
+| The Midwest Transplant | Bar back + 1 music gig/day | $1,530 | $1,160 | 2 | 4 | 1 | 0 | — | — |
+| The Midwest Transplant | PA when rested + 1 screen gig/day | $2,946 | $1,158 | 2 | 2 | 1 | 0 | — | — |
+| The Midwest Transplant | Headshots + bar back + 1 screen gig/day | $2,730 | $1,158 | 1 | 2 | 1 | 0 | — | — |
+| The Midwest Transplant | Make a short film + barista | $1,589 | $225 | 2 | 0 | — | 0 | — | — |
+| The Indie Hustler | No job | $1,000 | $1,000 | 1 | 0 | — | 0 | — | — |
+| The Indie Hustler | Barista 5 days/week | $3,810 | $3,636 | 1 | 0 | — | 0 | — | — |
+| The Indie Hustler | Bar back + 1 music gig/day | $5,290 | $3,996 | 3 | 10 | 1 | 0 | — | — |
+| The Indie Hustler | PA when rested + 1 screen gig/day | $5,523 | $3,958 | 3 | 10 | 1 | 0 | — | — |
+| The Indie Hustler | Headshots + bar back + 1 screen gig/day | $9,592 | $3,958 | 3 | 13 | 3 | 0 | — | — |
+| The Indie Hustler | Make a short film + barista | $2,282 | $1,587 | 2 | 0 | — | 0 | — | — |
+| The Bedroom Producer | No job | $400 | $400 | 1 | 0 | — | 0 | — | — |
+| The Bedroom Producer | Barista 5 days/week | $3,210 | $2,496 | 1 | 0 | — | 0 | — | — |
+| The Bedroom Producer | Bar back + 1 music gig/day | $4,658 | $2,460 | 2 | 10 | 1 | 9 | — | — |
+| The Bedroom Producer | PA when rested + 1 screen gig/day | $4,468 | $2,456 | 2 | 5 | 1 | 3 | — | — |
+| The Bedroom Producer | Headshots + bar back + 1 screen gig/day | $10,732 | $2,456 | 3 | 11 | 3 | 0 | — | — |
+| The Bedroom Producer | Make a short film + barista | $1,556 | $297 | 2 | 0 | — | 0 | — | — |
+
+Film runs: one film next to a weekday barista job, stopping at release (max 60 days). "Out of pocket" is self-funding plus festival fees; "Cash vs barista-only" compares end cash with barista alone over the same days.
+
+| Archetype | Film | Days to release | Quality | Festivals (in/sent, awards) | Outcome | Film RP | Tier after | Out of pocket | Offer | Cash vs barista-only |
+|---|---|---:|---:|---|---|---:|---:|---:|---:|---:|
+| The Nepo Baby | Short film | 7.9 | 51 | 2/2 | distribution deal | 180 | 3 | $2,075 | $649 | -$1,824 |
+| The Nepo Baby | Micro-budget feature | 14.9 | 48 | 3/3 | distribution deal | 405 | 3 | $20,175 | $6,243 | -$14,486 |
+| The Midwest Transplant | Short film | 14.9 | 51 | 2/2 | distribution deal | 180 | 2 | $1,101 | $650 | -$767 |
+| The Indie Hustler | Short film | 7.9 | 69 | 2/2 | distribution deal | 180 | 2 | $2,075 | $791 | -$1,528 |
+| The Bedroom Producer | Short film | 7.9 | 53 | 1/2 | distribution deal | 120 | 2 | $2,053 | $665 | -$1,654 |
 
 No-income runway (days before cash first drops below $0):
 
@@ -96,7 +116,7 @@ No-income runway (days before cash first drops below $0):
 | The Indie Hustler | 41 days | ~40 days |
 | The Bedroom Producer | 36 days | ~36 days |
 
-**Reading it:** the Midwest Transplant is the only archetype that cannot coast, and running dry on day 23 matches the target. Every strategy that works keeps everyone afloat. The Nepo Baby barely needs a job. Strategies that skip headshots never book above Tier 1. Follow-ups are tracked in Jira LAG-33.
+**Reading it:** the Midwest Transplant is the only archetype that cannot coast, and running dry on day 23 matches the target. Buying headshots once Clout 2 shows Tier 2 rows is now the best-paying strategy for the Indie Hustler and Bedroom Producer (Tier 3 bookings, ~$10k by day 30); without headshots nobody books above Tier 1. A short film releases in 8–15 days for every archetype, costs ~$0.8–2k net, and earns 120–300 RP (one Clout tier for a newcomer). The Nepo Baby can bankroll a micro-budget feature on day 1 (~$14.5k net cost, 405 RP); a film is their main money sink. Open items stay in Jira LAG-33.
 
 ## Assumptions (where the brief left a choice)
 
@@ -113,7 +133,7 @@ No-income runway (days before cash first drops below $0):
 
 ## Deliberately missing (Phase 1 scope)
 
-- Careers, pipelines, pilot season, record releases, labels, tours (**Phase 2**)
+- Music and TV careers, pilot season, record releases, labels, tours, guild membership (**Phase 2, Sprints 7–10**)
 - Accounts, server-side rules, shared Trades feed, leaderboards, shared clock (**Phase 3**)
 - Presence, chat, co-op productions (**Phase 4**)
 - Purchases, ads, analytics, account deletion, moderation tools: not needed until accounts and social features exist

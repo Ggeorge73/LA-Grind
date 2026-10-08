@@ -31,7 +31,7 @@ A project's **quality** is the weighted average of its stage scores. The payoff 
 1. **Develop.** *Write* session: 3h, −15 Energy, −15 Spark, anywhere. Score `= clamp(20 + 0.6·Writing + 0.2·Spark + rand(0–10))`. Writing +1 per session. **Script quality** is the average score.
 2. **Financing runs.** *Pitch* an investor: 2h, −10 Energy, at the investor's neighbourhood, at most one pitch a day.
    - Odds `= logistic((0.5·Script + 10·Clout + 0.3·Network − difficulty) / 12)`, clamped to 5–85%. Difficulty is 45 (short), 60 (micro) or 80 (indie).
-   - A yes raises 30–50% of the budget. *Self-fund* moves your own cash in instantly. The Nepo Baby's shortcut is intended.
+   - A yes raises 20–60% of the budget depending on the investor (easy marks give less). *Self-fund* moves your own cash in instantly. The Nepo Baby's shortcut is intended.
 3. **Crew assembly.** On entering this stage you get a candidate pool of `3 + Network/20` people (max 8): DP, Sound, Editor, Gaffer, AD, Production Designer and Composer.
    - Each has skill 1–5 and a fee of `budget × (0.04 + 0.03·skill)`, paid from the raised budget.
    - *Hire*: 1h meeting, −5 Energy. Filling every slot unlocks the shoot.
@@ -52,7 +52,7 @@ A project's **quality** is the weighted average of its stage scores. The payoff 
    - Acceptance odds `= logistic((Quality + 5·Clout − 20 − 15·tier) / 12)`.
    - An acceptance pays RP and a headline, and may bring an award and a **distribution offer** worth `budget × (0.3 + Quality/100) × [0.2, 0.4, 0.8, 1.2, 1.8][tier]`.
    - One submission per festival; the fee is paid up front and the odds are locked when you submit.
-   - Award chance `= clamp((Quality − 50 − 5·tier) / 50, 0, 60%)`; an award doubles the festival's RP (40 / 80 / 150 / 250 / 400).
+   - Award chance `= clamp((Quality − 50 − 5·tier) / 50, 0, 60%)`; an award doubles the festival's RP (60 / 120 / 225 / 375 / 600, raised ×1.5 in the Sprint 6 balance pass so a short film beats chasing Tier-1 gigs for RP).
    - Offer chance on acceptance `= 50% + Quality/200`. Parody distributors make the offers.
    - **Accepting an offer** releases the film: cash in, Network +5, and the project ends as a credit.
    - **Self-release** (once no results are pending): no cash, RP `= Quality × 0.5`.
