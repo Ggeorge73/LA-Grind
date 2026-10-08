@@ -42,7 +42,7 @@ function ScaleCard({ option }: { option: ScaleOption }) {
           <h2 className="min-w-0 font-bold leading-snug">{option.name}</h2>
           <span className="shrink-0 font-semibold tabular-nums">{money(option.budget)}</span>
         </div>
-        <p className="text-xs text-muted">Needs Clout Tier {option.minTier} · budget {money(option.budget)}</p>
+        <p className="text-xs text-muted">Needs Clout Tier {option.minTier}</p>
         <p className="mt-1 text-sm">{option.summary}</p>
         <Button
           variant="primary"
@@ -173,7 +173,7 @@ function BudgetSummary({ view }: { view: ProjectView }) {
   const b = view.budget;
   return (
     <Card>
-      <Meter label="Budget raised" value={b.raised} max={b.budget} tone="good" hint={`${money(b.raised)} of ${money(b.budget)} raised`} />
+      <Meter label="Budget raised, %" value={b.budget > 0 ? (100 * b.raised) / b.budget : 0} tone="good" hint={`${money(b.raised)} of ${money(b.budget)} raised`} />
       <p className="mt-1 text-sm">
         <span className="font-semibold tabular-nums">{money(b.raised)}</span> of {money(b.budget)} raised
       </p>
@@ -392,8 +392,7 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
 
       <Stepper stages={view.stages} />
       <div className="mb-3">
-        <Meter label="Quality so far" value={view.quality} hint={`Quality so far: ${Math.round(view.quality)} of 100`} />
-        <p className="sr-only">Quality so far: {Math.round(view.quality)}/100</p>
+        <Meter label="Quality so far, out of 100" value={view.quality} hint={`Quality so far: ${Math.round(view.quality)} of 100`} />
       </div>
 
       <div className="flex flex-col gap-2">
