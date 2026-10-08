@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { ARCHETYPES, ARCHETYPE_IDS } from '../../sim/content/archetypes';
 import { NEW_RUN_NETWORK_KEEP } from '../../sim/constants';
 import { dayOf } from '../../sim/formulas';
@@ -16,6 +17,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export function RunSummary() {
   const state = useGame((g) => g.state);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  // Move focus into the dialog so keyboard and screen-reader users land on the summary.
+  useEffect(() => titleRef.current?.focus(), []);
   if (!state) return null;
   const { stats, player } = state;
   const days = dayOf(state.minute) - dayOf(stats.startMinute) + 1;
@@ -30,7 +34,7 @@ export function RunSummary() {
       aria-labelledby="run-summary-title"
     >
       <div className="mx-auto max-w-xl px-4 pb-6 pt-4">
-        <h1 id="run-summary-title" className="text-center font-[family-name:var(--font-display)] text-3xl font-black">
+        <h1 id="run-summary-title" ref={titleRef} tabIndex={-1} className="outline-none text-center font-[family-name:var(--font-display)] text-3xl font-black">
           Moved Back Home
         </h1>
         <p className="mt-1 text-center text-sm text-muted">Your childhood bedroom still has the poster up.</p>

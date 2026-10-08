@@ -96,8 +96,7 @@ export function MapScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
 
   return (
     <div>
-      <h1 className="sr-only">Map</h1>
-      <SectionTitle>Greater Los Angeles (abridged)</SectionTitle>
+      <h1 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">Greater Los Angeles (abridged)</h1>
       <div className="rounded-2xl border border-line bg-surface p-1">
         <svg
           viewBox="0 0 100 100"
