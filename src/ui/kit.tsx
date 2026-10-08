@@ -1,5 +1,5 @@
 // Shared UI building blocks. Every tappable thing is at least 44px tall.
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { Medium } from '../sim/types';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -83,6 +83,11 @@ export function Chip({ children, tone = 'muted' }: { children: ReactNode; tone?:
 
 /** Bottom sheet for confirmations. Rendered above the bottom nav, inside thumb reach. */
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
     <div className="fixed inset-0 z-40 flex items-end bg-black/60" onClick={onClose} role="presentation">
       <div
