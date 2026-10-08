@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import * as C from './constants';
-import { FILM_SCALES } from './content/film';
+import { FESTIVALS, FILM_SCALES } from './content/film';
+import { ARCHETYPES } from './content/archetypes';
 import { INVESTORS } from './content/filmFlavor';
-import { crewFee, crewPoolSize, pitchOdds, writeScore } from './formulas';
-import { crewQuality, hiredCrew, pitchOddsFor, productionValue, projectQuality, remainingBudget } from './project';
+import { atHour, cloutTier, crewFee, crewPoolSize, dailyBills, dayOf, festivalOdds, hourOf, minuteOfDay, pitchOdds, writeScore } from './formulas';
+import {
+  crewQuality,
+  editorSkill,
+  festivalOddsFor,
+  hiredCrew,
+  pitchOddsFor,
+  productionValue,
+  projectQuality,
+  remainingBudget,
+} from './project';
 import { newGame, step, whyNot } from './reducer';
 import { Rng } from './rng';
 import { deserialize, serialize } from './save';
@@ -252,5 +262,372 @@ describe('project invariants and saves', () => {
   it('a save with an active project round-trips unchanged', () => {
     const s = randomProjectCommands(2, 300).reduce((st, c) => step(st, c).state, newGame('nepo', 8));
     expect(deserialize(serialize(s))).toEqual(s);
+  });
+});
+
+// ---------- Sprint 6: shoot → post → festival → release (LAG-47, LAG-48, LAG-50) ----------
+
+const at = (s: GameState, cmd: Command) => step(s, cmd);
+/** ADVANCE to the next time the clock reads `hour`:00 (0 minutes if it already does). */
+function advanceToHour(s: GameState, hour: number): GameState {
+  const minutes = (hour * 60 - minuteOfDay(s.minute) + 1440) % 1440;
+  return minutes ? run(s, { type: 'ADVANCE', minutes }).state : s;
+}
+const festival = (id: string) => FESTIVALS.find((f) => f.id === id)!;
+
+/** A short film with the script written, self-funded and crewed (an Editor + the cheapest other). */
+function shootStage(arch: 'indie' | 'nepo' | 'midwest' = 'indie', seed = 3): GameState {
+  let s = run(newGame(arch, seed), { type: 'START_PROJECT', scale: 'short' }).state;
+  s = write(rested(s));
+  s = write(rested(s));
+  s = run(s, { type: 'SELF_FUND', amount: 2000 }).state;
+  const pool = s.project!.crewPool;
+  const editor = pool.find((c) => c.role === 'editor')!;
+  const other = [...pool].filter((c) => c !== editor).sort((a, b) => a.fee - b.fee)[0]!;
+  s = run(rested(s), { type: 'HIRE_CREW', candidateId: editor.id }, { type: 'SKIP_TO_DONE' }).state;
+  s = run(rested(s), { type: 'HIRE_CREW', candidateId: other.id }, { type: 'SKIP_TO_DONE' }).state;
+  expect(s.project!.stage).toBe('shoot');
+  return s;
+}
+
+/** On set at 06:00, rested, ready to call action. */
+function onSet(s: GameState): GameState {
+  if (s.player.location !== s.project!.location) s = run(s, { type: 'TRAVEL', to: s.project!.location }, { type: 'SKIP_TO_DONE' }).state;
+  return rested(advanceToHour(s, 6));
+}
+const shoot = (s: GameState) => run(onSet(s), { type: 'SHOOT_DAY' }, { type: 'SKIP_TO_DONE' }).state;
+const edit = (s: GameState) => run(rested(s), { type: 'EDIT_SESSION' }, { type: 'SKIP_TO_DONE' }).state;
+
+function festivalStage(arch: 'indie' | 'nepo' | 'midwest' = 'indie', seed = 3): GameState {
+  const s = edit(shoot(shoot(shootStage(arch, seed))));
+  expect(s.project!.stage).toBe('festival');
+  return s;
+}
+
+/** Make the finished film great (state tweak), so acceptance/award/offer odds are high. */
+function polish(s: GameState): GameState {
+  const t = structuredClone(s);
+  t.project!.scores = { develop: [95, 95], shoot: [95, 95], post: [95] };
+  return t;
+}
+
+describe('shoot', () => {
+  it('needs the set location', () => {
+    const s = shootStage();
+    const away = structuredClone(s);
+    away.player.location = s.project!.location === 'noho' ? 'santamonica' : 'noho';
+    expect(whyNot(rested(advanceToHour(away, 6)), { type: 'SHOOT_DAY' })).toMatch(/The set is in/);
+  });
+
+  it('call window is 05:00–10:00', () => {
+    let s = shootStage();
+    if (s.player.location !== s.project!.location) s = run(s, { type: 'TRAVEL', to: s.project!.location }, { type: 'SKIP_TO_DONE' }).state;
+    for (const [h, ok] of [[4, false], [5, true], [10, true], [11, false], [22, false]] as const) {
+      const t = rested(advanceToHour(s, h));
+      expect(hourOf(t.minute)).toBe(h);
+      if (ok) expect(whyNot(t, { type: 'SHOOT_DAY' })).toBeNull();
+      else expect(whyNot(t, { type: 'SHOOT_DAY' })).toMatch(/Call time is 05:00–10:00/);
+    }
+  });
+
+  it('is blocked before the shoot stage and when exhausted', () => {
+    const early = run(newGame('indie', 1), { type: 'START_PROJECT', scale: 'short' }).state;
+    expect(whyNot(early, { type: 'SHOOT_DAY' })).toMatch(/Nothing to shoot/);
+    const t = structuredClone(onSet(shootStage()));
+    t.player.energy = 2;
+    expect(whyNot(t, { type: 'SHOOT_DAY' })).toMatch(/exhausted/);
+  });
+
+  it('a shoot day takes 10h, scores within the formula range, raises Directing; two days move to post', () => {
+    const s0 = onSet(shootStage());
+    const r = run(s0, { type: 'SHOOT_DAY' }, { type: 'SKIP_TO_DONE' });
+    expect(r.state.minute - s0.minute).toBe(10 * 60);
+    const scored = r.events.find((e) => e.type === 'SESSION_SCORED');
+    expect(scored).toMatchObject({ type: 'SESSION_SCORED', stage: 'shoot' });
+    const pl = s0.player;
+    const lo = 15 + 0.5 * pl.skills.directing + 0.25 * crewQuality(s0.project!) + 0.1 * pl.skills.acting;
+    if (scored?.type === 'SESSION_SCORED') {
+      expect(scored.score).toBeGreaterThanOrEqual(Math.floor(lo));
+      expect(scored.score).toBeLessThanOrEqual(Math.ceil(lo + 15));
+    }
+    expect(r.state.player.skills.directing).toBe(pl.skills.directing + 1);
+    expect(r.state.project!.stage).toBe('shoot');
+    const s2 = shoot(r.state);
+    expect(s2.project!.stage).toBe('post');
+    expect(s2.project!.scores.shoot).toHaveLength(2);
+    expect(whyNot(s2, { type: 'SHOOT_DAY' })).toMatch(/Nothing to shoot/);
+  });
+});
+
+describe('post', () => {
+  it('edit is 4h anywhere; the short needs one session to reach the festival stage', () => {
+    const s = shoot(shoot(shootStage()));
+    expect(s.project!.stage).toBe('post');
+    expect(whyNot(s, { type: 'EDIT_SESSION' })).toBeNull();
+    const r = run(rested(s), { type: 'EDIT_SESSION' }, { type: 'SKIP_TO_DONE' });
+    expect(r.state.minute - s.minute).toBe(4 * 60);
+    expect(r.state.project!.stage).toBe('festival');
+    expect(types(r.events)).toContain('PROJECT_STAGE');
+    expect(whyNot(r.state, { type: 'EDIT_SESSION' })).toMatch(/Nothing to edit/);
+  });
+
+  it('a hired Editor adds 4 points per skill level (same luck, same everything else)', () => {
+    const s = rested(shoot(shoot(shootStage())));
+    const ed = editorSkill(s.project!);
+    expect(ed).toBeGreaterThanOrEqual(1);
+    const without = structuredClone(s);
+    for (const c of without.project!.crewPool) if (c.role === 'editor') c.role = 'gaffer';
+    expect(editorSkill(without.project!)).toBe(0);
+    const score = (st: GameState) => run(st, { type: 'EDIT_SESSION' }, { type: 'SKIP_TO_DONE' }).state.project!.scores.post[0]!;
+    expect(score(s) - score(without)).toBe(4 * ed);
+  });
+});
+
+describe('festival circuit', () => {
+  it('cannot submit before the film is finished', () => {
+    expect(whyNot(shootStage(), { type: 'SUBMIT_FESTIVAL', festivalId: 'noho-shorts' })).toMatch(/Finish the film/);
+  });
+
+  it('submitting charges the fee, takes no time, locks the shown odds, and rejects duplicates', () => {
+    const s = festivalStage();
+    const f = festival('noho-shorts');
+    const shown = festivalOddsFor(s, s.project!, f);
+    expect(shown).toBeCloseTo(festivalOdds(projectQuality(s.project!), cloutTier(s.player.rp), 1), 10);
+    const r = at(s, { type: 'SUBMIT_FESTIVAL', festivalId: f.id });
+    expect(r.state.player.cash).toBe(s.player.cash - f.fee);
+    expect(r.state.minute).toBe(s.minute);
+    const sub = r.state.project!.submissions[0]!;
+    expect(sub).toMatchObject({ festivalId: f.id, tier: 1, status: 'pending', odds: shown, award: null });
+    expect(sub.resultMinute).toBe(atHour(dayOf(s.minute) + f.waitDays, 6));
+    expect(types(r.events)).toContain('FESTIVAL_SUBMITTED');
+    expect(whyNot(r.state, { type: 'SUBMIT_FESTIVAL', festivalId: f.id })).toMatch(/Already submitted/);
+    // Locked: a later Clout jump does not change the stored odds.
+    const famous = structuredClone(r.state);
+    famous.player.rp = 5000;
+    expect(famous.project!.submissions[0]!.odds).toBe(shown);
+  });
+
+  it('a short film is capped at tier 2; unknown festivals and empty wallets are refused', () => {
+    const s = festivalStage();
+    expect(whyNot(s, { type: 'SUBMIT_FESTIVAL', festivalId: 'silverlake-underground' })).toBeNull();
+    for (const id of ['slamdunce', 'sunburnt', 'canned']) expect(whyNot(s, { type: 'SUBMIT_FESTIVAL', festivalId: id })).toMatch(/short film can't get into/);
+    expect(whyNot(s, { type: 'SUBMIT_FESTIVAL', festivalId: 'nope' })).toMatch(/Unknown festival/);
+    const broke = structuredClone(s);
+    broke.player.cash = 30;
+    expect(whyNot(broke, { type: 'SUBMIT_FESTIVAL', festivalId: 'silverlake-underground' })).toMatch(/Needs \$50/);
+  });
+
+  it('results land at 06:00 on the right day with the locked odds; an acceptance pays RP', () => {
+    const s0 = festivalStage();
+    const s = at(s0, { type: 'SUBMIT_FESTIVAL', festivalId: 'noho-shorts' }).state;
+    const due = s.project!.submissions[0]!.resultMinute;
+    const before = run(s, { type: 'ADVANCE', minutes: due - s.minute - 1 }).state;
+    expect(before.project!.submissions[0]!.status).toBe('pending');
+    const r = run(before, { type: 'ADVANCE', minutes: 1 });
+    expect(hourOf(r.state.minute)).toBe(6);
+    const res = r.events.find((e) => e.type === 'FESTIVAL_RESULT');
+    expect(res).toBeDefined();
+    if (res?.type !== 'FESTIVAL_RESULT') return;
+    expect(res.odds).toBe(s.project!.submissions[0]!.odds);
+    expect(r.state.project!.submissions[0]!.status).toBe(res.accepted ? 'accepted' : 'rejected');
+    // Only the bills touch cash at 06:00; RP moves by exactly the reported amount.
+    expect(r.state.player.cash).toBe(before.player.cash - dailyBills(ARCHETYPES.indie.rentPerDay));
+    expect(r.state.player.rp - before.player.rp).toBe(res.rp);
+    if (res.accepted) expect(res.rp).toBeGreaterThanOrEqual(festival('noho-shorts').rp);
+    else expect(res.rp).toBe(0);
+  });
+
+  it('acceptances can bring awards (extra RP) and distribution offers worth the formula amount', () => {
+    let awards = 0;
+    let offers = 0;
+    let accepted = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      let s = polish(festivalStage());
+      s.rngState = seed;
+      s = at(s, { type: 'SUBMIT_FESTIVAL', festivalId: 'silverlake-underground' }).state;
+      const q = projectQuality(s.project!);
+      const r = run(s, { type: 'ADVANCE', minutes: s.project!.submissions[0]!.resultMinute - s.minute });
+      const res = r.events.find((e) => e.type === 'FESTIVAL_RESULT');
+      if (res?.type !== 'FESTIVAL_RESULT' || !res.accepted) continue;
+      accepted++;
+      const f = festival('silverlake-underground');
+      if (res.award) {
+        awards++;
+        expect(res.rp).toBe(f.rp * 2);
+        expect(r.state.project!.submissions[0]!.award).toBe(res.award);
+      } else expect(res.rp).toBe(f.rp);
+      if (res.offer) {
+        offers++;
+        expect(res.offer.amount).toBe(Math.round(2000 * (0.3 + q / 100) * 0.4));
+        expect(r.state.project!.offers.map((o) => o.id)).toContain(res.offer.id);
+      }
+    }
+    expect(accepted).toBeGreaterThan(30);
+    expect(awards).toBeGreaterThan(0);
+    expect(awards).toBeLessThan(accepted);
+    expect(offers).toBeGreaterThan(0);
+  });
+});
+
+describe('release', () => {
+  /** A finished, polished short with at least one distribution offer on the table. */
+  function withOffer(): GameState {
+    for (let seed = 1; seed < 100; seed++) {
+      let s = polish(festivalStage());
+      s.rngState = seed;
+      s = at(s, { type: 'SUBMIT_FESTIVAL', festivalId: 'silverlake-underground' }).state;
+      s = run(s, { type: 'ADVANCE', minutes: s.project!.submissions[0]!.resultMinute - s.minute }).state;
+      if (s.project!.offers.length) return s;
+    }
+    throw new Error('no offer in 100 seeds');
+  }
+
+  it('ACCEPT_OFFER pays the offer, adds Network, records "Released by …" and clears the project', () => {
+    const s = withOffer();
+    const offer = s.project!.offers[0]!;
+    const quality = Math.round(projectQuality(s.project!));
+    expect(whyNot(s, { type: 'ACCEPT_OFFER', offerId: 'o-nope' })).toMatch(/offer is gone/);
+    const r = at(s, { type: 'ACCEPT_OFFER', offerId: offer.id });
+    expect(r.state.player.cash).toBe(s.player.cash + offer.amount);
+    expect(r.state.stats.totalEarned).toBe(s.stats.totalEarned + offer.amount);
+    expect(r.state.player.network).toBe(Math.min(100, s.player.network + C.RELEASE_NETWORK));
+    expect(r.state.minute).toBe(s.minute);
+    expect(r.state.project).toBeNull();
+    expect(r.state.credits[0]).toMatchObject({ title: s.project!.title, quality, scale: 'Short film' });
+    expect(r.state.credits[0]!.outcome).toMatch(new RegExp(`^Released by ${offer.distributor}`));
+    expect(types(r.events)).toContain('FILM_RELEASED');
+    expect(whyNot(r.state, { type: 'ACCEPT_OFFER', offerId: offer.id })).toMatch(/No offers/);
+    expect(whyNot(r.state, { type: 'SELF_RELEASE' })).toMatch(/Finish the film/);
+    expect(whyNot(r.state, { type: 'START_PROJECT', scale: 'short' })).toBeNull();
+  });
+
+  it('accepting an offer that brings cash back to ≥ $0 clears an active overdraft immediately', () => {
+    const s = structuredClone(withOffer());
+    const offer = s.project!.offers[0]!;
+    s.player.cash = -Math.floor(offer.amount / 2);
+    s.overdraft = { startedMinute: s.minute, deadlineMinute: s.minute + C.OVERDRAFT_DAYS * C.MINUTES_PER_DAY };
+    const r = at(s, { type: 'ACCEPT_OFFER', offerId: offer.id });
+    expect(r.state.player.cash).toBeGreaterThanOrEqual(0);
+    expect(r.state.minute).toBe(s.minute);
+    expect(r.state.overdraft).toBeNull();
+    expect(types(r.events)).toContain('OVERDRAFT_CLEARED');
+  });
+
+  it('SELF_RELEASE is blocked while festival results are pending', () => {
+    const s = at(festivalStage(), { type: 'SUBMIT_FESTIVAL', festivalId: 'noho-shorts' }).state;
+    expect(whyNot(s, { type: 'SELF_RELEASE' })).toMatch(/Wait for your festival results/);
+    const done = run(s, { type: 'ADVANCE', minutes: s.project!.submissions[0]!.resultMinute - s.minute }).state;
+    expect(whyNot(done, { type: 'SELF_RELEASE' })).toBeNull();
+  });
+
+  it('SELF_RELEASE gives RP = round(quality × 0.5), no cash, and a "Self-released online" credit', () => {
+    const s = festivalStage();
+    const quality = Math.round(projectQuality(s.project!));
+    const r = at(s, { type: 'SELF_RELEASE' });
+    expect(r.state.player.rp - s.player.rp).toBe(Math.round(quality * C.SELF_RELEASE_RP_PER_QUALITY));
+    expect(r.state.player.cash).toBe(s.player.cash);
+    expect(r.state.project).toBeNull();
+    expect(r.state.credits[0]).toMatchObject({ outcome: 'Self-released online', quality });
+  });
+
+  it('self-release is refused before the festival stage', () => {
+    expect(whyNot(shootStage(), { type: 'SELF_RELEASE' })).toMatch(/Finish the film/);
+  });
+});
+
+describe('film saves, determinism and invariants', () => {
+  it('a v2 save with an in-flight project migrates to v3 with empty submissions and offers, and can carry on', () => {
+    const s = shoot(shoot(shootStage()));
+    const { submissions: _s, offers: _o, ...oldProject } = s.project!;
+    const v2 = JSON.stringify({ version: 2, savedAt: 0, state: { ...s, version: 2, project: oldProject } });
+    const m = deserialize(v2)!;
+    expect(m.version).toBe(3);
+    expect(m.project!.submissions).toEqual([]);
+    expect(m.project!.offers).toEqual([]);
+    expect(m.project!.scores).toEqual(s.project!.scores);
+    const finished = edit(m);
+    expect(finished.project!.stage).toBe('festival');
+    expect(at(finished, { type: 'SUBMIT_FESTIVAL', festivalId: 'noho-shorts' }).state.project!.submissions).toHaveLength(1);
+  });
+
+  it('a v2 save with no project migrates with project null', () => {
+    const s = newGame('midwest', 2);
+    const m = deserialize(JSON.stringify({ version: 2, savedAt: 0, state: { ...s, version: 2 } }))!;
+    expect(m.version).toBe(3);
+    expect(m.project).toBeNull();
+  });
+
+  /** Whole short film: shoot, edit, both festivals, then accept the best offer or self-release. */
+  function wholeFilm(seed: number): { state: GameState; events: GameEvent[] } {
+    let s = festivalStage('indie', seed);
+    const events: GameEvent[] = [];
+    for (const id of ['noho-shorts', 'silverlake-underground']) {
+      const r = at(s, { type: 'SUBMIT_FESTIVAL', festivalId: id });
+      s = r.state;
+      events.push(...r.events);
+    }
+    const last = Math.max(...s.project!.submissions.map((x) => x.resultMinute));
+    const r = run(s, { type: 'ADVANCE', minutes: last - s.minute });
+    s = r.state;
+    events.push(...r.events);
+    const best = [...s.project!.offers].sort((a, b) => b.amount - a.amount)[0];
+    const fin = at(s, best ? { type: 'ACCEPT_OFFER', offerId: best.id } : { type: 'SELF_RELEASE' });
+    events.push(...fin.events);
+    return { state: fin.state, events };
+  }
+
+  it('same seed + same commands = identical state through the whole film', () => {
+    for (const seed of [3, 7]) expect(wholeFilm(seed).state).toEqual(wholeFilm(seed).state);
+  });
+
+  it('cash only moves by stated amounts: fees, bills and the accepted offer', () => {
+    for (const seed of [3, 4, 5, 6]) {
+      const start = festivalStage('indie', seed);
+      const { state, events } = wholeFilm(seed);
+      let expected = start.player.cash;
+      for (const e of events) {
+        if (e.type === 'FESTIVAL_SUBMITTED') expected -= e.fee;
+        if (e.type === 'BILLS_CHARGED') expected -= e.amount;
+        if (e.type === 'FILM_RELEASED') expected += e.amount;
+        if (e.type === 'JOB_PAID' || e.type === 'BOOKED') throw new Error('unexpected income');
+      }
+      expect(state.player.cash).toBe(expected);
+      expect(state.project).toBeNull();
+      expect(state.credits[0]!.outcome).toMatch(/^(Released by |Self-released online)/);
+      const released = events.filter((e) => e.type === 'FILM_RELEASED');
+      expect(released).toHaveLength(1);
+    }
+  });
+
+  it('random film commands never break the rules (budget, stages, one release, pending ⇒ no self-release)', () => {
+    const r = new Rng(77);
+    let s = festivalStage('nepo', 5);
+    const ids = FESTIVALS.map((f) => f.id);
+    for (let i = 0; i < 400; i++) {
+      const roll = r.int(0, 5);
+      const cmd: Command =
+        roll === 0
+          ? { type: 'SUBMIT_FESTIVAL', festivalId: r.pick(ids) }
+          : roll === 1
+            ? { type: 'ADVANCE', minutes: r.int(60, 2000) }
+            : roll === 2
+              ? { type: 'SELF_RELEASE' }
+              : roll === 3
+                ? { type: 'ACCEPT_OFFER', offerId: s.project?.offers[0]?.id ?? 'x' }
+                : roll === 4
+                  ? { type: 'START_PROJECT', scale: 'short' }
+                  : { type: 'SKIP_TO_DONE' };
+      const before = s;
+      const res = step(s, cmd);
+      s = res.state;
+      const p = s.project;
+      if (p) {
+        for (const sub of p.submissions) expect(sub.tier).toBeLessThanOrEqual(FILM_SCALES[p.scale].bestFestivalTier);
+        expect(new Set(p.submissions.map((x) => x.festivalId)).size).toBe(p.submissions.length);
+      }
+      if (cmd.type === 'SELF_RELEASE' && before.project && before.project.submissions.some((x) => x.status === 'pending'))
+        expect(types(res.events)).toEqual(['ACTION_REJECTED']);
+      if (types(res.events).includes('FILM_RELEASED')) expect(s.project).toBeNull();
+    }
   });
 });

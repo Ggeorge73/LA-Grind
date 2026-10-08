@@ -92,6 +92,29 @@ export interface Project {
   spent: number;
   pitches: { investorId: string; day: number; yes: boolean; amount: number }[];
   crewPool: CrewCandidate[];
+  /** Festival circuit (stage 'festival'). */
+  submissions: FestivalSubmission[];
+  offers: DistributionOffer[];
+}
+
+export interface FestivalSubmission {
+  festivalId: string;
+  tier: number;
+  submittedMinute: number;
+  /** Result lands at 06:00 on this minute. */
+  resultMinute: number;
+  /** Acceptance chance locked in at submission (what the player was shown). */
+  odds: number;
+  status: 'pending' | 'accepted' | 'rejected';
+  award: string | null;
+}
+
+export interface DistributionOffer {
+  id: string;
+  festivalId: string;
+  distributorId: string;
+  distributor: string;
+  amount: number;
 }
 
 /** A finished (or abandoned) project on the player's record. */
@@ -186,7 +209,12 @@ export type Command =
   | { type: 'WRITE_SESSION' }
   | { type: 'PITCH'; investorId: string }
   | { type: 'SELF_FUND'; amount: number }
-  | { type: 'HIRE_CREW'; candidateId: string };
+  | { type: 'HIRE_CREW'; candidateId: string }
+  | { type: 'SHOOT_DAY' }
+  | { type: 'EDIT_SESSION' }
+  | { type: 'SUBMIT_FESTIVAL'; festivalId: string }
+  | { type: 'ACCEPT_OFFER'; offerId: string }
+  | { type: 'SELF_RELEASE' };
 
 export type GameEvent =
   | { type: 'ACTION_STARTED'; activity: Activity }
@@ -219,4 +247,7 @@ export type GameEvent =
   | { type: 'SESSION_SCORED'; stage: ProjectStage; score: number }
   | { type: 'PITCHED'; investorId: string; yes: boolean; amount: number; odds: number }
   | { type: 'SELF_FUNDED'; amount: number }
-  | { type: 'CREW_HIRED'; candidate: CrewCandidate };
+  | { type: 'CREW_HIRED'; candidate: CrewCandidate }
+  | { type: 'FESTIVAL_SUBMITTED'; festivalId: string; fee: number; odds: number; resultMinute: number }
+  | { type: 'FESTIVAL_RESULT'; festivalId: string; accepted: boolean; odds: number; rp: number; award: string | null; offer: DistributionOffer | null }
+  | { type: 'FILM_RELEASED'; title: string; quality: number; amount: number; distributor: string | null; rp: number };

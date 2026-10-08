@@ -21,7 +21,7 @@ import {
 import type { Rng } from './rng';
 import type { Activity, GameEvent, GameState } from './types';
 import { addHeadline, changeNetwork, changeRp, earn, ownHeadline } from './world';
-import { completeProjectAction } from './project';
+import { completeProjectAction, resolveFestivals } from './project';
 
 /** Advance `minutes` game minutes (stops early if the run ends). */
 export function advance(s: GameState, minutes: number, rng: Rng, events: GameEvent[]): void {
@@ -82,6 +82,16 @@ function newDay(s: GameState, rng: Rng, events: GameEvent[]): void {
   events.push({ type: 'BOARD_REFRESHED', count: s.board.length });
 
   for (let i = 0; i < C.NPC_HEADLINES_PER_DAY; i++) addHeadline(s, events, rng.pick(NPC_HEADLINES), false);
+
+  resolveFestivals(s, rng, events);
+}
+
+/** Instant commands that pay out (e.g. accepting a distribution offer) settle an overdraft right away. */
+export function settleOverdraft(s: GameState, events: GameEvent[]): void {
+  if (s.overdraft && s.player.cash >= 0) {
+    s.overdraft = null;
+    events.push({ type: 'OVERDRAFT_CLEARED' });
+  }
 }
 
 function checkOverdraft(s: GameState, rng: Rng, events: GameEvent[]): void {

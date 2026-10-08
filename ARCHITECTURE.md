@@ -1,4 +1,4 @@
-# LA Grind: Architecture (Phase 1)
+# LA Grind: Architecture
 
 The simulation is a calculator and the screen is its display. Every rule lives in pure functions in `src/sim/`. React only shows state and sends commands, and Capacitor only packages the result. That separation lets the same rules be unit-tested, balance-run headless, saved as JSON, and moved to a server in Phase 3 without a rewrite.
 
@@ -13,7 +13,11 @@ The simulation is a calculator and the screen is its display. Every rule lives i
 | **Opportunity / JobBoard** | `GameState.board: Opportunity[]` + `content/jobs.ts` | Today's opportunities (medium, skill, tier, location, window, prep, status), and the fixed survival-job table |
 | **Location** | `content/locations.ts`, `content/travel.ts` | Six neighbourhoods with map positions, leisure spots, classes, symmetric travel matrix with 405 flags |
 
-Balance numbers live only in `constants.ts` and `content/`. Adding a gig, job or headline means adding a row.
+| **Project** (PI-2) | `GameState.project`, `GameState.credits` | The one active career project (a medium-tagged pipeline of stages: develop → finance → crew → shoot → post → festival), its scores, budget, crew, festival submissions and distribution offers; finished projects become credits |
+
+Balance numbers live only in `constants.ts` and `content/`. Adding a gig, job, festival or headline means adding a row.
+
+**Project engine (`project.ts`).** Every career stage is one of four reusable kinds: `work` (timed sessions that score 0–100), `raise` (pitches with odds), `hire` (pick from a pool) and `circuit` (submit to tiered venues; results land at 06:00). Film uses all four; Music and TV will be new pipelines over the same kinds. Festival results are resolved by the clock's 06:00 tick, next to bills and the board refresh.
 
 ## Command → event flow
 
@@ -42,7 +46,7 @@ Game loop ──► ADVANCE n minutes ──► clock.tick() × n:
 | `lifecycle` | `visibilitychange` / `pagehide` | App plugin `pause` / `resume` |
 | `haptics` | no-op | Haptics plugin (tap, success, warning) |
 
-`index.ts` picks the implementation with `Capacitor.isNativePlatform()`. **Nothing outside `src/platform/` imports a Capacitor plugin.** Saves are versioned JSON strings, and `migrate()` upgrades old versions.
+`index.ts` picks the implementation with `Capacitor.isNativePlatform()`. **Nothing outside `src/platform/` imports a Capacitor plugin.** Saves are versioned JSON strings, and `migrate()` upgrades old versions step by step (v1 → v2 added careers; v2 → v3 added festival submissions and offers).
 
 ## Phase 3: moving the rules to a server
 

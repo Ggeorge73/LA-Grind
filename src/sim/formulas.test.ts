@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { ARCHETYPES } from './content/archetypes';
 import {
+  awardChance,
   bookingPayout,
   cloutTier,
   commute,
   dailyBills,
+  editScore,
+  festivalOdds,
   isExposure,
+  offerAmount,
+  offerChance,
+  shootScore,
   nextCreativeBurnout,
   successOdds,
   tierThreshold,
@@ -123,5 +129,45 @@ describe('misc rules', () => {
     expect(nextCreativeBurnout(false, 60)).toBe(true);
     expect(nextCreativeBurnout(true, 45)).toBe(true);
     expect(nextCreativeBurnout(true, 29.9)).toBe(false);
+  });
+});
+
+describe('film formulas (Sprint 6 reference values)', () => {
+  it('shoot score = 15 + 0.5·Directing + 0.25·Crew + 0.1·Acting + 0–15 luck, clamped', () => {
+    expect(shootScore({ directing: 40, acting: 15, crew: 60 }, 0.5)).toBeCloseTo(59, 5);
+    expect(shootScore({ directing: 10, acting: 20, crew: 20 }, 0)).toBeCloseTo(27, 5);
+    expect(shootScore({ directing: 10, acting: 20, crew: 20 }, 1)).toBeCloseTo(42, 5);
+    expect(shootScore({ directing: 100, acting: 100, crew: 100 }, 1)).toBe(100);
+  });
+  it('edit score = 20 + 0.5·Directing + 4·Editor skill + 0–10 luck, clamped', () => {
+    expect(editScore(40, 0, 0)).toBeCloseTo(40, 5);
+    expect(editScore(40, 3, 0.5)).toBeCloseTo(57, 5);
+    expect(editScore(40, 5, 0) - editScore(40, 0, 0)).toBeCloseTo(20, 5);
+    expect(editScore(100, 5, 1)).toBe(100);
+  });
+  it('festival odds = logistic((Q + 5·Clout − 20 − 15·tier) / 12), clamped to 3–95%', () => {
+    expect(festivalOdds(60, 1, 1)).toBeCloseTo(0.9241, 3);
+    expect(festivalOdds(50, 1, 2)).toBeCloseTo(0.6027, 3);
+    expect(festivalOdds(45, 1, 2)).toBeCloseTo(0.5, 5);
+    expect(festivalOdds(70, 4, 5)).toBeCloseTo(0.3973, 3);
+    expect(festivalOdds(0, 1, 5)).toBe(0.03);
+    expect(festivalOdds(100, 10, 1)).toBe(0.95);
+  });
+  it('award chance = (Q − 50 − 5·tier) / 50, clamped to 0–60%', () => {
+    expect(awardChance(70, 1)).toBeCloseTo(0.3, 5);
+    expect(awardChance(80, 3)).toBeCloseTo(0.3, 5);
+    expect(awardChance(40, 1)).toBe(0);
+    expect(awardChance(100, 1)).toBe(0.6);
+  });
+  it('offer chance on acceptance = 50% + Q/200', () => {
+    expect(offerChance(0)).toBeCloseTo(0.5, 5);
+    expect(offerChance(60)).toBeCloseTo(0.8, 5);
+    expect(offerChance(100)).toBe(1);
+  });
+  it('offer amount = budget × (0.3 + Q/100) × tier multiplier', () => {
+    expect(offerAmount(2000, 60, 0.4)).toBe(720);
+    expect(offerAmount(2000, 50, 0.2)).toBe(320);
+    expect(offerAmount(20000, 50, 0.8)).toBe(12800);
+    expect(offerAmount(80000, 70, 1.8)).toBe(144000);
   });
 });

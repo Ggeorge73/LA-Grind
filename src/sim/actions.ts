@@ -1,9 +1,12 @@
 // Read-only views for the UI: what the player can do right now, what it costs, what it pays,
 // and why not. Keeps every rule in src/sim so components only render and dispatch.
-import { CREW_ROLES, FILM_PIPELINE, FILM_SCALES, FILM_SCALE_IDS } from './content/film';
-import { INVESTORS } from './content/filmFlavor';
+import { CREW_ROLES, FESTIVALS, FILM_PIPELINE, FILM_SCALES, FILM_SCALE_IDS } from './content/film';
+import { DISTRIBUTORS, FESTIVAL_BLURBS, INVESTORS } from './content/filmFlavor';
 import {
   crewQuality,
+  editorSkill,
+  eligibleFestivals,
+  festivalOddsFor,
   fundingRoom,
   hiredCrew,
   pitchOddsFor,
@@ -13,6 +16,7 @@ import {
   remainingBudget,
   scaleOf,
   scriptQuality,
+  submittedTo,
 } from './project';
 import type { Project } from './types';
 import * as C from './constants';
@@ -20,7 +24,7 @@ import { ARCHETYPES } from './content/archetypes';
 import { JOBS, JOB_IDS } from './content/jobs';
 import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LEISURE_IDS, LOCATIONS, LOCATION_IDS, REPAIR_LOCATION } from './content/locations';
 import { SUBMISSION_NAME, oddsFor, submissionFee } from './board';
-import { bookingPayout, commute, dailyBills, hourOf, isExposure, type CommuteQuote } from './formulas';
+import { average, bookingPayout, commute, dailyBills, hourOf, isExposure, type CommuteQuote } from './formulas';
 import { whyNot } from './reducer';
 import type { Command, GameState, LocationId, Opportunity, Skill } from './types';
 import { formatMoney } from './world';
@@ -263,6 +267,32 @@ export interface ProjectView {
     productionValue: number;
     candidates: { id: string; name: string; role: string; skill: number; fee: number; quirk: string; hired: boolean; command: Command; disabledReason: string | null }[];
   };
+  shoot: {
+    done: number;
+    needed: number;
+    scores: number[];
+    average: number;
+    where: string;
+    command: Command;
+    disabledReason: string | null;
+  };
+  post: { done: number; needed: number; scores: number[]; average: number; hasEditor: boolean; command: Command; disabledReason: string | null };
+  festivals: {
+    id: string;
+    name: string;
+    tier: number;
+    blurb: string;
+    fee: number;
+    waitDays: number;
+    /** Live odds if submitted now (locked odds once submitted). */
+    odds: number;
+    eligible: boolean;
+    submission: { status: 'pending' | 'accepted' | 'rejected'; resultMinute: number; award: string | null } | null;
+    command: Command;
+    disabledReason: string | null;
+  }[];
+  offers: { id: string; distributor: string; blurb: string; festival: string; amount: number; command: Command; disabledReason: string | null }[];
+  selfRelease: { command: Command; disabledReason: string | null; rp: number };
   abandon: Command;
 }
 
@@ -311,6 +341,63 @@ export function projectView(s: GameState): ProjectView | null {
         return { id: c.id, name: c.name, role: CREW_ROLES[c.role], skill: c.skill, fee: c.fee, quirk: c.quirk, hired: c.hired, command, disabledReason: whyNot(s, command) };
       }),
     },
+    shoot: (() => {
+      const command: Command = { type: 'SHOOT_DAY' };
+      return {
+        done: p.scores.shoot.length,
+        needed: sc.shootDays,
+        scores: p.scores.shoot,
+        average: average(p.scores.shoot),
+        where: LOCATIONS[p.location].name,
+        command,
+        disabledReason: whyNot(s, command),
+      };
+    })(),
+    post: (() => {
+      const command: Command = { type: 'EDIT_SESSION' };
+      return {
+        done: p.scores.post.length,
+        needed: sc.editSessions,
+        scores: p.scores.post,
+        average: average(p.scores.post),
+        hasEditor: editorSkill(p) > 0,
+        command,
+        disabledReason: whyNot(s, command),
+      };
+    })(),
+    festivals: FESTIVALS.map((f) => {
+      const command: Command = { type: 'SUBMIT_FESTIVAL', festivalId: f.id };
+      const sub = submittedTo(p, f.id);
+      return {
+        id: f.id,
+        name: f.name,
+        tier: f.tier,
+        blurb: FESTIVAL_BLURBS[f.id] ?? '',
+        fee: f.fee,
+        waitDays: f.waitDays,
+        odds: sub ? sub.odds : festivalOddsFor(s, p, f),
+        eligible: eligibleFestivals(p).includes(f),
+        submission: sub ? { status: sub.status, resultMinute: sub.resultMinute, award: sub.award } : null,
+        command,
+        disabledReason: whyNot(s, command),
+      };
+    }),
+    offers: p.offers.map((o) => {
+      const command: Command = { type: 'ACCEPT_OFFER', offerId: o.id };
+      return {
+        id: o.id,
+        distributor: o.distributor,
+        blurb: DISTRIBUTORS.find((d) => d.id === o.distributorId)?.blurb ?? '',
+        festival: FESTIVALS.find((f) => f.id === o.festivalId)?.name ?? '',
+        amount: o.amount,
+        command,
+        disabledReason: whyNot(s, command),
+      };
+    }),
+    selfRelease: (() => {
+      const command: Command = { type: 'SELF_RELEASE' };
+      return { command, disabledReason: whyNot(s, command), rp: Math.round(Math.round(projectQuality(p)) * C.SELF_RELEASE_RP_PER_QUALITY) };
+    })(),
     abandon: { type: 'ABANDON_PROJECT' },
   };
 }

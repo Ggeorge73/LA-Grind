@@ -5,14 +5,31 @@ import { JOBS } from './content/jobs';
 import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LOCATIONS, REPAIR_LOCATION } from './content/locations';
 import { NPC_HEADLINES } from './content/headlines';
 import { SUBMISSION_NAME, generateBoard, oddsFor, submissionFee } from './board';
-import { advance } from './clock';
+import { advance, settleOverdraft } from './clock';
 import { atHour, commute, cloutTier, hourOf, minuteOfDay } from './formulas';
 import { Rng, seedToState } from './rng';
 import type { Activity, ArchetypeId, Command, GameEvent, GameState } from './types';
 import { addHeadline, addLog, formatMoney } from './world';
 import { describeEvent } from './describe';
 import { FILM_SCALES } from './content/film';
-import { abandonProject, fundingRoom, hiredCrew, investorById, pitchOddsFor, pitchedToday, scaleOf, selfFund, startProject } from './project';
+import {
+  abandonProject,
+  acceptOffer,
+  eligibleFestivals,
+  festivalById,
+  fundingRoom,
+  hiredCrew,
+  investorById,
+  pendingSubmissions,
+  pitchOddsFor,
+  pitchedToday,
+  scaleOf,
+  selfFund,
+  selfRelease,
+  startProject,
+  submitFestival,
+  submittedTo,
+} from './project';
 
 export interface StepResult {
   state: GameState;
@@ -175,6 +192,40 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       if (c.fee > pr.raised - pr.spent) return `Not enough budget left (${formatMoney(pr.raised - pr.spent)}). Self-fund to top up.`;
       return tired;
     }
+    case 'SHOOT_DAY': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'shoot') return 'Nothing to shoot right now.';
+      if (p.location !== pr.location) return `The set is in ${LOCATIONS[pr.location].name}.`;
+      const [from, to] = C.SHOOT_CALL_WINDOW;
+      if (hour < from || hour > to) return `Call time is ${pad(from)}:00–${pad(to)}:00.`;
+      return tired;
+    }
+    case 'EDIT_SESSION': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'post') return 'Nothing to edit right now.';
+      return tired;
+    }
+    case 'SUBMIT_FESTIVAL': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'festival') return 'Finish the film first.';
+      const f = festivalById(cmd.festivalId);
+      if (!f) return 'Unknown festival.';
+      if (!eligibleFestivals(pr).includes(f)) return `A ${scaleOf(pr).name.toLowerCase()} can't get into ${f.name}.`;
+      if (submittedTo(pr, f.id)) return 'Already submitted.';
+      if (p.cash < f.fee) return `Needs $${f.fee}.`;
+      return null;
+    }
+    case 'ACCEPT_OFFER': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'festival') return 'No offers right now.';
+      return pr.offers.some((o) => o.id === cmd.offerId) ? null : 'That offer is gone.';
+    }
+    case 'SELF_RELEASE': {
+      const pr = s.project;
+      if (!pr || pr.stage !== 'festival') return 'Finish the film first.';
+      if (pendingSubmissions(pr).length > 0) return 'Wait for your festival results first.';
+      return null;
+    }
     case 'SUBMIT': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId);
       if (!opp || opp.status !== 'open') return 'That opportunity is gone.';
@@ -219,6 +270,16 @@ export function step(state: GameState, cmd: Command): StepResult {
     case 'SELF_FUND':
       selfFund(s, rng, cmd.amount, events);
       break;
+    case 'SUBMIT_FESTIVAL':
+      submitFestival(s, festivalById(cmd.festivalId)!, events);
+      break;
+    case 'ACCEPT_OFFER':
+      acceptOffer(s, rng, cmd.offerId, events);
+      settleOverdraft(s, events);
+      break;
+    case 'SELF_RELEASE':
+      selfRelease(s, rng, events);
+      break;
     default: {
       const activity = begin(s, cmd);
       s.activity = activity;
@@ -237,7 +298,10 @@ export function step(state: GameState, cmd: Command): StepResult {
 /** Pay the up-front costs and build the activity. Only called after whyNot() passed. */
 function begin(
   s: GameState,
-  cmd: Exclude<Command, { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' }>,
+  cmd: Exclude<
+    Command,
+    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' }
+  >,
 ): Activity {
   const p = s.player;
   const make = (kind: Activity['kind'], label: string, minutes: number, extra: Partial<Activity> = {}): Activity => ({
@@ -325,6 +389,16 @@ function begin(
         energyPerMinute: C.HIRE_ENERGY / (C.HIRE_HOURS * H),
       });
     }
+    case 'SHOOT_DAY':
+      return make('project', `Shooting: ${s.project!.title}`, C.SHOOT_HOURS * H, {
+        projectAction: 'shoot',
+        energyPerMinute: C.SHOOT_ENERGY / (C.SHOOT_HOURS * H),
+      });
+    case 'EDIT_SESSION':
+      return make('project', `Editing: ${s.project!.title}`, C.EDIT_HOURS * H, {
+        projectAction: 'edit',
+        energyPerMinute: C.EDIT_ENERGY / (C.EDIT_HOURS * H),
+      });
     case 'SUBMIT': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId)!;
       p.cash -= submissionFee(p, opp);

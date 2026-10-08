@@ -91,9 +91,32 @@ export const FILM_TITLE_SECOND: readonly string[] = [
   'Moths', 'Satellites', 'Antennas', 'Porches', 'Envelopes', 'Cousins',
 ];
 
-export type FilmHeadlineKind = 'projectStarted' | 'pitchYes' | 'pitchNo' | 'greenlit' | 'crewComplete' | 'abandoned';
+export type FilmHeadlineKind =
+  | 'projectStarted'
+  | 'pitchYes'
+  | 'pitchNo'
+  | 'greenlit'
+  | 'crewComplete'
+  | 'abandoned'
+  | 'shootWrapped'
+  | 'festivalAccepted'
+  | 'festivalRejected'
+  | 'award'
+  | 'offer'
+  | 'released'
+  | 'selfReleased';
 
-/** Placeholders: {who} (e.g. "Indie Hustler"), {title} (film title), {investor} (investor name), {amount} (e.g. "$8,000"), {scale} ("short film" | "micro-budget feature" | "indie feature"). */
+/**
+ * Placeholders:
+ * - {who} (e.g. "Indie Hustler"), {title} (film title)
+ * - {investor} (investor name), {amount} (e.g. "$14,400")
+ * - {scale} ("short film" | "micro-budget feature" | "indie feature")
+ * - {festival} (festival name), {distributor} (distributor name), {award} (award name)
+ *
+ * Per kind: pitch* use {investor}/{amount}; shootWrapped uses {who},{title},{scale};
+ * festivalAccepted/festivalRejected use {who},{title},{festival}; award adds {award};
+ * offer/released use {who},{title},{distributor},{amount}; selfReleased uses {who},{title}.
+ */
 export const FILM_HEADLINES: Record<FilmHeadlineKind, readonly string[]> = {
   projectStarted: [
     '{who} Developing {scale} "{title}"; Calls It "Deeply Personal, Also Commercial"',
@@ -149,4 +172,108 @@ export const FILM_HEADLINES: Record<FilmHeadlineKind, readonly string[]> = {
     'Sources: "{title}" Now a Folder Called "Someday" on {who}\'s Desktop',
     '{who} Abandons "{title}"; Investors Reportedly "Relieved, Honestly"',
   ],
+  shootWrapped: [
+    'THAT\'S A WRAP: {who}\'s {scale} "{title}" Completes Shoot, Mostly on Schedule',
+    '"{title}" Wraps Production; {who} Sleeps 19 Hours, Wakes Up an Auteur',
+    '{who} Calls Final "Cut!" on "{title}," Crew Applauds, Returns Nothing Borrowed',
+    '{scale} "{title}" Wraps; Footage Described as "Painterly," Also Dark',
+    'Wrap Party for "{title}" Held in Parking Lot, Declared "Very Indie"',
+    '"{title}" Done Shooting; {who} Now Says "We\'ll Find It in the Edit"',
+    '{who} Wraps "{title}," Immediately Begins Grieving the Group Chat',
+    'Principal Photography Complete on "{title}"; Hard Drive Count: Alarming',
+  ],
+  festivalAccepted: [
+    'OFFICIAL SELECTION: {festival} Picks {who}\'s "{title}"',
+    '"{title}" Lands at {festival}; {who} Orders Laurels Before Lunch',
+    '{festival} Programs "{title}," {who} Updates Every Bio on the Internet',
+    '{who}\'s "{title}" Heads to {festival}; Lanyard Already Purchased',
+    '{festival} Says Yes to "{title}"; Programmer Calls It "a Mood"',
+    'Fest Alert: "{title}" Joins {festival} Lineup, {who} Practices Q&A Face',
+    '"{title}" Accepted to {festival}; {who} Researches Cheapest Motel in Town',
+  ],
+  festivalRejected: [
+    '{festival} Passes on "{title}," Cites "Unprecedented Number of Submissions"',
+    '"{title}" Not Selected for {festival}; {who} Rereads Form Email 40 Times',
+    '{who} Learns of {festival} Rejection via Portal Status Change, Shrugs Loudly',
+    '{festival} Declines "{title}," Keeps $85 Fee, Wishes {who} "Every Success"',
+    '"{title}" Snubbed by {festival}; {who} Declares Fests "Kind of Over Anyway"',
+    '{festival} Rejection Stings {who}, Who Reminds Everyone It\'s "Subjective"',
+    'Sources: {festival} Screeners Watched "{title}" for Nearly Four Minutes',
+  ],
+  award: [
+    '{who}\'s "{title}" Takes {award} at {festival}',
+    'WINNER: "{title}" Claims {award}; {who} Thanks Mom, Dentists, Fog',
+    '{festival} Hands {award} to "{title}," {who} Forgets Entire Speech',
+    '"{title}" Wins {award} at {festival}; Trophy Is Mostly Acrylic',
+    '{who} Accepts {award} for "{title}," Plugs Podcast Twice',
+    'Upset at {festival}: "{title}" Nabs {award} Over Film With a Budget',
+    '{award} Goes to "{title}"; {who} Adds Second Laurel, Poster Now Mostly Laurels',
+  ],
+  offer: [
+    '{distributor} Circles "{title}," Floats {amount} for Worldwide Rights',
+    'Deal Talk: {distributor} Offers {who} {amount} for "{title}"',
+    '{distributor} Sends {who} {amount} Offer for "{title}," Signed With an Emoji',
+    'Bidding War? Not Quite: {distributor} Alone Bids {amount} on "{title}"',
+    '{distributor} Eyes "{title}" at {amount}; {who} Pretends to Need Time',
+    '"{title}" Draws {amount} Offer From {distributor}, Plus "Great Exposure"',
+    'Sources: {distributor} Wants "{title}" for {amount} and a Shorter Title',
+  ],
+  released: [
+    '{distributor} Releases {who}\'s "{title}"; {amount} Deal Officially Real',
+    '"{title}" Now Streaming on {distributor}, Buried Under 40 Docuseries',
+    'OUT NOW: "{title}" Hits {distributor} After {amount} Pickup',
+    '{who}\'s "{title}" Debuts on {distributor}; Thumbnail Chosen by Algorithm',
+    '{distributor} Launches "{title}," {who} Spends {amount} Mentally Already',
+    '"{title}" Bows on {distributor}; Mom Watches Twice, Algorithm Notices',
+    '{distributor} Drops "{title}" ({amount} Deal); Marketing Is One Tweet',
+  ],
+  selfReleased: [
+    '{who} Self-Releases "{title}," Calls It "Disrupting Distribution"',
+    '"{title}" Goes Direct-to-Link-in-Bio; {who} Is Now a Distributor',
+    '{who} Uploads "{title}" Online, Refreshes View Count Hourly',
+    'Going It Alone: {who} Drops "{title}" Free, Asks for "Likes and Shares"',
+    '"{title}" Self-Released by {who}; Premiere Held in Group Chat',
+    '{who} Puts "{title}" Online After Distributors "Ghosted, Respectfully"',
+    'DIY Release: "{title}" Now Available Wherever {who} Posts Things',
+  ],
+};
+
+export interface Distributor {
+  id: string;
+  name: string;
+  /** ≤ 90 chars. */
+  blurb: string;
+}
+
+export const DISTRIBUTORS: readonly Distributor[] = [
+  { id: 'murderflix', name: 'MurderFlix', blurb: 'Only greenlights true crime. Will retitle your rom-com "The Killer Next Door."' },
+  { id: 'b26', name: 'B26', blurb: 'Boutique taste-maker. Sells tote bags of your film before buying the film.' },
+  { id: 'skyward-inflight', name: 'Skyward In-Flight Selections', blurb: 'Seat-back catalogue. Your ending will be cut for turbulence and content.' },
+  { id: 'freevue-247', name: 'FreeVue 24/7', blurb: 'Free ad-supported channel. Your film airs between two mattress commercials, forever.' },
+  { id: 'prestige-plus', name: 'Prestige+ Plus', blurb: 'Streamer with a plus in the name twice. Cancels things before they premiere.' },
+  { id: 'mumblecore-collection', name: 'The Mumblecore Collection', blurb: 'Curated arthouse service. Seven subscribers, all of them programmers.' },
+  { id: 'bigbox-dvd', name: 'BigBox Bargain Bin Home Video', blurb: 'Still prints DVDs. Will put a helicopter on your cover regardless of plot.' },
+  { id: 'scrollr', name: 'Scrollr Originals', blurb: 'Vertical-video app. Will release your feature in 94 one-minute parts.' },
+];
+
+export const FESTIVAL_AWARDS: readonly string[] = [
+  'Golden Sandal for Most Ambient Dread',
+  'Silver Lanyard for Bravest Use of Fog',
+  'Jury Prize for Longest Uninterrupted Stare',
+  'Audience Award (Audience of Eleven)',
+  'Crystal Moleskine for Emerging Voice',
+  'Special Mention for Least Explained Ending',
+  'Bronze Tote Bag for Unflinching Vision',
+  'Golden Boom Mic for Most Natural Sound (Wind)',
+  'Grand Jury Prize for Most Feelings Per Minute',
+  'Honorable Mention for Surviving Post-Production',
+];
+
+/** Keyed by festival id. ≤ 90 chars each. */
+export const FESTIVAL_BLURBS: Record<string, string> = {
+  'noho-shorts': 'Monthly screening in a bar back room. Projector is a laptop; jury is the bartender.',
+  'silverlake-underground': 'Rooftop fest for films shot on expired stock. Admission paid in kombucha.',
+  slamdunce: 'Park City\'s scrappier rival. Snow, swag bags, and lanyards in every color.',
+  sunburnt: 'Mountain prestige fest. Deals close in condos; everyone wears the same puffer.',
+  canned: 'Riviera glamour. Eight-minute ovations, strict shoe rules, yachts with opinions.',
 };
