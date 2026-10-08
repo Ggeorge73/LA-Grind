@@ -19,13 +19,14 @@ export interface LabelDeal {
 }
 
 // Easy indie → picky major. Bigger advances and marketing cost a bigger cut.
+// Advances 40–100% → 60–100% (LAG-69): at 40–60% a Midwest Transplant still owed ~$2k of a $4,000 EP on ~$45/day of barista savings.
 // Marketing 0.1–1.0 → 0.1–0.5 (LAG-69): it compounds through the release-week fan loop; at ×2 a Producer EP went 2k → 20k+ Fans.
 export const LABELS: readonly LabelDeal[] = [
-  { id: 'garage-press', location: 'noho', difficultyMod: -10, advanceMin: 0.4, advanceMax: 0.6, royaltyCut: 0.3, marketing: 0.1 },
-  { id: 'tape-hiss', location: 'silverlake', difficultyMod: -5, advanceMin: 0.5, advanceMax: 0.7, royaltyCut: 0.35, marketing: 0.15 },
-  { id: 'beachhouse', location: 'santamonica', difficultyMod: -2, advanceMin: 0.5, advanceMax: 0.7, royaltyCut: 0.4, marketing: 0.2 },
-  { id: 'algorithm', location: 'weho', difficultyMod: 3, advanceMin: 0.6, advanceMax: 0.85, royaltyCut: 0.5, marketing: 0.3 },
-  { id: 'burbank-sound', location: 'burbank', difficultyMod: 6, advanceMin: 0.7, advanceMax: 0.9, royaltyCut: 0.55, marketing: 0.35 },
+  { id: 'garage-press', location: 'noho', difficultyMod: -10, advanceMin: 0.6, advanceMax: 0.8, royaltyCut: 0.3, marketing: 0.1 },
+  { id: 'tape-hiss', location: 'silverlake', difficultyMod: -5, advanceMin: 0.65, advanceMax: 0.85, royaltyCut: 0.35, marketing: 0.15 },
+  { id: 'beachhouse', location: 'santamonica', difficultyMod: -2, advanceMin: 0.7, advanceMax: 0.85, royaltyCut: 0.4, marketing: 0.2 },
+  { id: 'algorithm', location: 'weho', difficultyMod: 3, advanceMin: 0.75, advanceMax: 0.9, royaltyCut: 0.5, marketing: 0.3 },
+  { id: 'burbank-sound', location: 'burbank', difficultyMod: 6, advanceMin: 0.85, advanceMax: 0.95, royaltyCut: 0.55, marketing: 0.35 },
   { id: 'sunset-major', location: 'hollywood', difficultyMod: 12, advanceMin: 0.9, advanceMax: 1, royaltyCut: 0.7, marketing: 0.5 },
 ];
 
