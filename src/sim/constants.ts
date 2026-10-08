@@ -114,4 +114,39 @@ export const TRADES_MAX = 60;
 export const LOG_MAX = 120;
 export const NPC_HEADLINES_PER_DAY = 3;
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
+
+// Projects (PI-2 career engine) — film numbers; scales live in content/film.ts
+export const WRITE_SESSION_HOURS = 3;
+export const WRITE_SESSION_ENERGY = 15;
+export const WRITE_SESSION_SPARK = 15;
+export const WRITE_SCORE_BASE = 20;
+export const WRITE_SCORE_SKILL = 0.6;
+export const WRITE_SCORE_SPARK = 0.2;
+export const WORK_SCORE_LUCK = 10;
+export const PROJECT_SKILL_GAIN = 1;
+
+export const PITCH_HOURS = 2;
+export const PITCH_ENERGY = 10;
+export const PITCH_SCRIPT_WEIGHT = 0.5;
+export const PITCH_CLOUT_WEIGHT = 10;
+export const PITCH_NETWORK_WEIGHT = 0.3;
+export const PITCH_SPREAD = 12;
+export const PITCH_FLOOR = 0.05;
+export const PITCH_CEILING = 0.85;
+
+export const HIRE_HOURS = 1;
+export const HIRE_ENERGY = 5;
+export const CREW_POOL_BASE = 3;
+export const CREW_POOL_PER_NETWORK = 20;
+export const CREW_POOL_MAX = 10;
+export const CREW_FEE_BASE = 0.04;
+export const CREW_FEE_PER_SKILL = 0.03;
+export const CREW_QUALITY_PER_SKILL = 20;
+export const PRODUCTION_VALUE_MAX = 10;
+
+// Film quality weights
+export const FILM_WEIGHT_SCRIPT = 0.35;
+export const FILM_WEIGHT_SHOOT = 0.4;
+export const FILM_WEIGHT_POST = 0.15;
+export const FILM_WEIGHT_CREW = 0.1;

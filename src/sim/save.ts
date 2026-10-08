@@ -26,7 +26,10 @@ export function deserialize(raw: string | null): GameState | null {
 
 type Migration = (file: SaveFile) => SaveFile;
 /** MIGRATIONS[n] upgrades a version-n save to version n+1. */
-const MIGRATIONS: Record<number, Migration> = {};
+const MIGRATIONS: Record<number, Migration> = {
+  // v1 → v2 (PI-2): careers. Old runs simply have no project and no credits yet.
+  1: (file) => ({ ...file, version: 2, state: { ...file.state, version: 2, project: null, credits: [] } }),
+};
 
 export function migrate(file: SaveFile): SaveFile | null {
   if (!file || typeof file.version !== 'number' || !file.state) return null;
