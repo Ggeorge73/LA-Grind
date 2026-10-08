@@ -2,7 +2,7 @@
 
 A satirical life-sim about trying to make it in Los Angeles's film, TV and music industries. Pick an archetype, pay rent, chase gigs, try not to move back home.
 
-**Phase 1: playable single-player slice**, plus **Phase 2 careers in progress**: you can now make a film from script to festival release. One codebase runs in a web browser and packages as iOS and Android apps with Capacitor.
+**Phase 1: playable single-player slice**, plus **Phase 2 careers in progress**: you can make a film from script to festival release, and record and release music onto the charts. One codebase runs in a web browser and packages as iOS and Android apps with Capacitor.
 
 - Plans and team: [`docs/PI-1.md`](docs/PI-1.md) (Phase 1) · [`docs/PI-2.md`](docs/PI-2.md) (careers: Film → Music → TV) · Jira project **LAG**
 - How it is built: [`ARCHITECTURE.md`](ARCHITECTURE.md)
@@ -22,6 +22,7 @@ npm run dev          # http://localhost:5173 — open at a phone size in devtool
 | `npm run balance` | Headless balance run: 4 archetypes × 4 strategies × 30 days, plus no-income runway |
 | `node tools/acceptance-playtest.cjs shots` | With `npm run dev` running: plays every "Done means" item for all 4 archetypes through the UI (needs Playwright + Chromium) |
 | `node tools/film-playtest.cjs shots` | With `npm run dev` running: takes a short film from script to release for all 4 archetypes through the Projects tab |
+| `node tools/music-playtest.cjs shots` | With `npm run dev` running: takes a single from songwriting to the end of release week for all 4 archetypes |
 | `npm run build` | Static production build in `dist/` |
 | `npm run cap:sync` | Build, then copy the web build into the iOS and Android projects (`npx cap sync`) |
 | `npm run ios` / `npm run android` | Sync, then open the native project in Xcode / Android Studio |
@@ -61,7 +62,7 @@ Needs **Android Studio** (with an SDK and an emulator image) and JDK 21.
 - **Hustle** tab: what you can do *here, now*, with time, costs, rewards, and why a button is disabled.
 - **Map** tab: tap a neighbourhood to see the live travel time, energy and gas before you go. Crossing the 405 at rush hour costs triple.
 - **Gigs** tab: today's film, TV and music opportunities. Prep raises your odds; the odds are shown before you submit. Tier 2+ needs headshots (Hollywood, $400).
-- **Projects** tab: make your own film. Write the script, pitch investors or self-fund, hire a crew, shoot on set (call time 05:00–10:00), edit, then submit to festivals. Results land at 06:00 days later; take a distribution offer or self-release. One project at a time.
+- **Projects** tab: make your own film. Write the script, pitch investors or self-fund, hire a crew, shoot on set (call time 05:00–10:00), edit, then submit to festivals. Results land at 06:00 days later; take a distribution offer or self-release. Or make music: write songs, book a studio, hire a studio crew, record, then release it and ride a 7-day release week (streams, royalties, Fans and a chart position every 06:00; promo once a day boosts tomorrow). One project at a time.
 - **Trades** tab: the satirical trade paper. Your bookings, rejections and exposures land here.
 - Bills of rent + $20 food + $10 car are charged at **06:00**. Below $0 starts a 3-day overdraft countdown, and if it runs out you've **Moved Back Home**.
 - **Pause / 1x / 4x** in the header; **Skip to done** finishes the current action instantly.
@@ -149,7 +150,7 @@ No-income runway (days before cash first drops below $0):
 
 ## Deliberately missing (Phase 1 scope)
 
-- Music and TV careers, pilot season, record releases, labels, tours, guild membership (**Phase 2, Sprints 7–10**)
+- Label deals, tours, beat sales, TV careers, pilot season, guild membership (**Phase 2, Sprints 8–10**)
 - Accounts, server-side rules, shared Trades feed, leaderboards, shared clock (**Phase 3**)
 - Presence, chat, co-op productions (**Phase 4**)
 - Purchases, ads, analytics, account deletion, moderation tools: not needed until accounts and social features exist
