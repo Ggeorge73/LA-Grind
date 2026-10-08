@@ -346,7 +346,8 @@ export function projectView(s: GameState): ProjectView | null {
       remaining: remainingBudget(p),
       room: Number.isFinite(fundingRoom(p)) ? fundingRoom(p) : 0,
     },
-    investors: INVESTORS.map((inv) => {
+    // Investors are film-only for now (music labels arrive in Sprint 8).
+    investors: (film ? INVESTORS : []).map((inv) => {
       const command: Command = { type: 'PITCH', investorId: inv.id };
       return {
         id: inv.id,
