@@ -1,8 +1,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const SIM_DIR = join(__dirname);
+const SIM_DIR = dirname(fileURLToPath(import.meta.url));
 const FORBIDDEN = [/from ['"]react/, /from ['"]@capacitor/, /Math\.random\(/, /Date\.now\(/, /\bfetch\(/, /\bwindow\./, /\bdocument\./];
 
 function files(dir: string): string[] {
