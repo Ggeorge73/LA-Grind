@@ -107,6 +107,22 @@ Film runs: one film next to a weekday barista job, stopping at release (max 60 d
 | The Indie Hustler | Short film | 7.9 | 69 | 2/2 | distribution deal | 180 | 2 | $2,075 | $791 | -$1,528 |
 | The Bedroom Producer | Short film | 7.9 | 53 | 1/2 | distribution deal | 120 | 2 | $2,053 | $665 | -$1,654 |
 
+Music runs: one record next to a weekday barista job, stopping at the end of release week (max 60 days). Studio budget is self-funded; "Cash vs barista-only" compares end cash with barista alone over the same days. The EP strategy keeps releasing singles until Clout 2, then saves up for the $4,000 studio.
+
+| Archetype | Strategy | Days to week end | Quality | Peak | Streams | Fans gained | Royalties | Music RP | Cash vs barista-only |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| The Nepo Baby | Single + promo | 7.9 | 63 | #74 | 26,220 | 331 | $104 | 81 | -$456 |
+| The Nepo Baby | Single, no promo | 7.9 | 63 | #77 | 18,520 | 234 | $73 | 72 | -$473 |
+| The Nepo Baby | EP + promo | 10.9 | 62 | #64 | 80,554 | 1,006 | $322 | 111 | -$3,874 |
+| The Midwest Transplant | Single + promo | 8.9 | 61 | #87 | 8,159 | 99 | $33 | 42 | -$375 |
+| The Midwest Transplant | Single, no promo | 8.9 | 61 | #89 | 5,791 | 70 | $23 | 36 | -$373 |
+| The Indie Hustler | Single + promo | 9.0 | 64 | #81 | 14,529 | 187 | $58 | 60 | -$486 |
+| The Indie Hustler | Single, no promo | 8.9 | 64 | #83 | 10,233 | 131 | $40 | 54 | -$368 |
+| The Bedroom Producer | Single + promo | 8.9 | 73 | #64 | 74,102 | 1,081 | $295 | 111 | -$113 |
+| The Bedroom Producer | Single, no promo | 8.9 | 73 | #66 | 51,089 | 746 | $204 | 105 | -$192 |
+
+A single takes ~8–9 days for everyone (most of it is the 7-day release week), costs $100–500 net and pays 36–111 RP; the Bedroom Producer's 1,200 starting fans make it the strongest (#64 peak, ~1,000 new fans, Clout 2 from one single). Daily promo adds ~40% streams and fans but is optional. Only the Nepo Baby can self-fund an EP in 60 days: the others reach Clout 2 (after 1–3 singles) but cannot save $4,000 on barista pay, which label advances (Sprint 8) are meant to solve. Tuned in LAG-62: single budget $600 → $400, chart RP 2 → 3 per place.
+
 No-income runway (days before cash first drops below $0):
 
 | Archetype | Runway | Target |
