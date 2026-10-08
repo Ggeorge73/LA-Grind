@@ -3,12 +3,17 @@
 import { FESTIVALS, FILM_SCALES } from './content/film';
 import { MUSIC_SCALES } from './content/music';
 import { CHART_NAME } from './content/musicFlavor';
+import { LABELS, VENUES } from './content/musicBiz';
+import { LABEL_FLAVOR, VENUE_FLAVOR } from './content/musicBizFlavor';
+import { beatFee, beatLeaseChance, placementChance, showPay, soundtrackBonus } from './formulas';
+import { playedShowToday } from './musicBiz';
 import { CREW_ROLE_NAMES, PROJECT_SCALES, SCALE_IDS_BY_MEDIUM, type ProjectMedium } from './content/projects';
 import { DISTRIBUTORS, FESTIVAL_BLURBS, INVESTORS } from './content/filmFlavor';
 import {
   crewQuality,
   editorSkill,
   eligibleFestivals,
+  labelOddsFor,
   filmScaleOf,
   musicScaleOf,
   peakPosition,
@@ -270,6 +275,23 @@ export interface ProjectView {
   write: { command: Command; disabledReason: string | null };
   budget: { budget: number; raised: number; selfFunded: number; spent: number; remaining: number; room: number };
   investors: { id: string; name: string; blurb: string; where: string; odds: number; pitchedToday: boolean; command: Command; disabledReason: string | null }[];
+  /** Music only (empty for film): labels to pitch in "Book the studio". */
+  labels: {
+    id: string;
+    name: string;
+    blurb: string;
+    where: string;
+    odds: number;
+    advance: string;
+    royaltyCut: number;
+    marketing: number;
+    command: Command;
+    disabledReason: string | null;
+  }[];
+  /** The label that signed this record, if any. */
+  signedLabel: Project['label'];
+  /** Film post stage: your catalogue records you could put on the soundtrack. */
+  soundtrack: { current: Project['soundtrack']; options: { id: string; title: string; quality: number; bonus: number; command: Command; disabledReason: string | null }[] };
   selfFundReason: (amount: number) => string | null;
   crew: {
     slots: number;
@@ -360,6 +382,31 @@ export function projectView(s: GameState): ProjectView | null {
         disabledReason: whyNot(s, command),
       };
     }),
+    labels: (film ? [] : LABELS).map((l) => {
+      const command: Command = { type: 'PITCH_LABEL', labelId: l.id };
+      return {
+        id: l.id,
+        name: LABEL_FLAVOR[l.id].name,
+        blurb: LABEL_FLAVOR[l.id].blurb,
+        where: LOCATIONS[l.location].name,
+        odds: labelOddsFor(s, p, l),
+        advance: `${Math.round(l.advanceMin * 100)}–${Math.round(l.advanceMax * 100)}%`,
+        royaltyCut: l.royaltyCut,
+        marketing: l.marketing,
+        command,
+        disabledReason: whyNot(s, command),
+      };
+    }),
+    signedLabel: p.label,
+    soundtrack: {
+      current: p.soundtrack,
+      options: film
+        ? s.catalog.map((r) => {
+            const command: Command = { type: 'PLACE_SONG', recordId: r.id };
+            return { id: r.id, title: r.title, quality: r.quality, bonus: soundtrackBonus(r.quality), command, disabledReason: whyNot(s, command) };
+          })
+        : [],
+    },
     selfFundReason: (amount: number) => whyNot(s, { type: 'SELF_FUND', amount }),
     crew: {
       slots: sc.crewSlots,
@@ -465,5 +512,69 @@ export function projectView(s: GameState): ProjectView | null {
           };
         })(),
     abandon: { type: 'ABANDON_PROJECT' },
+  };
+}
+
+// ---------- Music business (Sprint 8) ----------
+
+export interface MusicBizView {
+  fans: number;
+  shows: {
+    id: string;
+    name: string;
+    blurb: string;
+    where: string;
+    capacity: number;
+    minFans: number;
+    ticketPrice: number;
+    /** Expected tickets and your take at today's Fans (before ±20% luck). */
+    expectedTickets: number;
+    expectedPay: number;
+    command: Command;
+    disabledReason: string | null;
+  }[];
+  playedTonight: boolean;
+  beats: { id: string; title: string; quality: number; leases: number; earned: number; leaseChance: number; fee: number }[];
+  beatMax: number;
+  makeBeat: { command: Command; disabledReason: string | null };
+  catalog: { id: string; title: string; scale: string; quality: number; peak: number | null; placements: number; label: string | null; placementChance: number }[];
+}
+
+export function musicBizView(s: GameState): MusicBizView {
+  const fans = s.player.fans;
+  const makeBeat: Command = { type: 'MAKE_BEAT' };
+  return {
+    fans,
+    shows: VENUES.map((v) => {
+      const command: Command = { type: 'PLAY_SHOW', venueId: v.id };
+      const expectedTickets = Math.min(v.capacity, Math.round(fans * C.SHOW_DRAW));
+      return {
+        id: v.id,
+        name: VENUE_FLAVOR[v.id].name,
+        blurb: VENUE_FLAVOR[v.id].blurb,
+        where: LOCATIONS[v.location].name,
+        capacity: v.capacity,
+        minFans: v.minFans,
+        ticketPrice: v.ticketPrice,
+        expectedTickets,
+        expectedPay: showPay(expectedTickets, v.ticketPrice),
+        command,
+        disabledReason: whyNot(s, command),
+      };
+    }),
+    playedTonight: playedShowToday(s),
+    beats: s.beats.map((b) => ({ ...b, leaseChance: beatLeaseChance(b.quality, fans, b.leases), fee: beatFee(b.quality) })),
+    beatMax: C.BEAT_MAX,
+    makeBeat: { command: makeBeat, disabledReason: whyNot(s, makeBeat) },
+    catalog: s.catalog.map((r) => ({
+      id: r.id,
+      title: r.title,
+      scale: PROJECT_SCALES[r.scale].name,
+      quality: r.quality,
+      peak: r.peak,
+      placements: r.placements,
+      label: r.label,
+      placementChance: placementChance(r.quality, r.peak !== null),
+    })),
   };
 }

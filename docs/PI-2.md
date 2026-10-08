@@ -82,6 +82,20 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 
 **Music quality** `= 0.40·Songs + 0.45·Recording + 0.15·Crew + production value`. **Fans** is a new stat that persists across releases (the Bedroom Producer starts with some). Label deals, tours, beat sales and placements are Sprint 8.
 
+### Music business (Sprint 8)
+
+- **Label deals** (in *Book the studio*): pitch a label at its neighbourhood, once a day (2h, −10 Energy).
+  - Odds `= logistic((0.5·Songs + 10·Clout + min(40, Fans/100) − difficulty) / 12)`, clamped 5–85%. Difficulty: Single 40, EP 55, Album 75, plus the label's modifier.
+  - A yes signs the record: an advance of 40–100% of the studio budget (by label), the label keeps 30–70% of royalties, and marketing multiplies release-week streams by 1.1–2×. One label per record; self-fund the rest.
+- **Live shows**: `Play a show` at a venue, 19:00–22:00 start, 3h, −30 Energy, once a night, after your first release.
+  - Six venues from a 40-cap open mic (0 Fans needed, $5) to a 6,000-cap arena (20,000 Fans, $40).
+  - Tickets `= min(capacity, Fans × 3% × (0.8–1.2))`; you keep 60% of the door. Fans +15% of tickets; RP +1 per 50 tickets.
+- **Beat store**: `Make a beat` at home, 2h, −10 Energy, −10 Spark. Quality `= clamp(10 + 0.7·Music + rand(0–20))`. Up to 8 beats.
+  - Each 06:00 each beat may lease: chance `= min(40%, Quality/400 + Fans/20,000) × 0.9^leases`, fee `= $20 + 1.5·Quality`.
+- **Catalogue and placements**: every finished record joins your catalogue.
+  - Each 06:00 each record may be licensed by a parody production: chance `= 2% × Quality/50` (×1.5 if it charted), fee `= $300 × stream multiplier × Quality/50`, +10 RP.
+  - In a film's post stage you can put one of your records on the soundtrack (once per film): film quality `+ min(8, record Quality/10)`.
+
 ## Sprint plan
 
 | Sprint | Name | Scope |
@@ -89,7 +103,7 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 | 5 | **Greenlight** (Film I) — LAG-40…46 | Project engine + save migration v2; Develop, Financing, Crew stages; Projects tab |
 | 6 | **Festival Circuit** (Film II) — LAG-47…50 | Shoot, Post, festivals, distribution, film headlines; balance pass incl. LAG-33; film play-test |
 | 7 | **The Drop** (Music I) — LAG-51, LAG-57…62 | Write → record → release; Fans and Streams; release-week chart in The Trades |
-| 8 | **Deal Memo** (Music II) — LAG-52 | Label deal, tour, beat sales, song placements into film and TV projects |
+| 8 | **Deal Memo** (Music II) — LAG-52, LAG-63…69 | Label deal, tour, beat sales, song placements into film and TV projects |
 | 9 | **Pilot Season** (TV I) — LAG-53 | Callback mini-game; pilot season circuit |
 | 10 | **Writers' Room** (TV II) — LAG-54, LAG-55 | Pitch deck → agent meeting → writers' room; full guild and union membership |
 

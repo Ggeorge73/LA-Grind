@@ -40,6 +40,16 @@ const MIGRATIONS: Record<number, Migration> = {
     const project = old ? { ...old, studio: null, release: null, scores: { ...old.scores, record: [] } } : null;
     return { ...file, version: 4, state: { ...file.state, version: 4, player: { ...file.state.player, fans: 0 }, project } };
   },
+  // v4 → v5 (Sprint 8): music business. Empty beat store and catalogue; projects gain label and soundtrack slots.
+  4: (file) => {
+    const old = file.state.project;
+    const project = old ? { ...old, label: null, soundtrack: null } : null;
+    return {
+      ...file,
+      version: 5,
+      state: { ...file.state, version: 5, player: { ...file.state.player, lastShowDay: null }, project, beats: [], catalog: [] },
+    };
+  },
 };
 
 export function migrate(file: SaveFile): SaveFile | null {

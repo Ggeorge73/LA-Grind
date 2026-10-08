@@ -103,6 +103,20 @@ export function describeEvent(e: GameEvent): string | null {
       return e.peak === null
         ? `Release week over: ${e.totalStreams.toLocaleString('en-US')} streams, never charted.`
         : `Release week over: peaked at #${e.peak}, ${e.totalStreams.toLocaleString('en-US')} streams, +${e.rp} RP.`;
+    case 'LABEL_PITCHED':
+      return e.yes
+        ? `${e.label} signed you (${pct(e.odds)} odds): ${formatMoney(e.advance)} advance.`
+        : `${e.label} passed (${pct(e.odds)} odds).`;
+    case 'SHOW_PLAYED':
+      return `${e.soldOut ? 'SOLD OUT' : 'Played'} ${e.venue}: ${e.tickets} tickets, +${formatMoney(e.pay)}, +${e.fans} fans${e.rp ? `, +${e.rp} RP` : ''}.`;
+    case 'BEAT_MADE':
+      return `Made a beat: "${e.beat.title}" (quality ${e.beat.quality}). It's in your beat store.`;
+    case 'BEAT_LEASED':
+      return `Beat leased: "${e.title}" +${formatMoney(e.fee)}.`;
+    case 'PLACEMENT':
+      return `Sync placement: "${e.title}" in ${e.client}. +${formatMoney(e.fee)}, +${e.rp} RP.`;
+    case 'SOUNDTRACK_SET':
+      return `"${e.title}" is on the soundtrack: film quality +${e.bonus}.`;
     case 'ACTION_REJECTED':
     case 'HEADLINE':
       return null;

@@ -230,3 +230,32 @@ export const fansGained = (streams: number, quality: number): number => Math.rou
 export const royalties = (streams: number): number => Math.round(streams * C.ROYALTY_PER_STREAM);
 
 export const chartRp = (peak: number | null): number => (peak === null ? 0 : C.CHART_RP_PER_PLACE * (101 - peak));
+
+export function labelOdds(i: { songs: number; clout: number; fans: number; difficulty: number }): number {
+  const fanPoints = Math.min(C.LABEL_FANS_MAX_POINTS, i.fans / C.LABEL_FANS_PER_POINT);
+  const score = C.LABEL_SONGS_WEIGHT * i.songs + C.LABEL_CLOUT_WEIGHT * i.clout + fanPoints;
+  return clamp(1 / (1 + Math.exp(-(score - i.difficulty) / C.PITCH_SPREAD)), C.PITCH_FLOOR, C.PITCH_CEILING);
+}
+
+/** Tickets sold: a share of Fans (with ±20% luck), capped by the room. */
+export const showTickets = (fans: number, capacity: number, roll: number): number =>
+  Math.min(capacity, Math.round(fans * C.SHOW_DRAW * (0.8 + 0.4 * roll)));
+
+export const showPay = (tickets: number, price: number): number => Math.round(tickets * price * C.SHOW_DOOR_SPLIT);
+
+export const beatQuality = (music: number, roll: number): number =>
+  Math.round(clamp(C.BEAT_QUALITY_BASE + C.BEAT_QUALITY_MUSIC * music + roll * C.BEAT_QUALITY_LUCK, 0, 100));
+
+export const beatLeaseChance = (quality: number, fans: number, leases: number): number =>
+  Math.min(C.BEAT_LEASE_CHANCE_MAX, quality / C.BEAT_LEASE_QUALITY_DIVISOR + fans / C.BEAT_LEASE_FANS_DIVISOR) * C.BEAT_LEASE_DECAY ** leases;
+
+export const beatFee = (quality: number): number => Math.round(C.BEAT_FEE_BASE + C.BEAT_FEE_PER_QUALITY * quality);
+
+export const placementChance = (quality: number, charted: boolean): number =>
+  C.PLACEMENT_CHANCE * (quality / 50) * (charted ? C.PLACEMENT_CHARTED_BONUS : 1);
+
+export const placementFee = (quality: number, streamMultiplier: number): number =>
+  Math.round(C.PLACEMENT_FEE_BASE * streamMultiplier * (quality / 50));
+
+export const soundtrackBonus = (recordQuality: number): number =>
+  Math.min(C.SOUNDTRACK_BONUS_MAX, Math.round(recordQuality / C.SOUNDTRACK_QUALITY_DIVISOR));

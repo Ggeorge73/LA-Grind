@@ -3,6 +3,8 @@
 import * as C from './constants';
 import { FESTIVALS, FILM_LOCATIONS, FILM_SCALES, type Festival, type FilmScale, type FilmScaleId } from './content/film';
 import { MUSIC_SCALES, type MusicScale, type MusicScaleId } from './content/music';
+import { LABEL_DIFFICULTY, type LabelDeal } from './content/musicBiz';
+import { bizHeadline, labelById, labelName } from './musicBiz';
 import { CREW_ROLE_IDS_BY_MEDIUM, PIPELINES, PROJECT_SCALES, type ProjectMedium, type ScaleInfo } from './content/projects';
 import {
   MUSIC_CREW_QUIRKS,
@@ -43,11 +45,13 @@ import {
   chartPosition,
   chartRp,
   fansGained,
+  labelOdds,
   pitchOdds,
   recordScore,
   releaseStreams,
   royalties,
   shootScore,
+  soundtrackBonus,
   writeScore,
 } from './formulas';
 import type { Rng } from './rng';
@@ -87,7 +91,8 @@ export function projectQuality(p: Project): number {
     C.FILM_WEIGHT_SHOOT * average(p.scores.shoot) +
     C.FILM_WEIGHT_POST * average(p.scores.post) +
     C.FILM_WEIGHT_CREW * crewQuality(p) +
-    productionValue(p);
+    productionValue(p) +
+    (p.soundtrack?.bonus ?? 0);
   return clampStat(q);
 }
 
@@ -97,6 +102,15 @@ export function pitchOddsFor(s: GameState, p: Project, investor: Investor): numb
     clout: cloutTier(s.player.rp),
     network: s.player.network,
     difficulty: filmScaleOf(p).pitchDifficulty + investor.difficultyMod,
+  });
+}
+
+export function labelOddsFor(s: GameState, p: Project, label: LabelDeal): number {
+  return labelOdds({
+    songs: scriptQuality(p),
+    clout: cloutTier(s.player.rp),
+    fans: s.player.fans,
+    difficulty: LABEL_DIFFICULTY[p.scale as MusicScaleId] + label.difficultyMod,
   });
 }
 
@@ -166,6 +180,8 @@ export function startProject(s: GameState, rng: Rng, scale: ProjectScaleId, even
     submissions: [],
     offers: [],
     release: null,
+    label: null,
+    soundtrack: null,
   };
   s.project = project;
   events.push({ type: 'PROJECT_STARTED', project: structuredClone(project) });
@@ -286,6 +302,24 @@ export function completeProjectAction(s: GameState, a: Activity, rng: Rng, event
       if (yes) p.raised += amount;
       events.push({ type: 'PITCHED', investorId: inv.id, yes, amount, odds });
       filmHeadline(s, rng, events, yes ? 'pitchYes' : 'pitchNo', { investor: inv.name, amount });
+      break;
+    }
+    case 'labelPitch': {
+      const label = labelById(a.investorId!)!;
+      const odds = a.odds ?? 0;
+      const yes = rng.chance(odds);
+      const share = label.advanceMin + rng.float() * (label.advanceMax - label.advanceMin);
+      const advance = yes ? Math.min(fundingRoom(p), Math.round(p.budget * share)) : 0;
+      const name = labelName(label.id);
+      p.pitches.push({ investorId: label.id, day: dayOf(a.startMinute), yes, amount: advance });
+      if (yes) {
+        p.raised += advance;
+        p.label = { id: label.id, name, advance, royaltyCut: label.royaltyCut, marketing: label.marketing };
+        bizHeadline(s, rng, events, 'labelSigned', { title: p.title, label: name, amount: formatMoney(advance) });
+      } else {
+        bizHeadline(s, rng, events, 'labelPassed', { title: p.title, label: name });
+      }
+      events.push({ type: 'LABEL_PITCHED', labelId: label.id, label: name, yes, advance, odds });
       break;
     }
     case 'hire': {
@@ -419,9 +453,11 @@ export function resolveRelease(s: GameState, rng: Rng, events: GameEvent[]): voi
   const quality = projectQuality(p);
   const day = r.days.length;
   const promoted = r.promoPending;
-  const streams = releaseStreams({ fans: s.player.fans, quality, multiplier: musicScaleOf(p).streamMultiplier, day, promoted });
+  const marketing = 1 + (p.label?.marketing ?? 0);
+  const streams = releaseStreams({ fans: s.player.fans, quality, multiplier: musicScaleOf(p).streamMultiplier * marketing, day, promoted });
   const fans = fansGained(streams, quality);
-  const pay = royalties(streams);
+  // The label keeps its cut of the royalties.
+  const pay = Math.round(royalties(streams) * (1 - (p.label?.royaltyCut ?? 0)));
   const position = chartPosition(streams);
   const prevPeak = peakPosition(p);
   r.promoPending = false;
@@ -444,6 +480,16 @@ export function resolveRelease(s: GameState, rng: Rng, events: GameEvent[]): voi
     if (peak !== null) musicHeadline(s, rng, events, 'weekEnd', { position: peak });
     events.push({ type: 'RELEASE_WEEK_ENDED', title: p.title, peak, rp, totalStreams });
     if (rp > 0) changeRp(s, rng, events, rp);
+    s.catalog.push({
+      id: newId(s, 'r'),
+      title: p.title,
+      scale: p.scale,
+      quality: Math.round(quality),
+      peak,
+      releasedMinute: r.releasedMinute,
+      placements: 0,
+      label: p.label?.name ?? null,
+    });
     finishProject(s, peak === null ? "Didn't chart" : `Peaked at #${peak} on ${CHART_NAME}`);
   }
 }
@@ -454,3 +500,14 @@ export const peakPosition = (p: Project): number | null => {
 };
 
 export const PROJECT_STAGES: readonly ProjectStage[] = [...PIPELINES.film.map((x) => x.id), 'record', 'release'];
+
+/** Put one of your catalogue records on a film's soundtrack (post stage, once per film). */
+export function placeSong(s: GameState, rng: Rng, recordId: string, events: GameEvent[]): void {
+  const p = s.project!;
+  const r = s.catalog.find((x) => x.id === recordId)!;
+  const bonus = soundtrackBonus(r.quality);
+  p.soundtrack = { recordId: r.id, title: r.title, bonus };
+  r.placements += 1;
+  events.push({ type: 'SOUNDTRACK_SET', title: r.title, bonus });
+  bizHeadline(s, rng, events, 'soundtrack', { title: r.title, film: p.title });
+}

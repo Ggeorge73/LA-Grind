@@ -138,11 +138,11 @@ describe('write → book the studio → crew', () => {
     expect(s.project!.scores.develop).toHaveLength(MUSIC_SCALES.ep.songs);
   });
 
-  it('PITCH is rejected for music (no label meetings until Sprint 8)', () => {
+  it('PITCH (film investors) is rejected for music — records pitch labels', () => {
     const s = write(startSingle());
     const inv = INVESTORS[0]!;
     const here = rested(travelTo(s, inv.location));
-    expect(whyNot(here, { type: 'PITCH', investorId: inv.id })).toMatch(/No label meetings yet/);
+    expect(whyNot(here, { type: 'PITCH', investorId: inv.id })).toMatch(/pitched to labels/);
     const r = step(here, { type: 'PITCH', investorId: inv.id });
     expect(types(r.events)).toEqual(['ACTION_REJECTED']);
     expect(r.state).toBe(here);
@@ -394,7 +394,7 @@ describe('music saves and determinism', () => {
     expect(run(m, { type: 'START_PROJECT', scale: 'single' }).state.project!.medium).toBe('music');
   });
 
-  it('a v3 save with an in-flight film migrates to v4 and the film still finishes', () => {
+  it('a v3 save with an in-flight film migrates to the current version and the film still finishes', () => {
     // A short film shot and waiting for post.
     let s = run(newGame('indie', 3), { type: 'START_PROJECT', scale: 'short' }).state;
     s = write(write(s));
@@ -409,7 +409,7 @@ describe('music saves and determinism', () => {
     const { fans: _f, ...oldPlayer } = s.player;
     const v3 = JSON.stringify({ version: 3, savedAt: 0, state: { ...s, version: 3, player: oldPlayer, project: { ...oldProject, scores: oldScores } } });
     const m = deserialize(v3)!;
-    expect(m.version).toBe(4);
+    expect(m.version).toBe(C.SAVE_VERSION);
     expect(m.player.fans).toBe(0);
     expect(m.project).toMatchObject({ studio: null, release: null, medium: 'film' });
     expect(m.project!.scores).toEqual({ ...oldScores, record: [] });
