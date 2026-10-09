@@ -248,10 +248,11 @@ export function completeRoomDay(s: GameState, rng: Rng, events: GameEvent[]): vo
   const score = Math.round(writeScore(p.skills.writing, p.spark, rng.float()));
   c.roomScores.push(score);
   c.shotThisWeek = true;
-  p.skills.writing = clampStat(p.skills.writing + C.BOOKED_SKILL_GAIN);
+  // Design (PI-2 "Writers' room"): Writing +1 per room day, like a project session (LAG-82; was the +2 booking gain).
+  p.skills.writing = clampStat(p.skills.writing + C.PROJECT_SKILL_GAIN);
   const rp = C.ROOM_RP_PER_TIER * c.tier;
   events.push({ type: 'ROOM_DAY_DONE', showTitle: c.showTitle, score, rp });
-  events.push({ type: 'SKILL_GAINED', skill: 'writing', amount: C.BOOKED_SKILL_GAIN });
+  events.push({ type: 'SKILL_GAINED', skill: 'writing', amount: C.PROJECT_SKILL_GAIN });
   changeRp(s, rng, events, rp);
   const e = rng.pick(ROOM_EVENTS);
   s.roomEvent = { prompt: e.prompt, choices: [{ ...e.choices[0] }, { ...e.choices[1] }] };

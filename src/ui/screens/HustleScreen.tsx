@@ -5,6 +5,7 @@ import { useGame } from '../../store/game';
 import { duration } from '../format';
 import type { Tab } from '../GameScreen';
 import { Button, Card, Chip, SectionTitle } from '../kit';
+import { GuildsSection } from './GuildsSection';
 import { YourShowCard } from './tvKit';
 
 const RIDESHARE_HOURS = [1, 2, 4, 6, 8] as const;
@@ -149,6 +150,8 @@ export function HustleScreen({ onNavigate }: { onNavigate: (tab: Tab) => void })
           </section>
         );
       })}
+
+      <GuildsSection onNavigate={onNavigate} />
 
       <div className="mt-5 grid grid-cols-2 gap-2">
         <Button onClick={() => onNavigate('board')}>Find gigs</Button>

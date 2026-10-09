@@ -265,8 +265,15 @@ describe('invariants', () => {
     const r = new Rng(seed);
     const cmds: Command[] = [];
     for (let i = 0; i < n; i++) {
-      const roll = r.int(0, 9);
-      if (roll === 0) cmds.push({ type: 'TRAVEL', to: r.pick(LOCATION_IDS) });
+      const roll = r.int(0, 15);
+      // Sprint 10 (LAG-82): the writer's side and guilds are in the mix too.
+      if (roll === 10) cmds.push({ type: 'START_PROJECT', scale: 'spec' });
+      else if (roll === 11) cmds.push({ type: r.pick(['WRITE_SESSION', 'DECK_SESSION'] as const) });
+      else if (roll === 12) cmds.push({ type: 'PITCH_AGENT', agencyId: r.pick(['boutique', 'mailroom', 'midsize', 'prestige', 'mega', 'nope'] as const) });
+      else if (roll === 13) cmds.push({ type: 'ROOM_DAY' });
+      else if (roll === 14) cmds.push({ type: 'ROOM_CHOICE', option: r.int(0, 2) });
+      else if (roll === 15) cmds.push({ type: 'JOIN_GUILD', guild: r.pick(['acting', 'writing', 'directing', 'music'] as const) });
+      else if (roll === 0) cmds.push({ type: 'TRAVEL', to: r.pick(LOCATION_IDS) });
       else if (roll === 1) cmds.push({ type: 'START_JOB', jobId: r.pick(['barista', 'barback', 'rideshare', 'pa'] as const), hours: r.int(1, 8) });
       else if (roll === 2) cmds.push({ type: 'SLEEP', hours: r.int(1, 10) });
       else if (roll === 3) cmds.push({ type: 'TAKE_CLASS', skill: r.pick(['acting', 'writing', 'directing', 'music'] as const) });

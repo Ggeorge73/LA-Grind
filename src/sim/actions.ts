@@ -374,6 +374,8 @@ export function projectView(s: GameState): ProjectView | null {
   const pipeline = pipelineOf(p);
   const currentIdx = pipeline.findIndex((x) => x.id === p.stage);
   const film = p.medium === 'film';
+  // LAG-82: TV spec pilots have no labels, studio or release week (this used to assume "not film" = music and crashed).
+  const music = p.medium === 'music';
   const writeCmd: Command = { type: 'WRITE_SESSION' };
   return {
     project: p,
@@ -404,7 +406,7 @@ export function projectView(s: GameState): ProjectView | null {
         disabledReason: whyNot(s, command),
       };
     }),
-    labels: (film ? [] : LABELS).map((l) => {
+    labels: (music ? LABELS : []).map((l) => {
       const command: Command = { type: 'PITCH_LABEL', labelId: l.id };
       return {
         id: l.id,
@@ -497,7 +499,7 @@ export function projectView(s: GameState): ProjectView | null {
       const command: Command = { type: 'SELF_RELEASE' };
       return { command, disabledReason: whyNot(s, command), rp: Math.round(Math.round(projectQuality(p)) * C.SELF_RELEASE_RP_PER_QUALITY) };
     })(),
-    record: film
+    record: !music
       ? null
       : (() => {
           const command: Command = { type: 'RECORD_SESSION' };
@@ -512,7 +514,7 @@ export function projectView(s: GameState): ProjectView | null {
             disabledReason: whyNot(s, command),
           };
         })(),
-    release: film
+    release: !music
       ? null
       : (() => {
           const releaseCommand: Command = { type: 'RELEASE_RECORD' };

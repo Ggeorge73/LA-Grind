@@ -214,8 +214,8 @@ describe('project invariants and saves', () => {
     const cmds: Command[] = [];
     for (let i = 0; i < n; i++) {
       const roll = r.int(0, 9);
-      if (roll === 0) cmds.push({ type: 'START_PROJECT', scale: r.pick(['short', 'micro', 'indie'] as const) });
-      else if (roll === 1) cmds.push({ type: 'WRITE_SESSION' });
+      if (roll === 0) cmds.push({ type: 'START_PROJECT', scale: r.pick(['short', 'micro', 'indie', 'spec'] as const) });
+      else if (roll === 1) cmds.push({ type: r.pick(['WRITE_SESSION', 'DECK_SESSION'] as const) });
       else if (roll === 2) cmds.push({ type: 'PITCH', investorId: r.pick(INVESTORS).id });
       else if (roll === 3) cmds.push({ type: 'SELF_FUND', amount: r.int(1, 30) * 100 });
       else if (roll === 4) cmds.push({ type: 'HIRE_CREW', candidateId: `c${r.int(1, 200)}` });

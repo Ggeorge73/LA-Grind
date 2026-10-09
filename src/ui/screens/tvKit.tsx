@@ -1,11 +1,11 @@
-// TV, the actor's side (Sprint 9): pilot-season banner, pending pilots, the series-regular card and the callback sheet.
+// TV (Sprints 9–10): pilot-season banner, pending pilots, the series-regular / staff-writer card, the callback sheet and the writers' room sheet.
 import { useEffect, useRef } from 'react';
 import { tvView, type TvView } from '../../sim/actions';
-import { CALLBACK_BEATS, EPISODE_ENERGY, EPISODE_HOURS, MISSED_EPISODE_PAY, PILOT_DECISION_DAYS } from '../../sim/constants';
+import { CALLBACK_BEATS, EPISODE_ENERGY, EPISODE_HOURS, MISSED_EPISODE_PAY, PILOT_DECISION_DAYS, ROOM_ENERGY, ROOM_HOURS } from '../../sim/constants';
 import { useGame } from '../../store/game';
 import { clock, day, money, pct } from '../format';
 import type { Tab } from '../GameScreen';
-import { Button, SectionTitle, Sheet } from '../kit';
+import { Button, Meter, SectionTitle, Sheet } from '../kit';
 import { ReasonWithMap, useRun, wholePct } from './runKit';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -51,29 +51,44 @@ export function PendingPilots({ pilots }: { pilots: TvView['pilots'] }) {
   );
 }
 
-/** The series-regular contract: a weekly duty, so it sits at the top of Hustle (and on Gigs). */
+const FAVOR_PROMOTED = 70;
+const FAVOR_DROPPED = 30;
+
+/** The series-regular / staff-writer contract: a weekly duty, so it sits at the top of Hustle (and on Gigs). */
 export function YourShowCard({ contract, onNavigate, idPrefix }: { contract: NonNullable<TvView['contract']>; onNavigate: (tab: Tab) => void; idPrefix: string }) {
   const { error, run } = useRun();
   const c = contract;
+  const writer = c.kind === 'writer';
   const reasonId = `${idPrefix}-shoot-reason`;
   const reason = c.disabledReason;
+  const favorTone = c.favor >= FAVOR_PROMOTED ? 'text-good' : c.favor < FAVOR_DROPPED ? 'text-bad' : 'text-ink';
   return (
     <section aria-labelledby={`${idPrefix}-show-title`} className="mb-3 rounded-2xl border-2 border-tv/60 bg-tv/10 p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-tv">Your show</p>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-tv">{writer ? 'Your show · Staff writer' : 'Your show'}</p>
       <h2 id={`${idPrefix}-show-title`} className="font-[family-name:var(--font-display)] text-lg font-bold leading-snug">
         “{c.showTitle}”
       </h2>
       <p className="text-xs text-muted">
-        {c.network} · {c.role}
+        {c.network} · {writer ? 'Staff writer' : c.role}
       </p>
       <p className="mt-1.5 text-sm">
-        Episode <span className="font-semibold tabular-nums">{c.episode}</span> of {c.episodesTotal} · {money(c.weeklyPay)}/week
+        {writer ? 'Week' : 'Episode'} <span className="font-semibold tabular-nums">{c.episode}</span> of {c.episodesTotal} · {money(c.weeklyPay)}/week
         {c.episodesMissed > 0 && <span className="text-bad"> · {c.episodesMissed} missed</span>}
       </p>
+      {writer && (
+        <div className="mt-1.5">
+          <Meter label="Favor in the room" value={c.favor} tone={c.favor >= FAVOR_PROMOTED ? 'good' : c.favor < FAVOR_DROPPED ? 'bad' : 'accent'} hint={`Favor ${Math.round(c.favor)} of 100`} />
+          <p className="mt-0.5 text-xs text-muted">
+            Favor <span className={`font-semibold tabular-nums ${favorTone}`}>{Math.round(c.favor)}</span>/100 · {FAVOR_PROMOTED}+ at wrap: promoted · under{' '}
+            {FAVOR_DROPPED}: not asked back
+            {c.roomAverage > 0 && <> · room days avg {Math.round(c.roomAverage)}</>}
+          </p>
+        </div>
+      )}
       <p className="mt-0.5 text-sm">
-        This week's episode:{' '}
+        {writer ? "This week's room day: " : "This week's episode: "}
         {c.shotThisWeek ? (
-          <span className="font-semibold text-good">shot ✓</span>
+          <span className="font-semibold text-good">{writer ? 'done ✓' : 'shot ✓'}</span>
         ) : (
           <>
             <span className="font-semibold text-warn">not yet</span>
@@ -86,12 +101,14 @@ export function YourShowCard({ contract, onNavigate, idPrefix }: { contract: Non
       </p>
       {!c.shotThisWeek && (
         <p className="mt-0.5 text-xs text-muted">
-          On set at the studio lot in {c.where} · −{EPISODE_ENERGY} Energy. Miss it and the week pays {Math.round(MISSED_EPISODE_PAY * 100)}% and costs RP.
+          {writer
+            ? `In the writers' room at the studio lot in ${c.where} · −${ROOM_ENERGY} Energy. Miss it and the week pays ${Math.round(MISSED_EPISODE_PAY * 100)}% and costs RP.`
+            : `On set at the studio lot in ${c.where} · −${EPISODE_ENERGY} Energy. Miss it and the week pays ${Math.round(MISSED_EPISODE_PAY * 100)}% and costs RP.`}
         </p>
       )}
       {c.shotThisWeek ? (
         <p className="mt-0.5 text-xs text-muted">
-          Next episode shoots from Day {day(c.weekEndMinute)} {clock(c.weekEndMinute)}.
+          Next {writer ? 'room day' : 'episode shoots'} from Day {day(c.weekEndMinute)} {clock(c.weekEndMinute)}.
         </p>
       ) : (
         <>
@@ -102,12 +119,52 @@ export function YourShowCard({ contract, onNavigate, idPrefix }: { contract: Non
             aria-describedby={reason || error ? reasonId : undefined}
             onClick={() => run(c.command)}
           >
-            Shoot episode ({EPISODE_HOURS}h)
+            {writer ? `Room day (${ROOM_HOURS}h)` : `Shoot episode (${EPISODE_HOURS}h)`}
           </Button>
           <ReasonWithMap id={reasonId} text={reason} error={error} onNavigate={onNavigate} />
         </>
       )}
     </section>
+  );
+}
+
+const signed = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
+
+/** Writers' room politics. The sim blocks everything else until it's answered (06:00 picks answer 1), so it can't be dismissed. */
+export function RoomEventSheet() {
+  const state = useGame((g) => g.state);
+  const { error, run } = useRun();
+  const ev = state ? tvView(state).roomEvent : null;
+  const showTitle = state?.contract?.showTitle;
+  if (!ev) return null;
+  return (
+    <Sheet title={showTitle ? `In the room: “${showTitle}”` : 'In the writers’ room'} onClose={() => {}}>
+      <blockquote className="-mt-1 border-l-4 border-tv/60 pl-3 text-base italic leading-snug">{ev.prompt}</blockquote>
+      <div role="group" aria-label="Your answer" className="mt-3 flex flex-col gap-2">
+        {ev.choices.map((c, i) => {
+          const effects = `Favor ${signed(c.favor)} · Pages ${signed(c.quality)}`;
+          return (
+            <Button key={i} className="w-full py-2 text-left leading-snug" aria-label={`Answer ${i + 1}: ${c.text} (${effects})`} onClick={() => run(c.command)}>
+              <span className="block break-words">{c.text}</span>
+              <span className="mt-1 flex flex-wrap gap-1.5" aria-hidden>
+                <span className={`rounded-md border px-1.5 py-0.5 text-[11px] tabular-nums ${c.favor >= 0 ? 'border-good/50 text-good' : 'border-bad/50 text-bad'}`}>
+                  Favor {signed(c.favor)}
+                </span>
+                <span className={`rounded-md border px-1.5 py-0.5 text-[11px] tabular-nums ${c.quality >= 0 ? 'border-good/50 text-good' : 'border-bad/50 text-bad'}`}>
+                  Pages {signed(c.quality)}
+                </span>
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs text-muted">Everything else waits until you answer. Leave it until 06:00 and you'll go with answer 1.</p>
+      {error && (
+        <p className="mt-1 text-xs text-bad" role="status">
+          {error}
+        </p>
+      )}
+    </Sheet>
   );
 }
 
