@@ -57,7 +57,7 @@ export function BankApp() {
   return (
     <div className="flex flex-col gap-3">
       <section
-        aria-label="Balance"
+        aria-label="Account balance"
         className="relative overflow-hidden rounded-[1.6rem] p-4 shadow-[0_16px_30px_-14px_rgb(0_0_0/0.8)]"
         style={{ background: `linear-gradient(135deg, ${APPS.bank.bg} 0%, #0f3d17 55%, #1d1533 130%)` }}
       >

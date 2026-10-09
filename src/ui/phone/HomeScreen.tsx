@@ -14,7 +14,7 @@ export const APP_ORDER: readonly AppId[] = ['casting', 'studio', 'bank', 'feed',
 
 function Widget({ children, className = '', label }: { children: ReactNode; className?: string; label: string }) {
   return (
-    <section aria-label={label} className={`glass rounded-[1.6rem] p-3.5 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.6)] ${className}`}>
+    <section aria-label={label} className={`glass rounded-[1.6rem] p-3 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.6)] ${className}`}>
       {children}
     </section>
   );
@@ -131,9 +131,11 @@ function NowWidget({ state }: { state: GameState }) {
 
   return (
     <Widget label="Now">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-good">Free</p>
-      <p className="font-semibold">Nothing booked. What&apos;s the move?</p>
-      <ul className="no-scrollbar -mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1">
+      <p className="text-sm font-semibold">
+        <span className="mr-1.5 text-[11px] font-bold uppercase tracking-widest text-good">Free</span>
+        Nothing booked. What&apos;s the move?
+      </p>
+      <ul className="no-scrollbar -mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 [mask-image:linear-gradient(90deg,#000_85%,transparent)]">
         {ideas.slice(0, 3).map((i) => (
           <li key={i.text} className="shrink-0">
             <button type="button" onClick={() => openApp(i.app)} className="min-h-11 rounded-full bg-white/10 px-3 text-xs font-semibold active:bg-white/20">
@@ -214,9 +216,9 @@ export function HomeScreen() {
   return (
     <div className="home-in no-scrollbar h-full overflow-y-auto overscroll-contain px-3.5 pb-4 pt-1">
       <h1 className="sr-only">Home screen</h1>
-      <div className="px-1 pb-3 pt-1">
+      <div className="px-1 pb-2.5 pt-0.5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent/90">{LOCATIONS[state.player.location].name}</p>
-        <p className="font-[family-name:var(--font-display)] text-[22px] font-bold leading-tight">{greeting}</p>
+        <p className="font-[family-name:var(--font-display)] text-xl font-bold leading-tight">{greeting}</p>
       </div>
 
       {od && (
@@ -238,8 +240,8 @@ export function HomeScreen() {
         <StatsWidget state={state} />
       </div>
 
-      <nav aria-label="Apps" className="mt-4">
-        <ul className="grid grid-cols-3 gap-y-3">
+      <nav aria-label="Apps" className="mt-3.5">
+        <ul className="grid grid-cols-3 gap-y-2">
           {APP_ORDER.map((id) => (
             <AppTile key={id} id={id} state={state} />
           ))}

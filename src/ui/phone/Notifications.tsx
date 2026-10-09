@@ -41,7 +41,7 @@ function Banner({ n }: { n: Toast }) {
         <button
           type="button"
           onClick={open}
-          aria-label={`${title}: ${n.text}. Open ${n.app ? APPS[n.app].name : 'home screen'}`}
+          aria-label={`${title}: ${n.text.replace(/[.!?…]+$/, "")}. Open ${n.app ? APPS[n.app].name : 'home screen'}`}
           className="flex min-h-14 min-w-0 flex-1 items-start gap-2.5 py-2.5 pl-3 pr-1 text-left"
         >
           {contact ? (

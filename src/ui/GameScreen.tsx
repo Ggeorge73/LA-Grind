@@ -85,7 +85,7 @@ function MobilePhone() {
 
 function DesktopPhone() {
   return (
-    <div className="relative shrink-0 rounded-[3.2rem] bg-gradient-to-b from-[#3a2d5c] via-[#1c1530] to-[#2d2348] p-[11px] shadow-[0_40px_80px_-20px_rgb(0_0_0/0.85),inset_0_0_0_1px_rgb(255_255_255/0.12)]" style={{ height: 'min(780px, calc(100dvh - 48px))', aspectRatio: '390 / 780' }}>
+    <div className="relative shrink-0 rounded-[3.2rem] bg-gradient-to-b from-[#3a2d5c] via-[#1c1530] to-[#2d2348] p-[11px] shadow-[0_40px_80px_-20px_rgb(0_0_0/0.85),inset_0_0_0_1px_rgb(255_255_255/0.12)]" style={{ height: 'min(800px, calc(100dvh - 40px))', width: 'calc(min(800px, calc(100dvh - 40px)) * 0.5)' }}>
       <span aria-hidden className="absolute -left-[3px] top-28 h-14 w-[3px] rounded-l bg-[#4a3a74]" />
       <span aria-hidden className="absolute -right-[3px] top-36 h-20 w-[3px] rounded-r bg-[#4a3a74]" />
       <div role="group" aria-label="Phone" className="relative h-full overflow-hidden rounded-[2.5rem] bg-bg">

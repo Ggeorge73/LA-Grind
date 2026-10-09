@@ -175,7 +175,7 @@ export const INBOX_TEMPLATES: Record<InboxKind, readonly string[]> = {
   // {show},{network},{role} — casting
   callbackStarted: [
     'Hi! Producers loved you. Callback for {role} on {show} ({network}). Same energy, but more. And less.',
-    "Callback! {show} for {network}. They want to see your {role} again. Don't change a thing. Change some things.",
+    "Callback! {show} for {network}. They want to see you as {role} again. Don't change a thing. Change some things.",
     "You're on the callback list for {role} in {show}. {network} execs will be there. Wear the same shirt.",
     'Good news: callback for {show} ({network}). Role: {role}. Parking validated for the first 20 minutes.',
   ],
