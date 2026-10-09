@@ -64,103 +64,139 @@ Needs **Android Studio** (with an SDK and an emulator image) and JDK 21.
 - **Gigs** tab: today's film, TV and music opportunities. Prep raises your odds; the odds are shown before you submit. Tier 2+ needs headshots (Hollywood, $400).
 - **Projects** tab: make your own film. Write the script, pitch investors or self-fund, hire a crew, shoot on set (call time 05:00–10:00), edit, then submit to festivals. Results land at 06:00 days later; take a distribution offer or self-release. Or make music: write songs, book a studio, hire a studio crew, record, then release it and ride a 7-day release week (streams, royalties, Fans and a chart position every 06:00; promo once a day boosts tomorrow). Pitch record labels for a studio advance (they keep a cut). One project at a time.
 - **Music business** (Projects tab): play live shows once you have a record out (bigger rooms open as Fans grow), make beats at home that lease out each morning, and grow a catalogue that earns sync placements, or put one of your songs on your own film's soundtrack.
+- **TV** (Gigs and Projects tabs): pilot season runs days 8–17 of every 30. Book a pilot through a three-beat callback, wait a week for the network, and if it's picked up you're a series regular: shoot one episode a week at the Burbank lot.
+- **Writers' room** (Projects tab): start a **Spec pilot** (any Clout, no budget). Write 3 drafts, build a 2-session pitch deck, then meet talent agencies (one a day, each in its own neighbourhood). Once one signs you, your agent tries to get you staffed at 06:00 every 5 days, up to 3 times. Staffed, you're a staff writer on a show at your Clout tier ($500–3,500 a week for 6–10 weeks): one 8-hour room day a week at the lot, then answer the room's politics question. Favor 70+ at wrap gets you promoted to story editor (big RP); under 30 and you're not asked back.
+- **Guilds** (Hustle tab): one per skill. Earn 3 vouchers from union work in that skill (Tier 2+ bookings, a booked pilot, getting staffed, a label signing, a festival acceptance), then join at the guild's HQ for $1,000. Members earn 2× on gigs in that skill and +25% on series and staff-writer contracts, pay $100 dues every 30 days, and get a health plan (Burnout builds 25% slower) after a $2,000 month of union work. Global Rule One: members can't take Tier 1 (non-union) gigs in their skill.
 - **Trades** tab: the satirical trade paper. Your bookings, rejections and exposures land here.
 - Bills of rent + $20 food + $10 car are charged at **06:00**. Below $0 starts a 3-day overdraft countdown, and if it runs out you've **Moved Back Home**.
 - **Pause / 1x / 4x** in the header; **Skip to done** finishes the current action instantly.
 
 ## Balance (output of `npm run balance`)
 
-30 in-game days, seed 2026 (override with `BALANCE_SEED=n npm run balance`).
+Every table below is regenerated from `npm run balance` at the end of PI-2 (Sprint 10, LAG-77 item 3 / LAG-82). Seed 2026 (override with `BALANCE_SEED=n`); the pilot-season and writers'-room tables average 10 seeds (`PILOT_SEEDS`, `WRITER_SEEDS`, `WRITER_DAYS`). Since Sprint 9 pilots share the daily board and RNG with everything else, so single-seed rows move by seed noise from sprint to sprint; read them as examples, not targets.
+
+30 in-game days, every archetype × six scripted strategies:
 
 | Archetype | Strategy | End cash | Lowest cash | Tier | Bookings | Top tier booked | Exposed | Went broke | Moved home |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
 | The Nepo Baby | No job | $20,800 | $20,800 | 3 | 0 | — | 0 | — | — |
 | The Nepo Baby | Barista 5 days/week | $23,790 | $23,660 | 3 | 0 | — | 0 | — | — |
-| The Nepo Baby | Bar back + 1 music gig/day | $24,931 | $24,908 | 3 | 1 | 1 | 0 | — | — |
-| The Nepo Baby | PA when rested + 1 screen gig/day | $24,492 | $24,492 | 3 | 3 | 1 | 0 | — | — |
-| The Nepo Baby | Headshots + bar back + 1 screen gig/day | $24,321 | $24,321 | 3 | 1 | 1 | 0 | — | — |
+| The Nepo Baby | Bar back + 1 music gig/day | $25,006 | $24,935 | 3 | 2 | 1 | 0 | — | — |
+| The Nepo Baby | PA when rested + 1 screen gig/day | $24,065 | $23,955 | 3 | 3 | 1 | 0 | — | — |
+| The Nepo Baby | Headshots + bar back + 1 screen gig/day | $23,952 | $23,851 | 3 | 3 | 1 | 0 | — | — |
 | The Nepo Baby | Make a short film + barista | $22,096 | $21,966 | 3 | 0 | — | 0 | — | — |
 | The Midwest Transplant | No job | -$175 | -$175 | 1 | 0 | — | 0 | day 23 | day 26 |
 | The Midwest Transplant | Barista 5 days/week | $2,360 | $1,196 | 1 | 0 | — | 0 | — | — |
-| The Midwest Transplant | Bar back + 1 music gig/day | $1,530 | $1,160 | 2 | 4 | 1 | 0 | — | — |
-| The Midwest Transplant | PA when rested + 1 screen gig/day | $2,946 | $1,158 | 2 | 2 | 1 | 0 | — | — |
-| The Midwest Transplant | Headshots + bar back + 1 screen gig/day | $2,730 | $1,158 | 1 | 2 | 1 | 0 | — | — |
-| The Midwest Transplant | Make a short film + barista | $1,589 | $225 | 2 | 0 | — | 0 | — | — |
+| The Midwest Transplant | Bar back + 1 music gig/day | $800 | $800 | 1 | 2 | 1 | 0 | — | — |
+| The Midwest Transplant | PA when rested + 1 screen gig/day | $3,004 | $1,158 | 2 | 4 | 1 | 0 | — | — |
+| The Midwest Transplant | Headshots + bar back + 1 screen gig/day | $2,302 | $1,158 | 2 | 5 | 1 | 0 | — | — |
+| The Midwest Transplant | Make a short film + barista | $1,556 | $231 | 2 | 0 | — | 0 | — | — |
 | The Indie Hustler | No job | $1,000 | $1,000 | 1 | 0 | — | 0 | — | — |
 | The Indie Hustler | Barista 5 days/week | $3,810 | $3,636 | 1 | 0 | — | 0 | — | — |
-| The Indie Hustler | Bar back + 1 music gig/day | $5,290 | $3,996 | 3 | 10 | 1 | 0 | — | — |
-| The Indie Hustler | PA when rested + 1 screen gig/day | $5,523 | $3,958 | 3 | 10 | 1 | 0 | — | — |
-| The Indie Hustler | Headshots + bar back + 1 screen gig/day | $9,592 | $3,958 | 3 | 13 | 3 | 0 | — | — |
-| The Indie Hustler | Make a short film + barista | $2,282 | $1,587 | 2 | 0 | — | 0 | — | — |
+| The Indie Hustler | Bar back + 1 music gig/day | $5,188 | $3,996 | 2 | 8 | 1 | 0 | — | — |
+| The Indie Hustler | PA when rested + 1 screen gig/day | $5,131 | $3,958 | 2 | 7 | 1 | 0 | — | — |
+| The Indie Hustler | Headshots + bar back + 1 screen gig/day | $11,306 | $3,958 | 4 | 15 | 3 | 0 | — | — |
+| The Indie Hustler | Make a short film + barista | $1,491 | $1,317 | 1 | 0 | — | 0 | — | — |
 | The Bedroom Producer | No job | $400 | $400 | 1 | 0 | — | 0 | — | — |
 | The Bedroom Producer | Barista 5 days/week | $3,210 | $2,496 | 1 | 0 | — | 0 | — | — |
-| The Bedroom Producer | Bar back + 1 music gig/day | $4,658 | $2,460 | 2 | 10 | 1 | 9 | — | — |
-| The Bedroom Producer | PA when rested + 1 screen gig/day | $4,468 | $2,456 | 2 | 5 | 1 | 3 | — | — |
-| The Bedroom Producer | Headshots + bar back + 1 screen gig/day | $10,732 | $2,456 | 3 | 11 | 3 | 0 | — | — |
-| The Bedroom Producer | Make a short film + barista | $1,556 | $297 | 2 | 0 | — | 0 | — | — |
+| The Bedroom Producer | Bar back + 1 music gig/day | $4,853 | $2,460 | 2 | 11 | 1 | 6 | — | — |
+| The Bedroom Producer | PA when rested + 1 screen gig/day | $4,734 | $2,456 | 2 | 6 | 1 | 2 | — | — |
+| The Bedroom Producer | Headshots + bar back + 1 screen gig/day | $8,058 | $2,456 | 3 | 12 | 3 | 0 | — | — |
+| The Bedroom Producer | Make a short film + barista | $891 | $297 | 1 | 0 | — | 0 | — | — |
 
 Film runs: one film next to a weekday barista job, stopping at release (max 60 days). "Out of pocket" is self-funding plus festival fees; "Cash vs barista-only" compares end cash with barista alone over the same days.
 
 | Archetype | Film | Days to release | Quality | Festivals (in/sent, awards) | Outcome | Film RP | Tier after | Out of pocket | Offer | Cash vs barista-only |
 |---|---|---:|---:|---|---|---:|---:|---:|---:|---:|
 | The Nepo Baby | Short film | 7.9 | 51 | 2/2 | distribution deal | 180 | 3 | $2,075 | $649 | -$1,824 |
-| The Nepo Baby | Micro-budget feature | 14.9 | 48 | 3/3 | distribution deal | 405 | 3 | $20,175 | $6,243 | -$14,486 |
-| The Midwest Transplant | Short film | 14.9 | 51 | 2/2 | distribution deal | 180 | 2 | $1,101 | $650 | -$767 |
-| The Indie Hustler | Short film | 7.9 | 69 | 2/2 | distribution deal | 180 | 2 | $2,075 | $791 | -$1,528 |
-| The Bedroom Producer | Short film | 7.9 | 53 | 1/2 | distribution deal | 120 | 2 | $2,053 | $665 | -$1,654 |
+| The Nepo Baby | Micro-budget feature | 14.9 | 48 | 2/3 | distribution deal | 180 | 3 | $20,175 | $6,265 | -$14,464 |
+| The Midwest Transplant | Short film | 14.9 | 46 | 2/2 | distribution deal | 180 | 2 | $1,101 | $611 | -$804 |
+| The Indie Hustler | Short film | 7.9 | 69 | 1/2 | self-released | 95 | 1 | $2,075 | $0 | -$2,319 |
+| The Bedroom Producer | Short film | 7.9 | 53 | 0/2 | self-released | 27 | 1 | $2,053 | $0 | -$2,319 |
 
-Music runs: one record next to a weekday barista job, stopping at the end of release week (max 60 days). Studio budget is self-funded; "Cash vs barista-only" compares end cash with barista alone over the same days. The EP strategy keeps releasing singles until Clout 2, then saves up for the $4,000 studio.
+Music runs: one record next to a weekday barista job, stopping at the end of release week (max 60 days). Studio budget is self-funded. The EP strategy keeps releasing singles until Clout 2, then saves up for the $4,000 studio.
 
-| Archetype | Strategy | Days to week end | Quality | Peak | Streams | Fans gained | Royalties | Music RP | Cash vs barista-only |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| The Nepo Baby | Single + promo | 7.9 | 63 | #75 | 22,417 | 283 | $89 | 78 | -$471 |
-| The Nepo Baby | Single, no promo | 7.9 | 63 | #77 | 16,533 | 208 | $66 | 72 | -$480 |
-| The Nepo Baby | EP + promo | 10.9 | 62 | #65 | 54,981 | 685 | $220 | 108 | -$3,976 |
-| The Midwest Transplant | Single + promo | 8.9 | 61 | #88 | 7,079 | 88 | $29 | 39 | -$379 |
-| The Midwest Transplant | Single, no promo | 8.9 | 61 | #89 | 5,224 | 63 | $21 | 36 | -$375 |
-| The Midwest Transplant | EP + promo (after 3 singles) | > 60 | — | — | 29,959 | 362 | $118 | 156 | -$746 |
-| The Indie Hustler | Single + promo | 9.0 | 64 | #82 | 12,318 | 158 | $50 | 57 | -$494 |
-| The Indie Hustler | Single, no promo | 8.9 | 64 | #83 | 9,086 | 117 | $35 | 54 | -$373 |
-| The Indie Hustler | EP + promo (after 2 singles) | > 60 | — | — | 28,825 | 366 | $117 | 123 | -$743 |
-| The Bedroom Producer | Single + promo | 8.9 | 73 | #65 | 58,098 | 847 | $232 | 108 | -$176 |
-| The Bedroom Producer | Single, no promo | 8.9 | 73 | #66 | 42,851 | 625 | $172 | 105 | -$224 |
-| The Bedroom Producer | EP + promo (after 1 single) | > 60 | — | — | 58,098 | 847 | $232 | 108 | -$180 |
-
-A single takes ~8–9 days for everyone (most of it is the 7-day release week), costs $100–500 net and pays 36–108 RP; the Bedroom Producer's 1,200 starting fans make it the strongest (#65 peak, ~850 new fans, Clout 2 from one single). Daily promo adds ~35% streams and fans but is optional. Streams are based on your Fans at release; fans won during the week help your next record (LAG-69 follow-up, which also lowered these numbers by ~10–25%). Only the Nepo Baby can self-fund an EP in 60 days: the others reach Clout 2 (after 1–3 singles) but cannot save $4,000 on barista pay, which label advances (Sprint 8) are meant to solve. Tuned in LAG-62: single budget $600 → $400, chart RP 2 → 3 per place.
+| Archetype | Strategy | Days to week end | Quality | Peak | Streams | Fans gained | Royalties | Studio cost | Music RP | Tier after | Cash vs barista-only |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| The Nepo Baby | Single + promo | 7.9 | 63 | #75 | 22,417 | 283 | $89 | $400 | 78 | 3 | -$471 |
+| The Nepo Baby | Single, no promo | 7.9 | 63 | #77 | 16,533 | 208 | $66 | $400 | 72 | 3 | -$480 |
+| The Nepo Baby | EP + promo | 10.9 | 62 | #65 | 54,981 | 685 | $220 | $4,000 | 108 | 3 | -$3,976 |
+| The Midwest Transplant | Single + promo | 8.9 | 61 | #88 | 7,079 | 88 | $29 | $400 | 39 | 1 | -$379 |
+| The Midwest Transplant | Single, no promo | 8.9 | 61 | #89 | 5,224 | 63 | $21 | $400 | 36 | 1 | -$375 |
+| The Midwest Transplant | EP + promo (after 3 singles) | > 60 | — | — | 26,273 | 308 | $108 | $1,200 | 141 | 2 | -$1,150 |
+| The Indie Hustler | Single + promo | 9.0 | 64 | #82 | 12,318 | 158 | $50 | $400 | 57 | 1 | -$494 |
+| The Indie Hustler | Single, no promo | 8.9 | 64 | #83 | 9,086 | 117 | $35 | $400 | 54 | 1 | -$373 |
+| The Indie Hustler | EP + promo (after 2 singles) | > 60 | — | — | 28,627 | 362 | $117 | $800 | 123 | 2 | -$739 |
+| The Bedroom Producer | Single + promo | 8.9 | 73 | #65 | 58,098 | 847 | $232 | $400 | 108 | 2 | -$176 |
+| The Bedroom Producer | Single, no promo | 8.9 | 73 | #66 | 42,851 | 625 | $172 | $400 | 105 | 2 | -$224 |
+| The Bedroom Producer | EP + promo (after 1 single) | > 60 | — | — | 58,098 | 847 | $232 | $400 | 108 | 2 | -$180 |
 
 Music business (LAG-69): 45 days next to a weekday barista job, compared with barista alone. **Signed EP** puts out singles (one label meeting each, self-funding on a no) until Clout 2, then shops the EP to labels daily until one signs and self-funds what the advance leaves. **Beat grinder** makes a beat a day at home until the store holds 8. **Gig the catalogue** releases a single, then plays the best venue it can book every night.
 
-| Archetype | Strategy | Cash vs barista-only | Advances / leases / door | Fans | Clout | EP released | Notes |
-|---|---|---:|---:|---:|---:|---|---|
-| The Nepo Baby | Signed EP | -$607 | $2,425 | 1,139 | 3 | day 11 | Garage Press, 1 meeting |
-| The Nepo Baby | Beat grinder | $919 | $933 | 500 | 3 | — | avg Q26, $21/day |
-| The Nepo Baby | Gig the catalogue | $2,160 | $2,797 | 877 | 3 | — | basement, $76/show |
-| The Midwest Transplant | Signed EP | -$928 | $3,072 | 496 | 2 | day 34 | Garage Press, 7 meetings |
-| The Midwest Transplant | Beat grinder | $882 | $892 | 0 | 1 | — | avg Q31, $20/day |
-| The Midwest Transplant | Gig the catalogue | $28 | $171 | 88 | 1 | — | open mic, $5/show |
-| The Indie Hustler | Signed EP | -$1,768 | $2,978 | 839 | 2 | day 30 | Garage Press, 3 meetings |
-| The Indie Hustler | Beat grinder | $1,076 | $1,090 | 150 | 1 | — | avg Q26, $24/day |
-| The Indie Hustler | Gig the catalogue | $948 | $1,062 | 344 | 1 | — | basement, $30/show |
-| The Bedroom Producer | Signed EP | $1,001 | $2,737 | 4,961 | 2 | day 20 | Tape Hiss, 2 meetings |
-| The Bedroom Producer | Beat grinder | $2,419 | $2,437 | 1,200 | 1 | — | avg Q48, $54/day |
-| The Bedroom Producer | Gig the catalogue | $8,894 | $8,894 | 2,245 | 2 | — | club, $287/show |
+| Archetype | Strategy | Cash vs barista-only | Advances / leases / door | Fans | RP | Clout | EP released | Notes |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| The Nepo Baby | Signed EP | -$607 | $2,425 | 1,139 | 515 | 3 | day 11 | EP: Garage Press Records; 1 label meeting in all; placements $885 |
+| The Nepo Baby | Beat grinder | $979 | $993 | 500 | 400 | 3 | — | 8 beats, avg Q26; $22/day avg, $10/day over the last 10 days |
+| The Nepo Baby | Gig the catalogue | $2,102 | $2,739 | 875 | 478 | 3 | — | 37 shows, $74/show avg, best $90 |
+| The Midwest Transplant | Signed EP | -$1,126 | $3,680 | 639 | 253 | 2 | day 40 | EP: Garage Press Records; 6 label meetings in all; placements $336 |
+| The Midwest Transplant | Beat grinder | $1,087 | $1,097 | 0 | 0 | 1 | — | 8 beats, avg Q31; $24/day avg, $24/day over the last 10 days |
+| The Midwest Transplant | Gig the catalogue | -$338 | $171 | 88 | 39 | 1 | — | 36 shows, $5/show avg, best $5 |
+| The Indie Hustler | Signed EP | -$748 | $2,887 | 1,067 | 264 | 2 | day 33 | EP: Garage Press Records; 5 label meetings in all; placements $1,098 |
+| The Indie Hustler | Beat grinder | $675 | $689 | 150 | 0 | 1 | — | 8 beats, avg Q26; $15/day avg, $17/day over the last 10 days |
+| The Indie Hustler | Gig the catalogue | $601 | $1,099 | 344 | 57 | 1 | — | 36 shows, $31/show avg, best $36 |
+| The Bedroom Producer | Signed EP | $426 | $3,156 | 4,861 | 271 | 2 | day 20 | EP: Tape Hiss Tapes; 2 label meetings in all; placements $960 |
+| The Bedroom Producer | Beat grinder | $2,236 | $2,254 | 1,200 | 0 | 1 | — | 8 beats, avg Q48; $50/day avg, $60/day over the last 10 days |
+| The Bedroom Producer | Gig the catalogue | $9,833 | $9,395 | 2,255 | 134 | 2 | — | 31 shows, $303/show avg, best $358; placements $876 |
 
-With a label every archetype finishes an EP inside ~40 days (day 11–41 over 8 seeds; the Midwest Transplant is slowest at day 33–41). Beats are pocket money: $20–30/day for most, ~$55/day for the Bedroom Producer, under one $130 barista shift. Shows scale with Fans: the club pays ~$135 at 1,000 Fans and ~$400 at 3,000, but an act with a few hundred Fans earns almost nothing. Placements ($300–1,100) land in roughly half of the runs. With streams fixed to Fans at release, the Bedroom Producer's EP takes Fans from ~2,200 to ~5,000 (it was 7–14k when the week compounded). Tuned in LAG-69: show draw 3% → 2% and door split 60% → 45% (2,000 Fans at the club was ~$540 a night); beat lease cap 40% → 20%, Fans divisor 20,000 → 50,000, fee $20 + 1.5·Q → $10 + 1.2·Q; placement chance 2% → 1%; label advances 40–100% → 60–100% and marketing ×1.1–2 → ×1.1–1.5.
+Pilot season (LAG-76): 60 days (two seasons, days 8–17 and 38–47) next to a weekday barista job. Every season day the strategy preps 2h and submits to the best pilot it can afford (buying headshots once Tier 2 pilots show up) and shoots every episode. One seed:
 
-Pilot season (LAG-76): 60 days (two seasons) next to a weekday barista job, compared with barista alone, over 10 seeds. Every season day the strategy preps 2h and submits to the best pilot it can afford (buying headshots once Tier 2 pilots show up) and shoots every episode. At a callback it either picks the read its Acting senses, otherwise read 0 ("sensed or 0", a player guessing), or always the right read ("perfect", a player who reads the director's notes).
+| Archetype | Pilots sent / booked | Pickups | Episodes shot / weeks | Pilot fees | Series pay | Cash vs barista-only | RP | Clout | Credit |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| The Nepo Baby | 18 / 2 | 1/2 | 4 / 4 | $1,350 | $1,200 | $770 | 536 | 3 | Web series, Q100 |
+| The Midwest Transplant | 18 / 1 | 0/1 | 0 / 0 | $270 | $0 | -$432 | 32 | 1 | — |
+| The Indie Hustler | 18 / 3 | 0/3 | 0 / 0 | $810 | $0 | $798 | 96 | 1 | — |
+| The Bedroom Producer | 18 / 0 | 0/0 | 0 / 0 | $0 | $0 | -$728 | 0 | 1 | — |
 
-| Archetype | Reads | Booked a pilot in season 1 | Pickup odds (avg) | Pickup rate | Runs with a series | Cash vs barista-only (avg / min / max) | RP (avg) |
-|---|---|---:|---:|---:|---:|---:|---:|
-| The Nepo Baby | sensed or 0 | 80% | 38% | 9/27 (33%) | 6/10 | $2,049 / -$1,228 / $12,936 | 571 |
-| The Nepo Baby | perfect | 100% | 45% | 31/59 (53%) | 9/10 | $8,555 / $646 / $16,176 | 847 |
-| The Midwest Transplant | sensed or 0 | 80% | 35% | 5/16 (31%) | 5/10 | -$207 / -$698 / $560 | 69 |
-| The Midwest Transplant | perfect | 90% | 44% | 20/47 (43%) | 9/10 | $1,313 / -$676 / $3,368 | 222 |
-| The Indie Hustler | sensed or 0 | 40% | 33% | 6/16 (38%) | 4/10 | $635 / -$20 / $2,158 | 70 |
-| The Indie Hustler | perfect | 80% | 44% | 16/43 (37%) | 9/10 | $1,432 / $294 / $3,244 | 180 |
-| The Bedroom Producer | sensed or 0 | 50% | 34% | 3/9 (33%) | 3/10 | -$313 / -$728 / $496 | 41 |
-| The Bedroom Producer | perfect | 90% | 43% | 18/43 (42%) | 8/10 | $1,310 / -$184 / $4,018 | 208 |
+Over 10 seeds, picking the read its Acting senses, otherwise read 0 ("sensed or 0", a player guessing), or always the right read ("perfect", a player who reads the director's notes):
 
-Newcomers book a web pilot in their first season 40–80% of the time when guessing and 80–90% when they read the notes. Networks pick up 31–44% of pilots on average, so 8–9 runs in 10 land a show when reading well (3–5 when guessing). For a newcomer, a web or cable season adds ~$1.3k over 60 days with every episode shot; chasing pilots while guessing at callbacks roughly breaks even with the barista job. The Nepo Baby leads at +$8.6k with perfect reads because they start at Clout 3. Pilots are cast on Clout, not on the extra tier a manager shows, which closed an exploit where Acting-10 nepo babies landed network pilots (+$20k before the fix). Tuned in LAG-76: right read +12 → +6 points; pilot fee 2× → 1.5× the TV fee; pickup 20% + 10%/right → 15% + 8%/right; a missed episode week pays 25% (was 50%). Pilots now share the daily board and RNG with everything else, so the screen-gig rows in the 30-day table above move by seed noise in today's `npm run balance` (for example, Indie Hustler with headshots now reaches Tier 4). The reference numbers above are kept from LAG-69.
+| Archetype | Reads | Booked a pilot in season 1 | Right reads | Pickup odds (avg) | Pickup rate | Runs with a series | Episodes shot / weeks | Cash vs barista-only (avg / min / max) | RP (avg) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| The Nepo Baby | sensed or 0 | 80% | 1.4 / 3 | 38% | 9/27 (33%) | 6/10 | 25 / 21 | $2,049 / -$1,228 / $12,936 | 571 |
+| The Nepo Baby | perfect | 100% | 3.0 / 3 | 45% | 31/59 (53%) | 9/10 | 55 / 47 | $8,555 / $646 / $16,176 | 847 |
+| The Midwest Transplant | sensed or 0 | 80% | 1.5 / 3 | 35% | 5/16 (31%) | 5/10 | 18 / 17 | -$207 / -$698 / $560 | 69 |
+| The Midwest Transplant | perfect | 90% | 3.0 / 3 | 44% | 20/47 (43%) | 9/10 | 48 / 40 | $1,313 / -$676 / $3,368 | 222 |
+| The Indie Hustler | sensed or 0 | 40% | 1.5 / 3 | 33% | 6/16 (38%) | 4/10 | 16 / 14 | $635 / -$20 / $2,158 | 70 |
+| The Indie Hustler | perfect | 80% | 3.0 / 3 | 44% | 16/43 (37%) | 9/10 | 36 / 32 | $1,432 / $294 / $3,244 | 180 |
+| The Bedroom Producer | sensed or 0 | 50% | 1.4 / 3 | 34% | 3/9 (33%) | 3/10 | 12 / 12 | -$313 / -$728 / $496 | 41 |
+| The Bedroom Producer | perfect | 90% | 3.0 / 3 | 43% | 18/43 (42%) | 8/10 | 45 / 37 | $1,310 / -$184 / $4,018 | 208 |
+
+Writers' room (LAG-82): 90 days next to a weekday barista job, 10 seeds. The writer starts a spec pilot at once (and another whenever it is free and not on a show), writes 3 drafts and 2 deck sessions in the afternoons, meets the agency with the best odds × staffing value once a day, waits out staffing season, then does each week's room day first thing and answers every politics event either for **Favor** or for **the pages** (quality). The guild variant also chases one writing gig a day (Tier 2+ once headshots are affordable) and joins the Writing guild as soon as it has 3 vouchers and $1,000; the control row does the same without ever writing a spec. "Staffing tries won" counts every 06:00 roll; a season is up to 3 tries.
+
+| Archetype | Strategy | Staffed | Day staffed (avg, range) | Agency meetings / run | Staffing tries won | Seasons staffed / failed | Weekly pay | Room days / weeks | Wrapped: promoted / asked back / not asked back | Favor at end (on a show) | Joined guild | Cash vs barista-only (avg / min / max) | RP (avg) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| The Nepo Baby | Writer, answers for Favor | 10/10 | 12 (8–35) | 2.7 | 17/27 (63%) | 17 / 1 | $2,000–$2,000 | 106 / 98 | 9 / 0 / 0 | 64 (8 runs) | — | $18,455 / $15,874 / $19,850 | 853 |
+| The Nepo Baby | Writer, answers for the pages | 10/10 | 12 (8–35) | 2.7 | 17/27 (63%) | 17 / 1 | $2,000–$2,000 | 106 / 98 | 0 / 3 / 6 | 41 (8 runs) | — | $18,455 / $15,874 / $19,850 | 700 |
+| The Nepo Baby | Writer + writing gigs, joins the guild | 10/10 | 13 (8–41) | 2.6 | 19/28 (68%) | 19 / 2 | $2,000–$2,000 | 107 / 97 | 9 / 0 / 0 | 63 (10 runs) | 6/10, day 76 (54–90) | $17,803 / $14,984 / $19,211 | 982 |
+| The Nepo Baby | Control: writing gigs + guild, no spec | 0/10 | — | 0.0 | — | 0 / 0 | — | 0 / 0 | 0 / 0 / 0 | — | 0/10 | -$465 / -$578 / -$403 | 408 |
+| The Midwest Transplant | Writer, answers for Favor | 10/10 | 26 (10–56) | 5.0 | 16/52 (31%) | 16 / 7 | $500–$1,000 | 82 / 75 | 9 / 0 / 0 | 82 (7 runs) | — | $3,669 / $2,146 / $6,984 | 149 |
+| The Midwest Transplant | Writer, answers for the pages | 10/10 | 26 (10–56) | 5.4 | 17/53 (32%) | 17 / 7 | $500–$500 | 82 / 74 | 0 / 2 / 7 | 35 (8 runs) | — | $2,845 / $2,146 / $4,984 | 75 |
+| The Midwest Transplant | Writer + writing gigs, joins the guild | 10/10 | 24 (10–50) | 5.2 | 18/48 (38%) | 18 / 6 | $500–$1,250 | 82 / 73 | 9 / 0 / 0 | 74 (9 runs) | 5/10, day 77 (66–88) | $365 / -$1,694 / $2,070 | 279 |
+| The Midwest Transplant | Control: writing gigs + guild, no spec | 0/10 | — | 0.0 | — | 0 / 0 | — | 0 / 0 | 0 / 0 / 0 | — | 0/10 | -$2,281 / -$3,383 / -$1,657 | 53 |
+| The Indie Hustler | Writer, answers for Favor | 10/10 | 17 (9–27) | 3.2 | 20/40 (50%) | 20 / 2 | $500–$1,000 | 99 / 89 | 10 / 0 / 0 | 83 (10 runs) | — | $4,957 / $2,048 / $6,982 | 188 |
+| The Indie Hustler | Writer, answers for the pages | 10/10 | 17 (9–27) | 3.7 | 19/45 (42%) | 19 / 4 | $500–$500 | 93 / 84 | 0 / 0 / 10 | 29 (9 runs) | — | $3,266 / $2,050 / $4,982 | 83 |
+| The Indie Hustler | Writer + writing gigs, joins the guild | 10/10 | 12 (9–19) | 2.9 | 20/26 (77%) | 20 / 0 | $2,500–$4,375 | 105 / 95 | 10 / 0 / 0 | 83 (10 runs) | 10/10, day 32 (17–41) | $47,811 / $28,441 / $75,080 | 2101 |
+| The Indie Hustler | Control: writing gigs + guild, no spec | 0/10 | — | 0.0 | — | 0 / 0 | — | 0 / 0 | 0 / 0 / 0 | — | 10/10, day 55 (24–80) | $7,603 / -$411 / $20,051 | 918 |
+| The Bedroom Producer | Writer, answers for Favor | 10/10 | 27 (10–53) | 4.1 | 18/53 (34%) | 18 / 7 | $500–$1,000 | 86 / 77 | 9 / 0 / 0 | 83 (9 runs) | — | $3,769 / $1,674 / $6,346 | 157 |
+| The Bedroom Producer | Writer, answers for the pages | 10/10 | 27 (10–53) | 5.3 | 17/60 (28%) | 17 / 9 | $500–$500 | 77 / 69 | 0 / 1 / 8 | 29 (8 runs) | — | $2,580 / $1,674 / $3,204 | 69 |
+| The Bedroom Producer | Writer + writing gigs, joins the guild | 10/10 | 24 (10–50) | 4.4 | 17/41 (41%) | 17 / 6 | $500–$2,500 | 88 / 79 | 8 / 0 / 0 | 87 (9 runs) | 10/10, day 61 (34–87) | $8,123 / -$100 / $29,214 | 712 |
+| The Bedroom Producer | Control: writing gigs + guild, no spec | 0/10 | — | 0.0 | — | 0 / 0 | — | 0 / 0 | 0 / 0 / 0 | — | 0/10 | -$1,804 / -$3,028 / $12 | 154 |
+
+| Strategy (all archetypes) | Staffed | Promoted (of wraps) | Cash vs barista-only (avg) |
+|---|---:|---:|---:|
+| Writer, answers for Favor | 100% (40/40) | 100% (37/37) | $7,712 |
+| Writer, answers for the pages | 100% (40/40) | 0% (0/37) | $6,786 |
+| Writer + writing gigs, joins the guild | 100% (40/40) | 100% (36/36) | $18,525 |
+| Control: writing gigs + guild, no spec | 0% (0/40) | — | $763 |
 
 No-income runway (days before cash first drops below $0):
 
@@ -171,7 +207,9 @@ No-income runway (days before cash first drops below $0):
 | The Indie Hustler | 41 days | ~40 days |
 | The Bedroom Producer | 36 days | ~36 days |
 
-**Reading it:** the Midwest Transplant is the only archetype that cannot coast, and running dry on day 23 matches the target. Buying headshots once Clout 2 shows Tier 2 rows is now the best-paying strategy for the Indie Hustler and Bedroom Producer (Tier 3 bookings, ~$10k by day 30); without headshots nobody books above Tier 1. A short film releases in 8–15 days for every archetype, costs ~$0.8–2k net, and earns 120–300 RP (one Clout tier for a newcomer). The Nepo Baby can bankroll a micro-budget feature on day 1 (~$14.5k net cost, 405 RP); a film is their main money sink. Open items stay in Jira LAG-33.
+**Reading it.** The Midwest Transplant is the only archetype that cannot coast (broke on day 23, home on day 26, matching the target). Headshots plus one screen gig a day is still the best 30-day hustle for the Indie Hustler and Bedroom Producer (Tier 3–4 bookings, $8–11k by day 30); without headshots nobody books above Tier 1. A short film takes 8–15 days, costs ~$1–2k out of pocket and pays 27–180 RP depending on the festivals; the Nepo Baby's micro-budget feature is a ~$14.5k money sink. A single takes ~8–9 days, costs ~$180–500 net and pays 36–108 RP; only the Nepo Baby can self-fund an EP inside 60 days, and label advances get everyone else there by day 20–40. Beats are pocket money ($15–50/day); shows pay once you have Fans (the Bedroom Producer's club nights ~$300). Pilot season adds ~$1.3k over 60 days for a newcomer who reads the notes and roughly breaks even when guessing; the Nepo Baby leads at +$8.6k.
+
+**The writers' room** is the most reliable TV path: every run in 40 lands an agent (3–5 meetings) and gets staffed, newcomers by day 17–27 on average and the Nepo Baby by day 12; per 06:00 roll the odds are ~30–35% for the Midwest Transplant and Bedroom Producer, ~50% for the Indie Hustler and ~65% for the Nepo Baby, and 70–100% of staffing seasons end in a job. A newcomer's web-series room adds +$3–5k over 90 days next to the barista job (more than pilots, less than the headshots gig hustle); the Nepo Baby starts at Clout 3, so their first room is a $2,000/week streaming room (+$18k). Answering politics for Favor gets promoted in every wrap (37/37); answering for the pages never does (0/37, mostly "not asked back"), and newcomers end ~$0.8–1.7k poorer because the promotion RP would have lifted their next room's tier. Joining the Writing guild (day 32–77 when it happens) pays off hugely only when writing gigs have already pushed Clout to 4: the Indie Hustler's network rooms at $4,375/week (+25% scale) make it the single best strategy in the game (+$48k avg, +$75k max over 90 days). The follow-ups this table raised are listed under "PI-2 wrap-up" in `docs/PI-2.md`. Open balance items stay in Jira LAG-33.
 
 ## Assumptions (where the brief left a choice)
 
@@ -188,7 +226,6 @@ No-income runway (days before cash first drops below $0):
 
 ## Deliberately missing (Phase 1 scope)
 
-- TV careers, pilot season, writers' rooms, guild membership (**Phase 2, Sprints 9–10**)
 - Accounts, server-side rules, shared Trades feed, leaderboards, shared clock (**Phase 3**)
 - Presence, chat, co-op productions (**Phase 4**)
 - Purchases, ads, analytics, account deletion, moderation tools: not needed until accounts and social features exist

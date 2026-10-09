@@ -800,7 +800,7 @@ function bestWritingGig(s: GameState): Opportunity | null {
   return best;
 }
 
-function writerPolicy(answer: 'favor' | 'quality', guild: boolean): () => Policy {
+function writerPolicy(answer: 'favor' | 'quality', guild: boolean, spec = true): () => Policy {
   return () => {
     const job = baristaWeekdays();
     let gigDay = -1;
@@ -814,7 +814,7 @@ function writerPolicy(answer: 'favor' | 'quality', guild: boolean): () => Policy
         return { type: 'ROOM_CHOICE', option: pick ? 1 : 0 };
       }
       const reserve = 10 * dailyBills(ARCHETYPES[pl.archetype].rentPerDay);
-      if (!s.project && !s.contract) return { type: 'START_PROJECT', scale: 'spec' };
+      if (spec && !s.project && !s.contract) return { type: 'START_PROJECT', scale: 'spec' };
       if (h >= 22 || h < 5) return sleepUntil(s, 5);
       // On a show: this week's room day comes first.
       const c = s.contract;
@@ -870,10 +870,11 @@ function writerPolicy(answer: 'favor' | 'quality', guild: boolean): () => Policy
 
 const WRITER_DAYS = Number(process.env.WRITER_DAYS ?? 90);
 const WRITER_SEEDS = Number(process.env.WRITER_SEEDS ?? 10);
-const WRITER_RUNS: Array<[string, 'favor' | 'quality', boolean]> = [
-  ['Writer, answers for Favor', 'favor', false],
-  ['Writer, answers for the pages', 'quality', false],
-  ['Writer + writing gigs, joins the guild', 'favor', true],
+const WRITER_RUNS: Array<[string, 'favor' | 'quality', boolean, boolean]> = [
+  ['Writer, answers for Favor', 'favor', false, true],
+  ['Writer, answers for the pages', 'quality', false, true],
+  ['Writer + writing gigs, joins the guild', 'favor', true, true],
+  ['Control: writing gigs + guild, no spec', 'favor', true, false],
 ];
 
 interface WriterStats {
@@ -936,14 +937,14 @@ function writerStats(r: Result): WriterStats {
 const fmtDays = (xs: number[]) => (xs.length ? `${Math.round(avg(xs))} (${Math.min(...xs)}–${Math.max(...xs)})` : '—');
 
 console.log(`\nWriters' room: ${WRITER_DAYS} days next to a weekday barista job, ${WRITER_SEEDS} seeds (${SEED}…${SEED + WRITER_SEEDS - 1}), vs barista alone\n`);
-console.log('| Archetype | Strategy | Staffed | Day staffed (avg, range) | Agency meetings / run | Staffing tries won | Weekly pay | Room days / weeks | Wrapped: promoted / asked back / not asked back | Favor at end (on a show) | Joined guild | Cash vs barista-only (avg / min / max) | RP (avg) |');
-console.log('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
+console.log('| Archetype | Strategy | Staffed | Day staffed (avg, range) | Agency meetings / run | Staffing tries won | Seasons staffed / failed | Weekly pay | Room days / weeks | Wrapped: promoted / asked back / not asked back | Favor at end (on a show) | Joined guild | Cash vs barista-only (avg / min / max) | RP (avg) |');
+console.log('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
 const writerSummary: Record<string, { runs: number; staffed: number; promoted: number; wraps: number; diff: number[] }> = {};
 for (const id of ARCHETYPE_IDS) {
   const bases = Array.from({ length: WRITER_SEEDS }, (_, k) => simulate(id, baristaWeekdays, WRITER_DAYS, undefined, SEED + k).endCash);
-  for (const [name, answer, guild] of WRITER_RUNS) {
+  for (const [name, answer, guild, spec] of WRITER_RUNS) {
     const rows = bases.map((baseCash, k) => {
-      const r = simulate(id, writerPolicy(answer, guild), WRITER_DAYS, undefined, SEED + k);
+      const r = simulate(id, writerPolicy(answer, guild, spec), WRITER_DAYS, undefined, SEED + k);
       return { st: writerStats(r), diff: r.endCash - baseCash, rp: r.rp };
     });
     const staffedRuns = rows.filter((x) => x.st.staffings > 0);
@@ -962,7 +963,7 @@ for (const id of ARCHETYPE_IDS) {
     sum.wraps += wraps.length;
     sum.diff.push(...diffs);
     console.log(
-      `| ${ARCHETYPES[id].name} | ${name} | ${staffedRuns.length}/${rows.length} | ${fmtDays(staffedRuns.map((x) => x.st.staffedDay!))} | ${avg(rows.map((x) => x.st.meetings)).toFixed(1)} | ${tries ? `${wins}/${tries} (${pct(wins / tries)})` : '—'} | ${pays.length ? `${money(Math.min(...pays))}–${money(Math.max(...pays))}` : '—'} | ${rows.reduce((a, x) => a + x.st.roomDays, 0)} / ${rows.reduce((a, x) => a + x.st.weeks, 0)} | ${count('promoted')} / ${count('normal')} / ${count('notAskedBack')} | ${favors.length ? `${Math.round(avg(favors))} (${favors.length} runs)` : '—'} | ${guild ? `${joined.length}/${rows.length}${joined.length ? `, day ${fmtDays(joined.map((x) => x.st.joinedDay!))}` : ''}` : '—'} | ${money(Math.round(avg(diffs)))} / ${money(Math.min(...diffs))} / ${money(Math.max(...diffs))} | ${Math.round(avg(rows.map((x) => x.rp)))} |`,
+      `| ${ARCHETYPES[id].name} | ${name} | ${staffedRuns.length}/${rows.length} | ${fmtDays(staffedRuns.map((x) => x.st.staffedDay!))} | ${avg(rows.map((x) => x.st.meetings)).toFixed(1)} | ${tries ? `${wins}/${tries} (${pct(wins / tries)})` : '—'} | ${wins} / ${rows.reduce((t, x) => t + x.st.failedSeasons, 0)} | ${pays.length ? `${money(Math.min(...pays))}–${money(Math.max(...pays))}` : '—'} | ${rows.reduce((a, x) => a + x.st.roomDays, 0)} / ${rows.reduce((a, x) => a + x.st.weeks, 0)} | ${count('promoted')} / ${count('normal')} / ${count('notAskedBack')} | ${favors.length ? `${Math.round(avg(favors))} (${favors.length} runs)` : '—'} | ${guild ? `${joined.length}/${rows.length}${joined.length ? `, day ${fmtDays(joined.map((x) => x.st.joinedDay!))}` : ''}` : '—'} | ${money(Math.round(avg(diffs)))} / ${money(Math.min(...diffs))} / ${money(Math.max(...diffs))} | ${Math.round(avg(rows.map((x) => x.rp)))} |`,
     );
   }
 }

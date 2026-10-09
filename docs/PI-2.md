@@ -126,8 +126,8 @@ A **Spec pilot** project (TV, any Clout) on the shared engine: **write the spec 
 5. **Staff writer** (a contract like a series regular): the show's tier is your Clout (1–4): $500 / $1,000 / $2,000 / $3,500 a week for 6 / 8 / 10 / 10 weeks.
    - Each week, one **Room day** at the lot in Burbank (8h, −30 Energy): scored on Writing and Spark, Writing +1, +10·tier RP.
    - After every room day comes a **politics event** with two choices that move your **Favor** (starts at 50) and the room's quality. An open event must be answered (like a callback); at 06:00 it defaults to the first choice.
-   - Missing a week pays 25% and costs 15 Favor.
-   - At wrap: Favor ≥ 70 → **promoted to Story Editor** (+50·tier RP); Favor ≤ 30 → **not asked back** (−10·tier RP); otherwise a solid credit.
+   - Missing a week pays 25%, costs 15 Favor and 10·tier RP (same as a missed episode).
+   - At wrap: Favor ≥ 70 → **promoted to Story Editor** (+50·tier RP); Favor < 30 → **not asked back** (−10·tier RP); otherwise a solid credit.
 
 ## Guilds & unions (Sprint 10)
 
@@ -157,3 +157,33 @@ Music and TV get a detailed design at their sprint planning, following the same 
 ## Team (unchanged)
 
 Tech Lead (Claude), Simulation Engineer, Content Designer, Frontend Engineer, Platform Engineer, QA & Balance Engineer.
+
+## PI-2 wrap-up (end of Sprint 10)
+
+**What shipped**
+
+| Sprint | Shipped |
+|---|---|
+| 5 — Greenlight | Project engine (work / raise / hire / circuit stages) with save v2; film Develop, Financing (investor pitches, self-funding) and Crew stages; Projects tab with scale picker, stage stepper, abandon and credits. |
+| 6 — Festival Circuit | Shoot, Post, festival submissions with 06:00 results, awards, distribution offers and self-release (save v3); film headlines; "buys headshots" balance strategy (LAG-33 item 3); film play-test. |
+| 7 — The Drop | Music on the same engine: songs, studio booking, studio crew, record sessions, 7-day release week with streams, royalties, Fans and chart positions (save v4); Fans in the HUD. |
+| 8 — Deal Memo | Label deals (advances, royalty cut, marketing), live shows, the beat store, catalogue sync placements and film soundtracks (save v5); release-week fan snowball fixed (LAG-69). |
+| 9 — Pilot Season | Pilot season every 30 days, three-beat callbacks, network pickups and series-regular contracts (save v6); pilots cast on Clout (closed the Nepo exploit); TV play-test (LAG-76). |
+| 10 — Writers' Room | Spec pilot → pitch deck → agent → staffing season → staff-writer contracts with weekly room days, politics events, Favor and promotion; four per-skill guilds with vouchers, joining, dues, scale minimums, the health plan and Global Rule One (save v7); writers' play-test; QA LAG-82: 70 new tests (writers + guilds), all README balance tables regenerated, writer and guild balance strategies. |
+
+LAG-82 QA fixes in the sim: `projectView` crashed on TV spec pilots (it treated anything that wasn't film as music); room days now give Writing +1 as designed (they gave the +2 booking gain).
+
+**Known backlog**
+
+- **LAG-33** Balance pass after real play-tests: the Nepo Baby's $25k still makes jobs optional; PA days vs the screen window; the Midwest Transplant's thin music margin. (Item 3, a headshots strategy, is done.)
+- **LAG-34** First run on the iOS Simulator and Android Emulator (needs a Mac / Android SDK).
+- **LAG-56** Nepo Baby: manager-shown higher-tier gigs cause repeated exposures. Needs an exposure warning or softer double RP loss.
+- **LAG-70** Music business: open-mic walk-in floor, untested late-game venues, retiring beats.
+- **LAG-77** TV follow-ups: item 1 (booked pilots grant guild vouchers) shipped in Sprint 10 and item 3 (regenerate README balance tables) in LAG-82. Item 2 is still open: a callback auto-resolved at 06:00 can't mark its board row because the board has already been refreshed.
+- **New from LAG-82 (writers' room balance, design calls; no constants changed):**
+  1. Staffing is near-certain: 40/40 runs staffed within 90 days, 70–100% of seasons end in a job. Lower per-try odds don't fix it (tested: base 15% → 0% and divisor 500 → 1,000 still left 98–100% staffed) because a new spec costs ~2 days. Options: a cooldown on a new spec after "Didn't get staffed", or a per-tier penalty in the staffing odds like pickups have (`PICKUP_PER_TIER`).
+  2. The room tier follows Clout, and staffing gets *easier* with Clout, so writing gigs → Clout 4 → $4,375/week network rooms gives the best strategy in the game (Indie Hustler + writing guild: +$48k avg over 90 days, about 6× any other path). Rooms also out-pay series regulars at every tier (tier 1: $500 × 6 weeks vs $300 × 4). Matching rooms to series pay alone isn't enough (tested: still +$47k), so this needs the tier penalty from item 1 or a room tier capped below Clout.
+  3. Politics answers have only one axis that counts: always taking the Favor answer is promoted 37/37 times, and the pages answer never is (0/37). Room quality only affects the credit. Let quality feed into Favor or the wrap verdict, or make the Favor answers cost something.
+  Tracked as LAG-83 (items 1–3).
+  4. ~~Doc vs code on the not-asked-back boundary~~ — resolved: Favor < 30 (doc updated to match code and UI).
+  5. ~~Missed-week RP cost undocumented~~ — resolved: intended (same rule as a missed episode); doc updated.
