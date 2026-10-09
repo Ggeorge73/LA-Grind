@@ -38,9 +38,14 @@ Game loop ──► ADVANCE n minutes ──► clock.tick() × n:
 ```
 
 - **Deterministic:** randomness comes only from a seeded mulberry32 whose state is stored in `GameState`. The same seed and the same commands give the same result, which is tested.
-- **Events drive feedback:** `BOOKED`, `REJECTED`, `EXPOSED`, `BILLS_CHARGED`, `OVERDRAFT_STARTED`, `TIER_CHANGED` and the rest feed the activity log (`describe.ts`), toasts, haptics and The Trades. In Phase 3 they become the shared feed.
+- **Events drive feedback:** `BOOKED`, `REJECTED`, `EXPOSED`, `BILLS_CHARGED`, `OVERDRAFT_STARTED`, `TIER_CHANGED` and the rest feed the activity log (`describe.ts`), the phone's notification banners, haptics and The Trades. At the end of every `step()`, `inbox.ts` also turns events into text messages from your contacts. In PI-4 they become the shared feed.
+- **Money has a paper trail:** every cash change goes through `earn()` or `spend()` in `world.ts`, which write a labelled `ledger` row for the Bank app. A test checks that the cash change equals the sum of the new rows after every step.
 - **Read models for the UI:** `actions.ts` lists the available actions, travel quotes and opportunity odds, so components contain no rules.
 - **Time:** the loop (`store/loop.ts`) takes elapsed time from `requestAnimationFrame` timestamps, clamps catch-up to 5 s per frame, and advances whole game minutes. It pauses and saves when the app is backgrounded, and on resume discards the time away, so nothing happens offline.
+
+## The phone UI (`src/ui/phone/`, PI-3)
+
+The game is played through an in-game smartphone. `GameScreen` lays out a **world** layer (a 2D sky placeholder until the Sprint 12 3D city) and the **phone**. On a phone-sized screen the phone is a sheet raised over the world; at 900px and wider, the world is on the left and the phone sits in a device frame. The phone has a status bar, a home screen and nine apps (`content/phoneFlavor.ts` names them), and each app wraps the old screen components, so every rule still comes from the `actions.ts` read models. Phone navigation (which app is open, which thread) is UI-only state in `store/phone.ts`; it is not saved and not part of the sim.
 
 ## Platform adapter (`src/platform/`)
 
@@ -50,7 +55,7 @@ Game loop ──► ADVANCE n minutes ──► clock.tick() × n:
 | `lifecycle` | `visibilitychange` / `pagehide` | App plugin `pause` / `resume` |
 | `haptics` | no-op | Haptics plugin (tap, success, warning) |
 
-`index.ts` picks the implementation with `Capacitor.isNativePlatform()`. **Nothing outside `src/platform/` imports a Capacitor plugin.** Saves are versioned JSON strings, and `migrate()` upgrades old versions step by step (v1 → v2 added careers; v2 → v3 festival submissions and offers; v3 → v4 music: Fans, studio and release week; v4 → v5 music business: beats, catalogue, label and soundtrack; v5 → v6 TV: callback, pending pilots, series contract; v6 → v7 writers' room and guilds: old vouchers become Acting vouchers).
+`index.ts` picks the implementation with `Capacitor.isNativePlatform()`. **Nothing outside `src/platform/` imports a Capacitor plugin.** Saves are versioned JSON strings, and `migrate()` upgrades old versions step by step (v1 → v2 added careers; v2 → v3 festival submissions and offers; v3 → v4 music: Fans, studio and release week; v4 → v5 music business: beats, catalogue, label and soundtrack; v5 → v6 TV: callback, pending pilots, series contract; v6 → v7 writers' room and guilds: old vouchers become Acting vouchers; v7 → v8 the phone: an empty ledger and inbox).
 
 ## Phase 3: moving the rules to a server
 
