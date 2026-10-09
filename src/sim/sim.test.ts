@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as C from './constants';
 import { ARCHETYPE_IDS } from './content/archetypes';
-import { LOCATION_IDS } from './content/locations';
+import { LEISURE_IDS, LOCATION_IDS } from './content/locations';
 import { OPPORTUNITY_TEMPLATES } from './content/opportunities';
 import { atHour, dayOf, hourOf, minuteOfDay } from './formulas';
 import { newGame, step, whyNot } from './reducer';
@@ -277,7 +277,7 @@ describe('invariants', () => {
       else if (roll === 1) cmds.push({ type: 'START_JOB', jobId: r.pick(['barista', 'barback', 'rideshare', 'pa'] as const), hours: r.int(1, 8) });
       else if (roll === 2) cmds.push({ type: 'SLEEP', hours: r.int(1, 10) });
       else if (roll === 3) cmds.push({ type: 'TAKE_CLASS', skill: r.pick(['acting', 'writing', 'directing', 'music'] as const) });
-      else if (roll === 4) cmds.push({ type: 'LEISURE', leisureId: r.pick(['beach', 'screening', 'museum', 'records'] as const) });
+      else if (roll === 4) cmds.push({ type: 'LEISURE', leisureId: r.pick(LEISURE_IDS) });
       else if (roll === 5) cmds.push({ type: 'SKIP_TO_DONE' });
       else if (roll === 6) cmds.push({ type: 'PREP', opportunityId: `o${r.int(1, 60)}`, hours: r.int(1, 4) });
       else if (roll === 7) cmds.push({ type: 'SUBMIT', opportunityId: `o${r.int(1, 60)}` });

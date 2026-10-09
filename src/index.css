@@ -119,6 +119,30 @@ body {
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
+/* ---- 3D home (PI-3 Sprint 12) ---- */
+/* Dark glass, as in the approved prototype (prototypes/home-and-runner.html). */
+@utility hud-glass {
+  background: rgb(24 18 38 / 0.8);
+  border: 1px solid rgb(255 255 255 / 0.13);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+}
+/* Just under the top pill (and the overdraft strip when it shows: --hud-extra). */
+@utility hud-below {
+  top: calc(max(env(safe-area-inset-top), 0.5rem) + 62px + var(--hud-extra, 0px));
+}
+@utility safe-bottom-card {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+}
+.home-canvas {
+  touch-action: none;
+  cursor: grab;
+}
+.home-canvas.dragging {
+  cursor: grabbing;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;

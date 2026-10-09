@@ -108,6 +108,7 @@ function HomeBar() {
 /** The phone's screen. `chrome` renders above the status bar (the notch / drag handle). */
 export function PhoneScreen({ chrome }: { chrome?: ReactNode }) {
   const app = usePhone((p) => p.app);
+  const open = usePhone((p) => p.open);
   const lastApp = useRef<AppId | null>(null);
   const homeRef = useRef<HTMLDivElement>(null);
 
@@ -123,9 +124,12 @@ export function PhoneScreen({ chrome }: { chrome?: ReactNode }) {
     <div className="phone-wallpaper relative flex h-full flex-col overflow-hidden text-ink [contain:layout_paint]">
       {chrome}
       <StatusBar />
-      <div className="relative z-30 h-0">
-        <Notifications className="absolute inset-x-0 top-0" />
-      </div>
+      {/* While the phone is in the pocket, banners show over the room instead (GameScreen). */}
+      {open && (
+        <div className="relative z-30 h-0">
+          <Notifications className="absolute inset-x-0 top-0" />
+        </div>
+      )}
       <div ref={homeRef} className="relative min-h-0 flex-1">
         {app ? <AppFrame key={app} id={app} /> : <HomeScreen />}
       </div>

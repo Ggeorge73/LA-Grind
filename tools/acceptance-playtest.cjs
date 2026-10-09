@@ -23,16 +23,36 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     const d = (cmd) => page.evaluate((c) => window.__game.getState().dispatch(c), cmd);
     // Phone navigation: the old tabs map onto phone apps (Gigs → CastBoard, Hustle → Hustlr, Map → Merge, Trades → Scrollr).
     const APPS = { Projects: 'StudioDesk', Hustle: 'Hustlr', Gigs: 'CastBoard', Map: 'Merge', Trades: 'Scrollr', Guilds: 'UnionCard', Bank: 'Balance', Messages: 'Textr', Settings: 'Settings' };
+    // Sprint 12 (LAG-96): the 3D room is the main screen and the phone is a pocket overlay, closed by default (inert
+    // while closed). The HUD button raises it ("Open phone…", aria-expanded) and puts it away ("Put away phone").
+    const phoneBtn = () => page.locator('header[aria-label="Status"]').getByRole('button', { name: /^(Open phone|Put away phone)/ });
+    const phoneIsOpen = async () => (await phoneBtn().getAttribute('aria-expanded')) === 'true';
+    const phoneInertNow = () => page.evaluate(() => !!document.querySelector('[role=group][aria-label="Phone"]')?.closest('[inert]'));
+    const openPhone = async () => {
+      if (!(await phoneIsOpen())) await phoneBtn().click();
+      await page.waitForFunction(() => { const g = document.querySelector('[role=group][aria-label="Phone"]'); return !!g && !g.closest('[inert]'); });
+    };
+    const closePhone = async () => {
+      if (await phoneIsOpen()) await phoneBtn().click();
+      await page.waitForFunction(() => !!document.querySelector('[role=group][aria-label="Phone"]')?.closest('[inert]'));
+    };
+    /** Clicks the live "Skip to done" (the action card when the phone is away, the phone's when it's out). */
+    const skipUI = async () => {
+      const bs = page.getByRole('button', { name: 'Skip to done', exact: true });
+      for (let i = 0; i < (await bs.count()); i++) {
+        const b = bs.nth(i);
+        if (await b.evaluate((el) => !el.closest('[inert]') && el.getClientRects().length > 0)) return b.click();
+      }
+    };
     let current = null;
     const tab = async (n) => {
       const name = APPS[n] || n;
       current = name;
       // Banners sit over the top of the app; clear them so they never cover a button (phone-playtest checks banners).
       await page.evaluate(() => window.__game.setState({ notices: [] }));
-      const raise = page.getByRole('button', { name: 'Open phone' });
-      if (await raise.count()) await raise.click();
+      await openPhone();
       if (await page.getByRole('region', { name, exact: true }).count()) return;
-      const back = page.getByRole('button', { name: 'Back to home' });
+      const back = page.getByRole('group', { name: 'Phone' }).getByRole('button', { name: 'Back to home' });
       if (await back.count()) await back.click();
       await page.getByRole('navigation', { name: 'Apps' }).getByRole('button', { name, exact: true }).click();
       await page.getByRole('region', { name, exact: true }).waitFor();
@@ -40,7 +60,7 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     const main = () => page.getByRole('region', { name: current, exact: true });
     const hour = async () => ((await S()).minute % 1440) / 60;
     const advanceTo = async (h) => { const s = await S(); const day = Math.floor(s.minute / 1440); let t = day * 1440 + h * 60; if (t <= s.minute) t += 1440; await d({ type: 'ADVANCE', minutes: t - s.minute }); };
-    const skip = async () => { const b = page.getByRole('group', { name: 'Phone' }).getByRole('button', { name: 'Skip to done' }); if (await b.count()) await b.first().click(); };
+    const skip = skipUI;
     const travel = async (to) => {
       if ((await S()).player.location === to) return;
       await tab('Map');
@@ -77,6 +97,7 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     await page.reload();
     await page.getByRole('button', { name: new RegExp(`Start as ${{ nepo: 'The Nepo Baby', midwest: 'The Midwest Transplant', indie: 'The Indie Hustler', producer: 'The Bedroom Producer' }[arch]}`) }).click();
     await page.evaluate(() => window.__game.getState().setSpeed(0));
+    (await phoneIsOpen()) || (await phoneInertNow()) === false ? fail(`${arch}: phone should start closed (room is the main screen)`) : ok(`${arch}: phone starts closed over the room`);
     const start = await S();
 
     // 405 at 08:00 from NoHo costs triple (check from any start by quoting via the map list when at NoHo)
@@ -146,7 +167,7 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     // Save/restore exactness
     const before = JSON.stringify(await S());
     await page.evaluate(() => window.__game.getState().save());
-    await page.reload(); await page.getByRole('navigation', { name: 'Apps' }).waitFor();
+    await page.reload(); await page.locator('header[aria-label="Status"]').waitFor();
     JSON.stringify(await S()) === before ? ok(`${arch}: reload restores identical state`) : fail(`${arch}: reload changed state`);
 
     // Go broke → summary → restart
@@ -160,7 +181,7 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
       await page.waitForSelector('text=Moved Back Home');
       await page.screenshot({ path: `${OUT}/moved-home.png` });
       await page.getByRole('button', { name: /The Indie Hustler/ }).first().click();
-      await page.getByRole('navigation', { name: 'Apps' }).waitFor();
+      await page.locator('header[aria-label="Status"]').waitFor();
       (await S()).player.archetype === 'indie' ? ok('midwest: summary → new run started') : fail('new run');
     }
     errors.length ? fail(`${arch}: console errors ${errors.join(' | ')}`) : ok(`${arch}: no console errors`);

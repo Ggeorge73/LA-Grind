@@ -2,6 +2,7 @@
 // and why not. Keeps every rule in src/sim so components only render and dispatch.
 import { guildName, hasHealthPlan, isMember } from './guilds';
 import { CONTACTS } from './content/phoneFlavor';
+import { SOON } from './content/homeFlavor';
 import { unreadCount } from './inbox';
 import type { ContactId, InboxThread, LedgerEntry } from './types';
 import { AGENCIES, SPEC_SCALE } from './content/writers';
@@ -47,7 +48,7 @@ import type { Project } from './types';
 import * as C from './constants';
 import { ARCHETYPES } from './content/archetypes';
 import { JOBS, JOB_IDS } from './content/jobs';
-import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LEISURE_IDS, LOCATIONS, LOCATION_IDS, REPAIR_LOCATION } from './content/locations';
+import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LEISURE_IDS, LOCATIONS, LOCATION_IDS, REPAIR_LOCATION, leisureLocation } from './content/locations';
 import { SUBMISSION_NAME, oddsFor, submissionFee } from './board';
 import { average, bookingPayout, commute, dailyBills, hourOf, isExposure, type CommuteQuote } from './formulas';
 import { whyNot } from './reducer';
@@ -123,7 +124,7 @@ export function listActions(s: GameState, rideshareHours = 4, sleepHours = 8): A
 
   for (const id of LEISURE_IDS) {
     const spot = LEISURE[id];
-    if (spot.location !== p.location) continue;
+    if (leisureLocation(spot, p.home) !== p.location) continue;
     add({
       id: `leisure-${id}`,
       group: 'rest',
@@ -131,7 +132,7 @@ export function listActions(s: GameState, rideshareHours = 4, sleepHours = 8): A
       detail: spot.flavour,
       minutes: C.LEISURE_HOURS * 60,
       costs: spot.cost ? [`−$${spot.cost}`] : [],
-      rewards: [`+${C.LEISURE_SPARK} Spark`, `−${C.LEISURE_BURNOUT_RELIEF} Burnout`],
+      rewards: [`+${spot.spark ?? C.LEISURE_SPARK} Spark`, `−${C.LEISURE_BURNOUT_RELIEF} Burnout`],
       command: { type: 'LEISURE', leisureId: id },
     });
   }
@@ -857,5 +858,72 @@ export function inboxView(s: GameState): { threads: ThreadView[]; unread: number
         read: { type: 'READ_THREAD', contact: t.contact },
       };
     }),
+  };
+}
+
+// ---------- 3D home (PI-3 Sprint 12) ----------
+
+export type HotspotId = 'bed' | 'desk' | 'ringlight' | 'tv' | 'fridge' | 'shower' | 'table' | 'door';
+
+export interface HotspotAction {
+  label: string;
+  /** What it gives and costs, for chips on the action card. */
+  effects: string[];
+  minutes: number;
+  command: Command;
+  disabledReason: string | null;
+}
+
+export interface HotspotView {
+  id: HotspotId;
+  /** Real actions here; empty for spots whose systems arrive later (see `soon`). */
+  actions: HotspotAction[];
+  /** Set when the spot is a preview of a later sprint (needs arrive in Sprint 14). */
+  soon: string | null;
+}
+
+/** The apartment's tap-to-act spots, each mapped to real commands. Only meaningful at home. */
+export function homeView(s: GameState): { atHome: boolean; hotspots: HotspotView[] } {
+  const p = s.player;
+  const act = (label: string, minutes: number, effects: string[], command: Command): HotspotAction => ({
+    label,
+    minutes,
+    effects,
+    command,
+    disabledReason: whyNot(s, command),
+  });
+  const mult = ARCHETYPES[p.archetype].sleepMultiplier;
+  const sleepHours = 8;
+
+  const desk: HotspotAction[] = [];
+  const pr = s.project;
+  if (pr?.stage === 'develop') {
+    desk.push(act(pr.medium === 'music' ? 'Write a song' : pr.medium === 'tv' ? 'Write a draft' : 'Write the script', C.WRITE_SESSION_HOURS * 60, [`−${C.WRITE_SESSION_ENERGY} Energy`, `−${C.WRITE_SESSION_SPARK} Spark`], { type: 'WRITE_SESSION' }));
+  }
+  if (pr?.medium === 'tv' && pr.stage === 'deck') desk.push(act('Build the pitch deck', C.DECK_HOURS * 60, [`−${C.DECK_ENERGY} Energy`, `−${C.DECK_SPARK} Spark`], { type: 'DECK_SESSION' }));
+  if (pr?.stage === 'post') desk.push(act('Edit the cut', C.EDIT_HOURS * 60, [`−${C.EDIT_ENERGY} Energy`], { type: 'EDIT_SESSION' }));
+  desk.push(act('Make a beat', C.BEAT_HOURS * 60, [`−${C.BEAT_ENERGY} Energy`, `−${C.BEAT_SPARK} Spark`], { type: 'MAKE_BEAT' }));
+
+  // Ring light: prep for the open audition you're most likely to book (prep raises odds).
+  const prepable = s.board
+    .filter((o) => o.status === 'open' && o.prepHours < C.PREP_MAX_HOURS)
+    .map((o) => ({ o, odds: oddsFor(p, o) }))
+    .sort((a, b) => b.odds - a.odds)[0];
+  const ring: HotspotAction[] = prepable
+    ? [act(`Prep for "${prepable.o.title}"`, 60, [`−${C.PREP_SPARK_PER_HOUR} Spark`, 'Better odds'], { type: 'PREP', opportunityId: prepable.o.id, hours: 1 })]
+    : [];
+
+  return {
+    atHome: p.location === p.home,
+    hotspots: [
+      { id: 'bed', soon: null, actions: [act(`Sleep ${sleepHours}h`, sleepHours * 60, [`+${Math.round(C.ENERGY_SLEEP_GAIN_PER_HOUR * mult * sleepHours)} Energy`, `−${C.BURNOUT_RECOVERY_PER_HOUR * sleepHours} Burnout`], { type: 'SLEEP', hours: sleepHours })] },
+      { id: 'desk', soon: null, actions: desk },
+      { id: 'ringlight', soon: prepable ? null : 'No auditions to prep for on today’s board.', actions: ring },
+      { id: 'tv', soon: null, actions: [act(LEISURE.tv.name, C.LEISURE_HOURS * 60, [`+${LEISURE.tv.spark ?? C.LEISURE_SPARK} Spark`, `−${C.LEISURE_BURNOUT_RELIEF} Burnout`], { type: 'LEISURE', leisureId: 'tv' })] },
+      { id: 'fridge', soon: SOON.fridge, actions: [] },
+      { id: 'shower', soon: SOON.shower, actions: [] },
+      { id: 'table', soon: SOON.table, actions: [] },
+      { id: 'door', soon: null, actions: [] },
+    ],
   };
 }

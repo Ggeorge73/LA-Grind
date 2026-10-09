@@ -47,6 +47,10 @@ Game loop ──► ADVANCE n minutes ──► clock.tick() × n:
 
 The game is played through an in-game smartphone. `GameScreen` lays out a **world** layer (a 2D sky placeholder until the Sprint 12 3D city) and the **phone**. On a phone-sized screen the phone is a sheet raised over the world; at 900px and wider, the world is on the left and the phone sits in a device frame. The phone has a status bar, a home screen and nine apps (`content/phoneFlavor.ts` names them), and each app wraps the old screen components, so every rule still comes from the `actions.ts` read models. Phone navigation (which app is open, which thread) is UI-only state in `store/phone.ts`; it is not saved and not part of the sim.
 
+## The 3D home (`src/ui/world/`, PI-3 Sprint 12)
+
+At home, the main screen is a three.js cutaway apartment (`HomeScene.ts`, an imperative scene that the React wrapper `HomeWorld.tsx` mounts once and feeds from the stores). three.js sits in its own lazily loaded chunk. The room's tap-to-act spots come from the `homeView()` read model, so every spot sends an ordinary sim command. The character's walk is UI-only (`store/room.ts`). The room adds no rules and is not saved. The phone is a pocket overlay over the room, and an off-canvas "Room actions" list mirrors every spot for keyboard, screen-reader and no-WebGL use.
+
 ## Platform adapter (`src/platform/`)
 
 | Interface | Web | iOS / Android (Capacitor) |
