@@ -175,6 +175,7 @@ export function describeEvent(e: GameEvent): string | null {
         : `${gn(e.guild)} health plan lapsed: not enough union work last cycle.`;
     case 'ACTION_REJECTED':
     case 'HEADLINE':
+    case 'MOM_CHECK_IN':
       return null;
   }
 }

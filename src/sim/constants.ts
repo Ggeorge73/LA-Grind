@@ -114,7 +114,7 @@ export const TRADES_MAX = 60;
 export const LOG_MAX = 120;
 export const NPC_HEADLINES_PER_DAY = 3;
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 // Projects (PI-2 career engine) — film numbers; scales live in content/film.ts
 export const WRITE_SESSION_HOURS = 3;
@@ -351,3 +351,10 @@ export const HEALTH_PLAN_BURNOUT = 0.75;
 /** Spec-pilot quality = SPEC_WEIGHT·spec + DECK_WEIGHT·deck. */
 export const SPEC_WEIGHT = 0.5;
 export const DECK_WEIGHT = 0.5;
+
+// Phone OS (PI-3 Sprint 11)
+export const LEDGER_MAX = 200;
+/** Messages kept per thread. */
+export const INBOX_THREAD_MAX = 50;
+/** Chance per morning that Mom checks in. */
+export const MOM_CHECK_IN_CHANCE = 0.2;

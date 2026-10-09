@@ -5,7 +5,7 @@ import { ARCHETYPES } from './content/archetypes';
 import { HEADLINES, type HeadlineKind } from './content/headlines';
 import { clampStat, cloutTier } from './formulas';
 import type { Rng } from './rng';
-import type { GameEvent, GameState, Medium } from './types';
+import type { GameEvent, GameState, LedgerKind, Medium } from './types';
 
 export function newId(s: GameState, prefix: string): string {
   s.nextId += 1;
@@ -77,7 +77,21 @@ export function changeNetwork(s: GameState, events: GameEvent[], delta: number):
   events.push({ type: 'NETWORK_GAINED', amount: delta });
 }
 
-export function earn(s: GameState, amount: number): void {
+function record(s: GameState, amount: number, label: string, kind: LedgerKind): void {
+  if (amount === 0) return;
+  s.ledger.unshift({ id: newId(s, 'm'), minute: s.minute, amount, label, kind });
+  if (s.ledger.length > C.LEDGER_MAX) s.ledger.length = C.LEDGER_MAX;
+}
+
+/** Money in. Every cash increase goes through here so the Bank app's ledger always adds up. */
+export function earn(s: GameState, amount: number, label: string, kind: LedgerKind): void {
   s.player.cash += amount;
   s.stats.totalEarned += amount;
+  record(s, amount, label, kind);
+}
+
+/** Money out. Every cash decrease goes through here. */
+export function spend(s: GameState, amount: number, label: string, kind: LedgerKind): void {
+  s.player.cash -= amount;
+  record(s, -amount, label, kind);
 }

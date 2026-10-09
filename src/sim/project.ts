@@ -65,7 +65,7 @@ import {
 } from './formulas';
 import type { Rng } from './rng';
 import type { Activity, CrewCandidate, GameEvent, GameState, Project, ProjectScaleId, ProjectStage } from './types';
-import { addHeadline, changeNetwork, changeRp, earn, fillTemplate, formatMoney, newId, who } from './world';
+import { addHeadline, changeNetwork, changeRp, earn, fillTemplate, formatMoney, newId, spend, who } from './world';
 
 export const scaleOf = (p: Project): ScaleInfo => PROJECT_SCALES[p.scale];
 /** Film-only numbers (shoot days, festivals, pitch difficulty). Only call on film projects. */
@@ -287,7 +287,7 @@ export function advanceIfReady(s: GameState, rng: Rng, events: GameEvent[]): voi
 
 export function selfFund(s: GameState, rng: Rng, amount: number, events: GameEvent[]): void {
   const p = s.project!;
-  s.player.cash -= amount;
+  spend(s, amount, `Self-funded: ${p.title}`, p.medium === 'music' ? 'music' : 'film');
   p.raised += amount;
   p.selfFunded += amount;
   events.push({ type: 'SELF_FUNDED', amount });
@@ -426,7 +426,7 @@ export function submitFestival(s: GameState, f: Festival, events: GameEvent[]): 
   const p = s.project!;
   const odds = festivalOddsFor(s, p, f);
   const resultMinute = atHour(dayOf(s.minute) + f.waitDays, C.BILLS_HOUR);
-  s.player.cash -= f.fee;
+  spend(s, f.fee, `Festival fee: ${f.name}`, 'film');
   p.submissions.push({ festivalId: f.id, tier: f.tier, submittedMinute: s.minute, resultMinute, odds, status: 'pending', award: null });
   events.push({ type: 'FESTIVAL_SUBMITTED', festivalId: f.id, fee: f.fee, odds, resultMinute });
 }
@@ -476,7 +476,7 @@ export function acceptOffer(s: GameState, rng: Rng, offerId: string, events: Gam
   const p = s.project!;
   const offer = p.offers.find((o) => o.id === offerId)!;
   const quality = Math.round(projectQuality(p));
-  earn(s, offer.amount);
+  earn(s, offer.amount, `Distribution: ${offer.distributor}`, 'film');
   filmHeadline(s, rng, events, 'released', { distributor: offer.distributor, amount: offer.amount });
   events.push({ type: 'FILM_RELEASED', title: p.title, quality, amount: offer.amount, distributor: offer.distributor, rp: 0 });
   changeNetwork(s, events, C.RELEASE_NETWORK);
@@ -522,7 +522,7 @@ export function resolveRelease(s: GameState, rng: Rng, events: GameEvent[]): voi
   r.promoPending = false;
   r.days.push({ streams, fans, royalties: pay, position, promoted });
   s.player.fans += fans;
-  earn(s, pay);
+  earn(s, pay, `Royalties: ${p.title}`, 'music');
   events.push({ type: 'RELEASE_DAY', day: day + 1, streams, fans, royalties: pay, position });
 
   if (day === 0) {

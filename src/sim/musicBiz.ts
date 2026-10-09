@@ -27,7 +27,7 @@ export function completeShow(s: GameState, a: Activity, rng: Rng, events: GameEv
   const fans = Math.round(tickets * C.SHOW_FAN_GAIN);
   const rp = Math.floor(tickets / C.SHOW_TICKETS_PER_RP);
   const soldOut = tickets >= v.capacity;
-  earn(s, pay);
+  earn(s, pay, `Show at ${venueName(v.id)}`, 'music');
   s.player.fans += fans;
   events.push({ type: 'SHOW_PLAYED', venueId: v.id, venue: venueName(v.id), tickets, soldOut, pay, fans, rp });
   bizHeadline(s, rng, events, soldOut ? 'showSoldOut' : 'showPlayed', { venue: venueName(v.id), tickets });
@@ -55,7 +55,7 @@ export function resolveBeatLeases(s: GameState, rng: Rng, events: GameEvent[]): 
     const fee = beatFee(b.quality);
     b.leases += 1;
     b.earned += fee;
-    earn(s, fee);
+    earn(s, fee, `Beat lease: ${b.title}`, 'music');
     events.push({ type: 'BEAT_LEASED', beatId: b.id, title: b.title, fee });
     if (b.leases === 1) bizHeadline(s, rng, events, 'beatLeased', { beat: b.title, amount: formatMoney(fee) });
   }
@@ -69,7 +69,7 @@ export function resolvePlacements(s: GameState, rng: Rng, events: GameEvent[]): 
     const fee = placementFee(r.quality, scale ? scale.streamMultiplier : 1);
     const client = rng.pick(SYNC_CLIENTS);
     r.placements += 1;
-    earn(s, fee);
+    earn(s, fee, `Sync: ${r.title}`, 'music');
     events.push({ type: 'PLACEMENT', recordId: r.id, title: r.title, client, fee, rp: C.PLACEMENT_RP });
     bizHeadline(s, rng, events, 'placement', { title: r.title, client, amount: formatMoney(fee) });
     changeRp(s, rng, events, C.PLACEMENT_RP);
