@@ -1,5 +1,9 @@
 // Read-only views for the UI: what the player can do right now, what it costs, what it pays,
 // and why not. Keeps every rule in src/sim so components only render and dispatch.
+import { guildName, hasHealthPlan, isMember } from './guilds';
+import { AGENCIES, SPEC_SCALE } from './content/writers';
+import { AGENCY_FLAVOR, GUILD_FLAVOR } from './content/writersFlavor';
+import { GUILDS, GUILD_SKILLS } from './content/guilds';
 import { FESTIVALS, FILM_SCALES } from './content/film';
 import { MUSIC_SCALES } from './content/music';
 import { CHART_NAME } from './content/musicFlavor';
@@ -27,6 +31,8 @@ import {
   hiredCrew,
   pitchOddsFor,
   pitchedToday,
+  agentOddsFor,
+  staffingOddsFor,
   productionValue,
   projectQuality,
   remainingBudget,
@@ -209,7 +215,7 @@ export interface OpportunityView {
 
 export function opportunityView(s: GameState, opp: Opportunity): OpportunityView {
   const p = s.player;
-  const payout = bookingPayout(opp.medium, opp.tier, p.guildVouchers >= C.GUILD_VOUCHERS_NEEDED);
+  const payout = bookingPayout(opp.medium, opp.tier, isMember(p, opp.skill));
   const remaining = C.PREP_MAX_HOURS - opp.prepHours;
   const prep = [1, 2, 4]
     .filter((h) => h <= remaining)
@@ -255,7 +261,7 @@ export interface ScaleOption {
 }
 
 export function projectScaleOptions(s: GameState): ScaleOption[] {
-  return (['film', 'music'] as const).flatMap((medium) =>
+  return (['film', 'music', 'tv'] as const).flatMap((medium) =>
     SCALE_IDS_BY_MEDIUM[medium].map((id) => {
       const sc = PROJECT_SCALES[id];
       const command: Command = { type: 'START_PROJECT', scale: id };
@@ -263,6 +269,8 @@ export function projectScaleOptions(s: GameState): ScaleOption[] {
       if (medium === 'film') {
         const f = FILM_SCALES[id as keyof typeof FILM_SCALES];
         summary = `${f.scriptSessions} writing sessions · ${f.crewSlots} crew · ${f.shootDays} shoot days · festivals up to tier ${f.bestFestivalTier}`;
+      } else if (medium === 'tv') {
+        summary = `${SPEC_SCALE.writeSessions} drafts · ${SPEC_SCALE.deckSessions} deck sessions · land an agent · ${C.STAFFING_TRIES} staffing tries`;
       } else {
         const m = MUSIC_SCALES[id as keyof typeof MUSIC_SCALES];
         summary = `${m.songs} ${m.songs === 1 ? 'song' : 'songs'} · ${m.crewSlots} studio crew · ${m.recordSessions} studio sessions · 7-day release week`;
@@ -348,6 +356,14 @@ export interface ProjectView {
     promoReason: string | null;
     promotedToday: boolean;
   } | null;
+  /** TV spec pilot only (null otherwise): deck, agencies, staffing season. */
+  spec: {
+    deck: { done: number; needed: number; scores: number[]; average: number; command: Command; disabledReason: string | null };
+    agencies: { id: string; name: string; blurb: string; where: string; odds: number; heat: number; command: Command; disabledReason: string | null }[];
+    pitchedToday: boolean;
+    agent: Project['agent'];
+    staffing: { tries: number; triesTotal: number; nextMinute: number; odds: number } | null;
+  } | null;
   abandon: Command;
 }
 
@@ -358,6 +374,8 @@ export function projectView(s: GameState): ProjectView | null {
   const pipeline = pipelineOf(p);
   const currentIdx = pipeline.findIndex((x) => x.id === p.stage);
   const film = p.medium === 'film';
+  // LAG-82: TV spec pilots have no labels, studio or release week (this used to assume "not film" = music and crashed).
+  const music = p.medium === 'music';
   const writeCmd: Command = { type: 'WRITE_SESSION' };
   return {
     project: p,
@@ -388,7 +406,7 @@ export function projectView(s: GameState): ProjectView | null {
         disabledReason: whyNot(s, command),
       };
     }),
-    labels: (film ? [] : LABELS).map((l) => {
+    labels: (music ? LABELS : []).map((l) => {
       const command: Command = { type: 'PITCH_LABEL', labelId: l.id };
       return {
         id: l.id,
@@ -481,7 +499,7 @@ export function projectView(s: GameState): ProjectView | null {
       const command: Command = { type: 'SELF_RELEASE' };
       return { command, disabledReason: whyNot(s, command), rp: Math.round(Math.round(projectQuality(p)) * C.SELF_RELEASE_RP_PER_QUALITY) };
     })(),
-    record: film
+    record: !music
       ? null
       : (() => {
           const command: Command = { type: 'RECORD_SESSION' };
@@ -496,7 +514,7 @@ export function projectView(s: GameState): ProjectView | null {
             disabledReason: whyNot(s, command),
           };
         })(),
-    release: film
+    release: !music
       ? null
       : (() => {
           const releaseCommand: Command = { type: 'RELEASE_RECORD' };
@@ -517,6 +535,40 @@ export function projectView(s: GameState): ProjectView | null {
             promotedToday: promotedToday(s, p),
           };
         })(),
+    spec:
+      p.medium === 'tv'
+        ? (() => {
+            const deckCmd: Command = { type: 'DECK_SESSION' };
+            return {
+              deck: {
+                done: p.scores.deck.length,
+                needed: SPEC_SCALE.deckSessions,
+                scores: p.scores.deck,
+                average: average(p.scores.deck),
+                command: deckCmd,
+                disabledReason: whyNot(s, deckCmd),
+              },
+              agencies: AGENCIES.map((a) => {
+                const command: Command = { type: 'PITCH_AGENT', agencyId: a.id };
+                return {
+                  id: a.id,
+                  name: AGENCY_FLAVOR[a.id].name,
+                  blurb: AGENCY_FLAVOR[a.id].blurb,
+                  where: LOCATIONS[a.location].name,
+                  odds: agentOddsFor(s, p, a),
+                  heat: a.heat,
+                  command,
+                  disabledReason: whyNot(s, command),
+                };
+              }),
+              pitchedToday: pitchedToday(s, p),
+              agent: p.agent,
+              staffing: p.staffing
+                ? { tries: p.staffing.tries, triesTotal: C.STAFFING_TRIES, nextMinute: p.staffing.nextMinute, odds: staffingOddsFor(s, p) }
+                : null,
+            };
+          })()
+        : null,
     abandon: { type: 'ABANDON_PROJECT' },
   };
 }
@@ -606,6 +658,11 @@ export interface TvView {
   } | null;
   pilots: { id: string; showTitle: string; network: string; role: string; tier: number; right: number; decisionMinute: number; pickupOdds: number }[];
   contract: {
+    /** actor: shoot an episode a week. writer: one room day a week. */
+    kind: 'actor' | 'writer';
+    /** Writers' room standing 0–100 (70+ promoted, under 30 not asked back). */
+    favor: number;
+    roomAverage: number;
     showTitle: string;
     network: string;
     role: string;
@@ -620,6 +677,8 @@ export interface TvView {
     command: Command;
     disabledReason: string | null;
   } | null;
+  /** A writers' room politics question waiting for your answer. */
+  roomEvent: { prompt: string; choices: { text: string; favor: number; quality: number; command: Command }[] } | null;
 }
 
 export function tvView(s: GameState): TvView {
@@ -628,7 +687,7 @@ export function tvView(s: GameState): TvView {
   const active = isPilotSeason(day);
   const cb = s.callback;
   const clout = cloutTier(s.player.rp);
-  const shoot: Command = { type: 'SHOOT_EPISODE' };
+  const work: Command = s.contract?.kind === 'writer' ? { type: 'ROOM_DAY' } : { type: 'SHOOT_EPISODE' };
   return {
     season: {
       active,
@@ -657,6 +716,9 @@ export function tvView(s: GameState): TvView {
     pilots: s.pilots.map((p) => ({ ...p, pickupOdds: pickupOdds(p.right, clout, p.tier) })),
     contract: s.contract
       ? {
+          kind: s.contract.kind,
+          favor: s.contract.favor,
+          roomAverage: average(s.contract.roomScores),
           showTitle: s.contract.showTitle,
           network: s.contract.network,
           role: s.contract.role,
@@ -668,9 +730,63 @@ export function tvView(s: GameState): TvView {
           shotThisWeek: s.contract.shotThisWeek,
           weekEndMinute: s.contract.weekEndMinute,
           where: LOCATIONS[STUDIO_LOT].name,
-          command: shoot,
-          disabledReason: whyNot(s, shoot),
+          command: work,
+          disabledReason: whyNot(s, work),
         }
       : null,
+    roomEvent: s.roomEvent
+      ? {
+          prompt: s.roomEvent.prompt,
+          choices: s.roomEvent.choices.map((c, option) => ({ ...c, command: { type: 'ROOM_CHOICE', option } as Command })),
+        }
+      : null,
+  };
+}
+
+// ---------- Guilds & unions (Sprint 10) ----------
+
+export interface GuildView {
+  skill: Skill;
+  name: string;
+  short: string;
+  blurb: string;
+  hq: string;
+  vouchers: number;
+  needed: number;
+  member: boolean;
+  healthPlan: boolean;
+  earnedThisCycle: number;
+  healthThreshold: number;
+  joinFee: number;
+  dues: number;
+  command: Command;
+  disabledReason: string | null;
+}
+
+export function guildsView(s: GameState): { guilds: GuildView[]; healthPlan: boolean } {
+  const p = s.player;
+  return {
+    healthPlan: hasHealthPlan(p),
+    guilds: GUILD_SKILLS.map((skill) => {
+      const g = p.guilds[skill];
+      const command: Command = { type: 'JOIN_GUILD', guild: skill };
+      return {
+        skill,
+        name: GUILD_FLAVOR[skill].name,
+        short: guildName(skill),
+        blurb: GUILD_FLAVOR[skill].blurb,
+        hq: LOCATIONS[GUILDS[skill].hq].name,
+        vouchers: g.vouchers,
+        needed: C.GUILD_VOUCHERS_NEEDED,
+        member: g.member,
+        healthPlan: g.healthPlan,
+        earnedThisCycle: g.earnedThisCycle,
+        healthThreshold: C.HEALTH_PLAN_THRESHOLD,
+        joinFee: C.GUILD_JOIN_FEE,
+        dues: C.GUILD_DUES,
+        command,
+        disabledReason: whyNot(s, command),
+      };
+    }),
   };
 }

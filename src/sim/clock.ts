@@ -23,7 +23,9 @@ import type { Activity, GameEvent, GameState } from './types';
 import { addHeadline, changeNetwork, changeRp, earn, ownHeadline } from './world';
 import { completeProjectAction, resolveFestivals, resolveRelease } from './project';
 import { completeBeat, completeShow, resolveBeatLeases, resolvePlacements } from './musicBiz';
-import { announcePilotSeason, completeEpisode, resolveCallback, resolveContractWeek, resolvePilots, startCallback } from './tv';
+import { announcePilotSeason, completeEpisode, completeRoomDay, resolveCallback, resolveContractWeek, resolvePilots, resolveRoomEvent, startCallback } from './tv';
+import { resolveStaffing } from './project';
+import { grantVoucher, hasHealthPlan, isMember, joinGuild, recordUnionEarnings, resolveDues } from './guilds';
 
 /** Advance `minutes` game minutes (stops early if the run ends). */
 export function advance(s: GameState, minutes: number, rng: Rng, events: GameEvent[]): void {
@@ -37,7 +39,8 @@ function tick(s: GameState, rng: Rng, events: GameEvent[]): void {
   const resting = sleeping || a?.kind === 'leisure';
 
   // Burnout is judged on the Energy the player had during this minute.
-  if (a && !resting) p.burnout += burnoutGainPerMinute(p.energy);
+  // Guild health plan: covered members burn out slower.
+  if (a && !resting) p.burnout += burnoutGainPerMinute(p.energy) * (hasHealthPlan(p) ? C.HEALTH_PLAN_BURNOUT : 1);
   if (resting) p.burnout -= C.BURNOUT_RECOVERY_PER_HOUR / C.MINUTES_PER_HOUR;
 
   if (sleeping) {
@@ -90,11 +93,14 @@ function newDay(s: GameState, rng: Rng, events: GameEvent[]): void {
   resolveBeatLeases(s, rng, events);
   resolvePlacements(s, rng, events);
 
-  // TV: an unfinished callback resolves with the reads you made; networks decide; series weeks pay.
+  // TV: an unfinished callback (or room event) resolves with what you picked; networks decide; series weeks pay.
   if (s.callback) resolveCallback(s, rng, events);
+  if (s.roomEvent) resolveRoomEvent(s, 0, events);
   resolvePilots(s, rng, events);
   resolveContractWeek(s, rng, events);
   announcePilotSeason(s, rng, events, dayOf(s.minute));
+  resolveStaffing(s, rng, events);
+  resolveDues(s, events, dayOf(s.minute));
 }
 
 /** Instant commands that pay out (e.g. accepting a distribution offer) settle an overdraft right away. */
@@ -179,6 +185,13 @@ function complete(s: GameState, a: Activity, rng: Rng, events: GameEvent[]): voi
     case 'episode':
       completeEpisode(s, rng, events);
       return;
+    case 'room':
+      completeRoomDay(s, rng, events);
+      return;
+    case 'guild':
+      p.cash -= C.GUILD_JOIN_FEE;
+      joinGuild(s, rng, a.skill!, events);
+      return;
   }
 }
 
@@ -193,8 +206,9 @@ function resolveSubmission(s: GameState, a: Activity, rng: Rng, events: GameEven
   const odds = a.odds ?? 0;
 
   if (rng.chance(odds)) {
-    const union = p.guildVouchers >= C.GUILD_VOUCHERS_NEEDED;
+    const union = isMember(p, opp.skill);
     const { pay, rp, network } = bookingPayout(opp.medium, opp.tier, union);
+    recordUnionEarnings(s, opp.skill, pay);
     opp.status = 'booked';
     earn(s, pay);
     p.skills[opp.skill] = clampStat(p.skills[opp.skill] + C.BOOKED_SKILL_GAIN);
@@ -205,10 +219,7 @@ function resolveSubmission(s: GameState, a: Activity, rng: Rng, events: GameEven
     changeRp(s, rng, events, rp);
     changeNetwork(s, events, network);
     events.push({ type: 'SKILL_GAINED', skill: opp.skill, amount: C.BOOKED_SKILL_GAIN });
-    if (opp.tier >= C.GUILD_VOUCHER_MIN_TIER && p.guildVouchers < C.GUILD_VOUCHERS_NEEDED) {
-      p.guildVouchers += 1;
-      events.push({ type: 'GUILD_VOUCHER', total: p.guildVouchers });
-    }
+    if (opp.tier >= C.GUILD_VOUCHER_MIN_TIER) grantVoucher(s, events, opp.skill);
     return;
   }
 

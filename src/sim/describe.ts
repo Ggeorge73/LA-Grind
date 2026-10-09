@@ -2,6 +2,7 @@
 import { JOBS } from './content/jobs';
 import { LEISURE, LOCATIONS } from './content/locations';
 import { FESTIVALS } from './content/film';
+import { GUILD_FLAVOR } from './content/writersFlavor';
 import type { GameEvent } from './types';
 import { formatMoney } from './world';
 
@@ -44,7 +45,9 @@ export function describeEvent(e: GameEvent): string | null {
     case 'TIER_CHANGED':
       return e.to > e.from ? `Clout up: Tier ${e.to}!` : `Clout down: Tier ${e.to}.`;
     case 'GUILD_VOUCHER':
-      return e.total >= 3 ? 'Third guild voucher: union rate (2x pay) unlocked!' : `Guild voucher ${e.total}/3.`;
+      return e.total >= 3
+        ? `Third ${gn(e.guild)} voucher: you can join at their HQ.`
+        : `${gn(e.guild)} voucher ${e.total}/3.`;
     case 'CREATIVE_BURNOUT_STARTED':
       return 'Creative Burnout: all odds halved until Burnout drops below 30.';
     case 'CREATIVE_BURNOUT_CLEARED':
@@ -67,11 +70,14 @@ export function describeEvent(e: GameEvent): string | null {
         festival: 'Locked cut. Festival season awaits.',
         record: 'Crew booked. Time to record.',
         release: 'Mastered. Release it when you are ready.',
+        deck: 'Spec pilot done. Now build the pitch deck.',
+        agent: 'Deck ready. Go meet agencies.',
+        staffing: 'You have an agent! Staffing season: they send your spec out every 5 days.',
       }[e.stage];
     case 'PROJECT_ABANDONED':
       return `Abandoned "${e.title}". It lives on as a Google Doc.`;
     case 'SESSION_SCORED':
-      return `${{ develop: 'Writing session', shoot: 'Shoot day', post: 'Edit session', record: 'Studio session' }[e.stage as 'develop' | 'shoot' | 'post' | 'record'] ?? 'Session'} scored ${e.score}/100.`;
+      return `${{ develop: 'Writing session', shoot: 'Shoot day', post: 'Edit session', record: 'Studio session', deck: 'Deck session' }[e.stage as 'develop' | 'shoot' | 'post' | 'record' | 'deck'] ?? 'Session'} scored ${e.score}/100.`;
     case 'PITCHED':
       return e.yes ? `Pitch landed (${pct(e.odds)} odds): +${formatMoney(e.amount)} raised.` : `Pitch passed on (${pct(e.odds)} odds).`;
     case 'SELF_FUNDED':
@@ -140,10 +146,39 @@ export function describeEvent(e: GameEvent): string | null {
         : `"${e.showTitle}" episode ${e.episode} paid: +${formatMoney(e.pay)}.`;
     case 'SERIES_WRAPPED':
       return `That's a wrap on "${e.showTitle}": ${e.episodes} episodes${e.missed ? ` (${e.missed} missed)` : ''}.`;
+    case 'AGENT_PITCHED':
+      return e.yes ? `${e.agency} signed you (${pct(e.odds)} odds)!` : `${e.agency} passed (${pct(e.odds)} odds).`;
+    case 'STAFFING_ROLLED':
+      if (e.staffed) return `STAFFED on "${e.show}" (${e.network}) at ${pct(e.odds)} odds! Do one room day a week in Burbank.`;
+      return e.final
+        ? `Staffing try ${e.attempt}: no offer (${pct(e.odds)} odds). Staffing season is over.`
+        : `Staffing try ${e.attempt}: no offer (${pct(e.odds)} odds). Your agent tries again in 5 days.`;
+    case 'ROOM_DAY_DONE':
+      return `Room day on "${e.showTitle}" scored ${e.score}/100: +${e.rp} RP.`;
+    case 'ROOM_EVENT':
+      return `In the room: ${e.prompt}`;
+    case 'ROOM_CHOICE_MADE':
+      return `You: "${e.text}". Favor ${signed(e.favor)} (now ${e.favorNow}), pages ${signed(e.quality)}.`;
+    case 'ROOM_WRAPPED':
+      return {
+        promoted: `"${e.showTitle}" wrapped after ${e.weeks} weeks. Favor ${e.favor}: promoted to story editor! +${e.rp} RP.`,
+        notAskedBack: `"${e.showTitle}" wrapped after ${e.weeks} weeks. Favor ${e.favor}: not asked back. ${e.rp} RP.`,
+        normal: `"${e.showTitle}" wrapped after ${e.weeks} weeks. Favor ${e.favor}: they'd have you back.`,
+      }[e.outcome];
+    case 'GUILD_JOINED':
+      return `Joined ${GUILD_FLAVOR[e.guild].name}: −${formatMoney(e.fee)}. Union rate on ${e.guild} gigs; no more non-union work in it.`;
+    case 'GUILD_DUES':
+      return `Guild dues: −${formatMoney(e.total)}.`;
+    case 'HEALTH_PLAN':
+      return e.active
+        ? `${gn(e.guild)} health plan active: Burnout builds slower.`
+        : `${gn(e.guild)} health plan lapsed: not enough union work last cycle.`;
     case 'ACTION_REJECTED':
     case 'HEADLINE':
       return null;
   }
 }
 
+const gn = (g: keyof typeof GUILD_FLAVOR): string => GUILD_FLAVOR[g].short;
+const signed = (n: number): string => (n >= 0 ? `+${n}` : `−${-n}`);
 const festivalName = (id: string): string => FESTIVALS.find((f) => f.id === id)?.name ?? id;

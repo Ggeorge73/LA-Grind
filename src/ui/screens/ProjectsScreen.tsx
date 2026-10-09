@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { projectScaleOptions, projectView, type ProjectView, type ScaleOption } from '../../sim/actions';
 import {
+  AGENT_PITCH_ENERGY,
+  AGENT_PITCH_HOURS,
   BILLS_HOUR,
+  DECK_ENERGY,
+  DECK_HOURS,
+  DECK_SPARK,
   EDIT_ENERGY,
   EDIT_HOURS,
   HIRE_HOURS,
@@ -42,7 +47,7 @@ function ScaleCard({ option }: { option: ScaleOption }) {
       <article aria-label={option.name}>
         <div className="flex items-start justify-between gap-2">
           <h2 className="min-w-0 font-bold leading-snug">{option.name}</h2>
-          <span className="shrink-0 font-semibold tabular-nums">{money(option.budget)}</span>
+          <span className="shrink-0 font-semibold tabular-nums">{option.budget > 0 ? money(option.budget) : 'No budget'}</span>
         </div>
         <p className="text-xs text-muted">Needs Clout Tier {option.minTier}</p>
         <p className="mt-1 text-sm">{option.summary}</p>
@@ -64,6 +69,7 @@ function ScaleCard({ option }: { option: ScaleOption }) {
 const MEDIUM_GROUPS = [
   { medium: 'film', title: 'Film', tagline: 'Script, money, crew, shoot, festivals', cls: 'text-film' },
   { medium: 'music', title: 'Music', tagline: 'Write, book a studio, record, drop it', cls: 'text-music' },
+  { medium: 'tv', title: 'TV', tagline: 'Spec, deck, agent, staffing season', cls: 'text-tv' },
 ] as const;
 
 /**
@@ -202,9 +208,10 @@ function WriteCard({ view }: { view: ProjectView }) {
   const { script, write } = view;
   const reasonId = 'write-reason';
   const music = view.project.medium === 'music';
+  const tv = view.project.medium === 'tv';
   return (
     <Card>
-      <h2 className="font-bold">{music ? 'Write the songs' : 'Write the script'}</h2>
+      <h2 className="font-bold">{music ? 'Write the songs' : tv ? 'Write the spec pilot' : 'Write the script'}</h2>
       <p className="text-sm">
         {music ? 'Song' : 'Sessions'} <span className="font-semibold tabular-nums">{script.done}/{script.needed}</span> · {music ? 'Song' : 'Script'} quality{' '}
         <span className="font-semibold tabular-nums">{Math.round(script.quality)}</span>/100
@@ -219,7 +226,11 @@ function WriteCard({ view }: { view: ProjectView }) {
         </ul>
       ) : (
         <p className="mt-1 text-xs text-muted">
-          {music ? 'A voice memo of you humming. It has potential. Probably.' : 'The blank page stares back. It has notes.'}
+          {music
+            ? 'A voice memo of you humming. It has potential. Probably.'
+            : tv
+              ? 'FADE IN. That is as far as anyone has got.'
+              : 'The blank page stares back. It has notes.'}
         </p>
       )}
       <Button
@@ -229,7 +240,7 @@ function WriteCard({ view }: { view: ProjectView }) {
         aria-describedby={write.disabledReason || error ? reasonId : undefined}
         onClick={() => run(write.command)}
       >
-        {music ? `Write a song (${WRITE_SESSION_HOURS}h)` : `Write (${WRITE_SESSION_HOURS}h)`}
+        {music ? `Write a song (${WRITE_SESSION_HOURS}h)` : tv ? `Write a draft (${WRITE_SESSION_HOURS}h)` : `Write (${WRITE_SESSION_HOURS}h)`}
       </Button>
       <Reason id={reasonId} text={write.disabledReason} error={error} />
     </Card>
@@ -1101,7 +1112,12 @@ function MusicReleaseStage({ view }: { view: ProjectView }) {
 
 /** Where the quality number comes from: each stage's score so far (all values from projectView). */
 function QualityParts({ view }: { view: ProjectView }) {
-  const parts: { label: string; value: number | null }[] = view.record
+  const parts: { label: string; value: number | null }[] = view.spec
+    ? [
+        { label: 'Spec', value: view.script.done > 0 ? view.script.quality : null },
+        { label: 'Deck', value: view.spec.deck.done > 0 ? view.spec.deck.average : null },
+      ]
+    : view.record
     ? [
         { label: 'Songs', value: view.script.done > 0 ? view.script.quality : null },
         { label: 'Crew', value: view.crew.hired > 0 ? view.crew.quality : null },
@@ -1125,6 +1141,148 @@ function QualityParts({ view }: { view: ProjectView }) {
   );
 }
 
+// ---------- TV spec pilot (writer's side) ----------
+
+type SpecView = NonNullable<ProjectView['spec']>;
+
+function DeckCard({ deck }: { deck: SpecView['deck'] }) {
+  const { error, run } = useRun();
+  const reasonId = 'deck-reason';
+  return (
+    <Card>
+      <h2 className="font-bold">Build the pitch deck</h2>
+      <p className="text-sm">
+        Session <span className="font-semibold tabular-nums">{deck.done} / {deck.needed}</span>
+        {deck.scores.length > 0 && (
+          <>
+            {' '}
+            · Average <span className="font-semibold tabular-nums">{Math.round(deck.average)}</span>/100
+          </>
+        )}
+      </p>
+      {deck.scores.length > 0 ? (
+        <ScoreChips label="Deck session scores" prefix="Slide pass" scores={deck.scores} />
+      ) : (
+        <p className="mt-1 text-xs text-muted">Twelve slides. One of them is just a mood board of rain.</p>
+      )}
+      <p className="mt-2 text-xs">
+        <span className="text-muted">Cost</span> {DECK_HOURS}h · −{DECK_ENERGY} Energy · −{DECK_SPARK} Spark · anywhere
+      </p>
+      <Button
+        variant="primary"
+        className="mt-2 w-full"
+        disabled={deck.disabledReason !== null}
+        aria-describedby={deck.disabledReason || error ? reasonId : undefined}
+        onClick={() => run(deck.command)}
+      >
+        Build deck ({DECK_HOURS}h)
+      </Button>
+      <Reason id={reasonId} text={deck.disabledReason} error={error} />
+    </Card>
+  );
+}
+
+function AgencyCard({ agency, onNavigate }: { agency: SpecView['agencies'][number]; onNavigate: (tab: Tab) => void }) {
+  const { error, run } = useRun();
+  const reasonId = `agency-${agency.id}-reason`;
+  return (
+    <Card>
+      <article aria-label={agency.name}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-bold leading-snug">{agency.name}</h3>
+            <p className="text-xs text-muted">{agency.blurb}</p>
+            <p className="mt-1 text-xs">Takes meetings in {agency.where}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-2xl font-bold tabular-nums leading-none" aria-label={`Signing odds ${pct(agency.odds)}`}>
+              {pct(agency.odds)}
+            </p>
+            <p className="text-[11px] text-muted">odds</p>
+          </div>
+        </div>
+        <p className="mt-1 text-xs">
+          <span className="rounded-md border border-tv/50 bg-tv/10 px-2 py-0.5 text-tv">Heat +{wholePct(agency.heat)}</span>
+          <span className="text-muted"> to staffing odds if they sign you</span>
+        </p>
+        <Button
+          variant="primary"
+          className="mt-2 w-full"
+          disabled={agency.disabledReason !== null}
+          aria-describedby={agency.disabledReason || error ? reasonId : undefined}
+          onClick={() => run(agency.command)}
+        >
+          Meet {agency.name} ({AGENT_PITCH_HOURS}h, −{AGENT_PITCH_ENERGY} Energy)
+        </Button>
+        <ReasonWithMap id={reasonId} text={agency.disabledReason} error={error} onNavigate={onNavigate} />
+      </article>
+    </Card>
+  );
+}
+
+function AgentStage({ view, spec, onNavigate }: { view: ProjectView; spec: SpecView; onNavigate: (tab: Tab) => void }) {
+  return (
+    <>
+      <Card>
+        <h2 className="font-bold">Land an agent</h2>
+        <p className="text-sm">
+          Spec <span className="font-semibold tabular-nums">{Math.round(view.script.quality)}</span>/100 · Deck{' '}
+          <span className="font-semibold tabular-nums">{Math.round(spec.deck.average)}</span>/100
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          One agency meeting a day. Bigger agencies are harder to sign but bring more heat into staffing season.
+        </p>
+        {spec.pitchedToday && <p className="mt-1 text-xs text-muted">Met an agency today — assistants talk. Try again tomorrow.</p>}
+      </Card>
+      <SectionTitle>Agencies</SectionTitle>
+      <ul className="flex flex-col gap-2">
+        {spec.agencies.map((a) => (
+          <li key={a.id}>
+            <AgencyCard agency={a} onNavigate={onNavigate} />
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function StaffingCard({ spec }: { spec: SpecView }) {
+  const st = spec.staffing;
+  return (
+    <section aria-labelledby="staffing-title" className="rounded-2xl border-2 border-tv/60 bg-tv/10 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-tv">Staffing season</p>
+      <h2 id="staffing-title" className="font-[family-name:var(--font-display)] text-lg font-bold leading-snug">
+        {spec.agent ? `${spec.agent.name} is sending your spec out` : 'Your agent is sending your spec out'}
+      </h2>
+      {st ? (
+        <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg border border-line bg-surface px-1 py-1.5">
+            <dt className="text-[11px] text-muted">Tries</dt>
+            <dd className="font-bold tabular-nums leading-tight">
+              {st.tries}/{st.triesTotal}
+            </dd>
+          </div>
+          <div className="rounded-lg border border-line bg-surface px-1 py-1.5">
+            <dt className="text-[11px] text-muted">Odds</dt>
+            <dd className="font-bold tabular-nums leading-tight">{pct(st.odds)}</dd>
+          </div>
+          <div className="rounded-lg border border-line bg-surface px-1 py-1.5">
+            <dt className="text-[11px] text-muted">Next try</dt>
+            <dd className="font-bold tabular-nums leading-tight">
+              Day {day(st.nextMinute)} {clock(st.nextMinute)}
+            </dd>
+          </div>
+        </dl>
+      ) : (
+        <p className="mt-1 text-sm text-muted">Waiting on the first round of calls.</p>
+      )}
+      <p className="mt-2 text-xs text-muted">
+        Nothing to press: your agent makes the calls. Keep hustling — Clout raises the odds. Staffed writers do one room day a week at the studio lot.
+      </p>
+    </section>
+  );
+}
+
 function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (tab: Tab) => void }) {
   const dispatch = useGame((g) => g.dispatch);
   const [confirm, setConfirm] = useState(false);
@@ -1132,13 +1290,18 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
   const { project } = view;
   const location = LOCATIONS[project.location];
   const music = project.medium === 'music';
+  const tv = view.spec !== null;
 
   return (
     <div>
       <header className="mb-3">
         <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">“{project.title}”</h1>
         <p className="text-sm text-muted">
-          {music ? `${view.scaleName} · records at ${project.studio ?? 'the studio'}, ${location.name}` : `${view.scaleName} · shoots in ${location.name}`}
+          {tv
+            ? `${view.scaleName} · write it, pitch it, get staffed`
+            : music
+              ? `${view.scaleName} · records at ${project.studio ?? 'the studio'}, ${location.name}`
+              : `${view.scaleName} · shoots in ${location.name}`}
         </p>
       </header>
 
@@ -1151,7 +1314,11 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
       <div className="flex flex-col gap-2">
         {project.stage === 'develop' && <WriteCard view={view} />}
 
-        {project.stage === 'finance' && music && (
+        {view.spec && project.stage === 'deck' && <DeckCard deck={view.spec.deck} />}
+        {view.spec && project.stage === 'agent' && <AgentStage view={view} spec={view.spec} onNavigate={onNavigate} />}
+        {view.spec && project.stage === 'staffing' && <StaffingCard spec={view.spec} />}
+
+        {!tv && project.stage === 'finance' && music && (
           <>
             <StudioBooking view={view} />
             <LabelSection view={view} onNavigate={onNavigate} />
@@ -1159,7 +1326,7 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
           </>
         )}
 
-        {project.stage === 'finance' && !music && (
+        {!tv && project.stage === 'finance' && !music && (
           <>
             <BudgetSummary view={view} />
             <SectionTitle>Investors</SectionTitle>
@@ -1174,7 +1341,7 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
           </>
         )}
 
-        {project.stage === 'crew' && <CrewStage view={view} />}
+        {!tv && project.stage === 'crew' && <CrewStage view={view} />}
 
         {project.stage === 'shoot' && <ShootCard view={view} onNavigate={onNavigate} />}
         {project.stage === 'post' && <PostCard view={view} />}
@@ -1196,7 +1363,9 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
 
       {confirm && (
         <Sheet title={`Abandon “${project.title}”?`} onClose={() => setConfirm(false)}>
-          <p className="mb-4 text-sm text-muted">Money raised is gone. The credit stays, forever, as a cautionary tale.</p>
+          <p className="mb-4 text-sm text-muted">
+            {tv ? 'The spec goes in a drawer. The drawer is full of specs.' : 'Money raised is gone. The credit stays, forever, as a cautionary tale.'}
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={() => setConfirm(false)}>Cancel</Button>
             <Button

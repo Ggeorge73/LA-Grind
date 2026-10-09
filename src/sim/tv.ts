@@ -3,10 +3,17 @@ import * as C from './constants';
 import { PILOT_CASTING_LOCATIONS, PILOT_TIERS, type PilotTier } from './content/tv';
 import { CALLBACK_BEATS, NETWORKS, PILOT_ROLES, PILOT_TITLE_FIRST, PILOT_TITLE_SECOND, TV_HEADLINES, type TvHeadlineKind } from './content/tvFlavor';
 import { windowFor } from './board';
-import { atHour, bookingPayout, callbackOdds, callbackSenseChance, clampStat, cloutTier, cycleDay, dayOf, pickupOdds } from './formulas';
+import { ROOM_TIERS } from './content/writers';
+import { ROOM_EVENTS, WRITERS_HEADLINES, type WritersHeadlineKind } from './content/writersFlavor';
+import { atHour, bookingPayout, callbackOdds, callbackSenseChance, clamp, clampStat, cloutTier, cycleDay, dayOf, pickupOdds, writeScore } from './formulas';
+import { contractPay, grantVoucher, isMember, recordUnionEarnings } from './guilds';
 import type { Rng } from './rng';
-import type { Activity, Callback, GameEvent, GameState, Opportunity } from './types';
+import type { Activity, Callback, GameEvent, GameState, Opportunity, SeriesContract } from './types';
 import { addHeadline, changeNetwork, changeRp, earn, fillTemplate, newId, ownHeadline, who } from './world';
+
+export function writersHeadline(s: GameState, rng: Rng, events: GameEvent[], kind: WritersHeadlineKind, vars: Record<string, string | number> = {}, own = true): void {
+  addHeadline(s, events, fillTemplate(rng.pick(WRITERS_HEADLINES[kind]), { who: who(s), ...vars }), own);
+}
 
 export function tvHeadline(s: GameState, rng: Rng, events: GameEvent[], kind: TvHeadlineKind, vars: Record<string, string | number> = {}, own = true): void {
   addHeadline(s, events, fillTemplate(rng.pick(TV_HEADLINES[kind]), { who: who(s), ...vars }), own);
@@ -84,9 +91,11 @@ export function resolveCallback(s: GameState, rng: Rng, events: GameEvent[]): vo
   let pay = 0;
   if (booked) {
     // Same union rate as any other booking (and as the board's pilot fee shows).
-    const base = bookingPayout('tv', cb.tier, s.player.guildVouchers >= C.GUILD_VOUCHERS_NEEDED);
+    const base = bookingPayout('tv', cb.tier, isMember(s.player, 'acting'));
     pay = base.pay * C.PILOT_FEE_MULTIPLIER;
     earn(s, pay);
+    recordUnionEarnings(s, 'acting', pay);
+    grantVoucher(s, events, 'acting');
     s.stats.bookings += 1;
     if (!s.stats.bestBooking || pay > s.stats.bestBooking.pay) s.stats.bestBooking = { title: `${cb.showTitle} (pilot)`, pay };
     s.player.skills.acting = clampStat(s.player.skills.acting + C.BOOKED_SKILL_GAIN);
@@ -131,11 +140,14 @@ export function resolvePilots(s: GameState, rng: Rng, events: GameEvent[]): void
     }
     const info = PILOT_TIERS[p.tier as PilotTier];
     s.contract = {
+      kind: 'actor',
+      favor: C.FAVOR_START,
+      roomScores: [],
       showTitle: p.showTitle,
       network: p.network,
       role: p.role,
       tier: p.tier,
-      weeklyPay: info.weeklyPay,
+      weeklyPay: contractPay(s.player, 'acting', info.weeklyPay),
       episodesTotal: info.episodes,
       episodesDone: 0,
       episodesMissed: 0,
@@ -161,21 +173,30 @@ export function resolveContractWeek(s: GameState, rng: Rng, events: GameEvent[])
   const c = s.contract;
   if (!c || s.minute < c.weekEndMinute) return;
   const missed = !c.shotThisWeek;
+  const writer = c.kind === 'writer';
   const pay = Math.round(c.weeklyPay * (missed ? C.MISSED_EPISODE_PAY : 1));
   // Report what is actually lost: RP never goes below 0.
   const rpLost = missed ? Math.min(s.player.rp, C.EPISODE_RP_PER_TIER * c.tier) : 0;
   c.episodesDone += 1;
   if (missed) c.episodesMissed += 1;
   earn(s, pay);
+  recordUnionEarnings(s, writer ? 'writing' : 'acting', pay);
   events.push({ type: 'EPISODE_WEEK', showTitle: c.showTitle, episode: c.episodesDone, pay, missed, rpLost });
   if (missed) {
-    tvHeadline(s, rng, events, 'missedEpisode', { title: c.showTitle });
+    if (writer) {
+      c.favor = clamp(c.favor - C.FAVOR_MISSED_WEEK, 0, 100);
+      writersHeadline(s, rng, events, 'roomMissed', { show: c.showTitle });
+    } else tvHeadline(s, rng, events, 'missedEpisode', { title: c.showTitle });
     changeRp(s, rng, events, -rpLost);
   }
   c.shotThisWeek = false;
   c.weekEndMinute += 7 * C.MINUTES_PER_DAY;
   if (c.episodesDone >= c.episodesTotal) {
     s.contract = null;
+    if (writer) {
+      wrapRoom(s, rng, events, c);
+      return;
+    }
     s.credits.unshift({
       title: c.showTitle,
       medium: 'tv',
@@ -194,4 +215,82 @@ export function announcePilotSeason(s: GameState, rng: Rng, events: GameEvent[],
   if (cycleDay(day) !== C.PILOT_SEASON_FIRST) return;
   events.push({ type: 'PILOT_SEASON_OPENED' });
   tvHeadline(s, rng, events, 'seasonOpen', { network: rng.pick(NETWORKS[4]) }, false);
+}
+
+// ---------- Writers' room (Sprint 10) ----------
+
+/** Staffing came through: a staff-writer job on a show at your Clout tier. */
+export function staffWriter(s: GameState, showTitle: string, network: string): void {
+  const tier = Math.max(1, Math.min(4, cloutTier(s.player.rp))) as 1 | 2 | 3 | 4;
+  const room = ROOM_TIERS[tier];
+  s.contract = {
+    kind: 'writer',
+    favor: C.FAVOR_START,
+    roomScores: [],
+    showTitle,
+    network,
+    role: 'Staff writer',
+    tier,
+    weeklyPay: contractPay(s.player, 'writing', room.weeklyPay),
+    episodesTotal: room.weeks,
+    episodesDone: 0,
+    episodesMissed: 0,
+    shotThisWeek: false,
+    weekEndMinute: s.minute + 7 * C.MINUTES_PER_DAY,
+  };
+}
+
+/** A day in the room: break story, punch up pages, survive the politics. */
+export function completeRoomDay(s: GameState, rng: Rng, events: GameEvent[]): void {
+  const c = s.contract;
+  if (!c || c.kind !== 'writer') return;
+  const p = s.player;
+  const score = Math.round(writeScore(p.skills.writing, p.spark, rng.float()));
+  c.roomScores.push(score);
+  c.shotThisWeek = true;
+  // Design (PI-2 "Writers' room"): Writing +1 per room day, like a project session (LAG-82; was the +2 booking gain).
+  p.skills.writing = clampStat(p.skills.writing + C.PROJECT_SKILL_GAIN);
+  const rp = C.ROOM_RP_PER_TIER * c.tier;
+  events.push({ type: 'ROOM_DAY_DONE', showTitle: c.showTitle, score, rp });
+  events.push({ type: 'SKILL_GAINED', skill: 'writing', amount: C.PROJECT_SKILL_GAIN });
+  changeRp(s, rng, events, rp);
+  const e = rng.pick(ROOM_EVENTS);
+  s.roomEvent = { prompt: e.prompt, choices: [{ ...e.choices[0] }, { ...e.choices[1] }] };
+  events.push({ type: 'ROOM_EVENT', prompt: e.prompt });
+}
+
+/** Answer the room's politics: favor moves, and the day's pages get better or worse. */
+export function resolveRoomEvent(s: GameState, option: number, events: GameEvent[]): void {
+  const ev = s.roomEvent;
+  s.roomEvent = null;
+  const c = s.contract;
+  if (!ev) return;
+  const choice = ev.choices[option === 1 ? 1 : 0];
+  if (c && c.kind === 'writer') {
+    c.favor = clamp(c.favor + choice.favor, 0, 100);
+    const last = c.roomScores.length - 1;
+    if (last >= 0) c.roomScores[last] = clamp(c.roomScores[last]! + choice.quality, 0, 100);
+  }
+  events.push({ type: 'ROOM_CHOICE_MADE', text: choice.text, favor: choice.favor, quality: choice.quality, favorNow: c?.favor ?? 0 });
+}
+
+/** The room wraps: favor decides whether you're promoted, asked back, or quietly not. */
+function wrapRoom(s: GameState, rng: Rng, events: GameEvent[], c: SeriesContract): void {
+  const outcome = c.favor >= C.FAVOR_PROMOTED ? 'promoted' : c.favor < C.FAVOR_NOT_ASKED_BACK ? 'notAskedBack' : 'normal';
+  const rp = outcome === 'promoted' ? C.PROMOTION_RP_PER_TIER * c.tier : outcome === 'notAskedBack' ? -Math.min(s.player.rp, C.NOT_ASKED_BACK_RP_PER_TIER * c.tier) : 0;
+  const quality = c.roomScores.length ? Math.round(c.roomScores.reduce((a, b) => a + b, 0) / c.roomScores.length) : 0;
+  const label = ROOM_TIERS[c.tier as 1 | 2 | 3 | 4].label;
+  const verdict = outcome === 'promoted' ? 'promoted to story editor' : outcome === 'notAskedBack' ? 'not asked back' : 'asked back';
+  s.credits.unshift({
+    title: c.showTitle,
+    medium: 'tv',
+    scale: label,
+    quality,
+    outcome: `Staff writer on ${c.network}, ${c.episodesTotal} weeks (${verdict})`,
+    minute: s.minute,
+  });
+  events.push({ type: 'ROOM_WRAPPED', showTitle: c.showTitle, weeks: c.episodesTotal, favor: c.favor, outcome, rp });
+  if (outcome === 'normal') writersHeadline(s, rng, events, 'roomWrapped', { show: c.showTitle, weeks: c.episodesTotal });
+  else writersHeadline(s, rng, events, outcome, { show: c.showTitle });
+  if (rp !== 0) changeRp(s, rng, events, rp);
 }

@@ -261,7 +261,7 @@ describe('callbacks', () => {
   it('booked: PILOT_FEE_MULTIPLIER × the TV fee (union rate included), RP, skill, bookings, and a pilot decided at 06:00 seven days later', () => {
     for (const [tier, union] of [[1, false], [3, false], [2, true]] as const) {
       const o = openCallback(at('indie', 4, 10), { tier });
-      const before = forceYes(tweak(o.state, (t) => (t.player.guildVouchers = union ? C.GUILD_VOUCHERS_NEEDED : 0)));
+      const before = forceYes(tweak(o.state, (t) => (t.player.guilds.acting.member = union)));
       const r = answer(before, (best, i) => (i === 0 ? wrong(best) : best));
       const base = bookingPayout('tv', tier, union);
       const pay = base.pay * C.PILOT_FEE_MULTIPLIER;
@@ -381,6 +381,9 @@ describe('network decisions', () => {
       const s = onShow(tier);
       const info = PILOT_TIERS[tier];
       expect(s.contract).toEqual({
+        kind: 'actor',
+        favor: C.FAVOR_START,
+        roomScores: [],
         showTitle: 'Cozy Heights',
         network: NETWORKS[tier][0],
         role: 'Hot Detective #2',
@@ -531,13 +534,12 @@ describe('series-regular contracts', () => {
 // ---------- saves, determinism, views ----------
 
 describe('pilot season saves, determinism and views', () => {
-  it('a v5 save (no callback, pilots or contract) migrates to v6 and pilot season still works', () => {
+  it('a v5 save (no callback, pilots or contract) migrates to the current version and pilot season still works', () => {
     const s = newGame('midwest', 1);
     const { callback: _c, pilots: _p, contract: _k, ...rest } = s;
     const v5 = JSON.stringify({ version: 5, savedAt: 0, state: { ...rest, version: 5 } });
     const m = deserialize(v5)!;
     expect(m.version).toBe(C.SAVE_VERSION);
-    expect(C.SAVE_VERSION).toBe(6);
     expect(m.callback).toBeNull();
     expect(m.pilots).toEqual([]);
     expect(m.contract).toBeNull();

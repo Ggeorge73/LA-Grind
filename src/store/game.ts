@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { haptics, now, storage } from '../platform';
 import * as C from '../sim/constants';
+import { describeEvent } from '../sim/describe';
 import { dayOf } from '../sim/formulas';
 import { newGame, step } from '../sim/reducer';
 import { deserialize, serialize } from '../sim/save';
@@ -34,6 +35,11 @@ interface GameStore {
 
 let carryMs = 0;
 let toastId = 0;
+
+/** Toast text for events whose log line (describe.ts) already says it best. */
+function say(tone: Toast['tone'], e: GameEvent): Toast {
+  return { id: ++toastId, tone, text: describeEvent(e) ?? e.type };
+}
 
 function feedback(events: GameEvent[]): Toast | null {
   let toast: Toast | null = null;
@@ -77,6 +83,29 @@ function feedback(events: GameEvent[]): Toast | null {
       toast = { id: ++toastId, tone: 'good', text: `That's a wrap on “${e.showTitle}”: ${e.episodes} episodes. New TV credit!` };
     } else if (e.type === 'PILOT_SEASON_OPENED') {
       toast = { id: ++toastId, tone: 'info', text: 'Pilot season is open: pilots are on the Gigs board.' };
+    } else if (e.type === 'AGENT_PITCHED') {
+      haptics.pulse(e.yes ? 'success' : 'warning');
+      toast = say(e.yes ? 'good' : 'bad', e);
+    } else if (e.type === 'STAFFING_ROLLED') {
+      haptics.pulse(e.staffed ? 'success' : 'warning');
+      toast = say(e.staffed ? 'good' : e.final ? 'bad' : 'info', e);
+    } else if (e.type === 'ROOM_DAY_DONE') {
+      haptics.pulse('success');
+      toast = say('good', e);
+    } else if (e.type === 'ROOM_WRAPPED') {
+      haptics.pulse(e.outcome === 'notAskedBack' ? 'warning' : 'success');
+      toast = say(e.outcome === 'notAskedBack' ? 'bad' : 'good', e);
+    } else if (e.type === 'GUILD_VOUCHER') {
+      if (e.total >= C.GUILD_VOUCHERS_NEEDED) haptics.pulse('success');
+      toast = say(e.total >= C.GUILD_VOUCHERS_NEEDED ? 'good' : 'info', e);
+    } else if (e.type === 'GUILD_JOINED') {
+      haptics.pulse('success');
+      toast = say('good', e);
+    } else if (e.type === 'GUILD_DUES') {
+      toast ??= say('info', e);
+    } else if (e.type === 'HEALTH_PLAN') {
+      haptics.pulse(e.active ? 'success' : 'warning');
+      toast = say(e.active ? 'good' : 'bad', e);
     } else if (e.type === 'TIER_CHANGED' && e.to > e.from) {
       haptics.pulse('success');
       toast = { id: ++toastId, tone: 'good', text: `Clout Tier ${e.to}!` };

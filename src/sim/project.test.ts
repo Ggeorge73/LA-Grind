@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as C from './constants';
 import { FESTIVALS, FILM_SCALES } from './content/film';
 import { ARCHETYPES } from './content/archetypes';
+import { PROJECT_SCALES } from './content/projects';
 import { INVESTORS } from './content/filmFlavor';
 import { atHour, cloutTier, crewFee, crewPoolSize, dailyBills, dayOf, festivalOdds, hourOf, minuteOfDay, pitchOdds, writeScore } from './formulas';
 import {
@@ -214,8 +215,8 @@ describe('project invariants and saves', () => {
     const cmds: Command[] = [];
     for (let i = 0; i < n; i++) {
       const roll = r.int(0, 9);
-      if (roll === 0) cmds.push({ type: 'START_PROJECT', scale: r.pick(['short', 'micro', 'indie'] as const) });
-      else if (roll === 1) cmds.push({ type: 'WRITE_SESSION' });
+      if (roll === 0) cmds.push({ type: 'START_PROJECT', scale: r.pick(['short', 'micro', 'indie', 'spec'] as const) });
+      else if (roll === 1) cmds.push({ type: r.pick(['WRITE_SESSION', 'DECK_SESSION'] as const) });
       else if (roll === 2) cmds.push({ type: 'PITCH', investorId: r.pick(INVESTORS).id });
       else if (roll === 3) cmds.push({ type: 'SELF_FUND', amount: r.int(1, 30) * 100 });
       else if (roll === 4) cmds.push({ type: 'HIRE_CREW', candidateId: `c${r.int(1, 200)}` });
@@ -235,7 +236,7 @@ describe('project invariants and saves', () => {
       if (p) {
         expect(p.spent).toBeLessThanOrEqual(p.raised);
         expect(p.raised).toBeGreaterThanOrEqual(p.selfFunded);
-        expect(hiredCrew(p).length).toBeLessThanOrEqual(FILM_SCALES[p.scale as keyof typeof FILM_SCALES].crewSlots);
+        expect(hiredCrew(p).length).toBeLessThanOrEqual(PROJECT_SCALES[p.scale].crewSlots);
         for (const x of p.scores.develop) expect(x).toBeGreaterThanOrEqual(0);
       }
     }
@@ -307,7 +308,7 @@ function festivalStage(arch: 'indie' | 'nepo' | 'midwest' = 'indie', seed = 3): 
 /** Make the finished film great (state tweak), so acceptance/award/offer odds are high. */
 function polish(s: GameState): GameState {
   const t = structuredClone(s);
-  t.project!.scores = { develop: [95, 95], shoot: [95, 95], post: [95], record: [] };
+  t.project!.scores = { develop: [95, 95], shoot: [95, 95], post: [95], record: [], deck: [] };
   return t;
 }
 
