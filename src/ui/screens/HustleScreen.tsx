@@ -1,14 +1,14 @@
 import { useState, type ReactNode } from 'react';
 import { listActions, tvView, type ActionOption } from '../../sim/actions';
 import { LOCATIONS } from '../../sim/content/locations';
+import { APPS } from '../../sim/content/phoneFlavor';
 import { useGame } from '../../store/game';
 import { duration } from '../format';
 import type { Tab } from '../GameScreen';
 import { Button, Card, Chip, SectionTitle } from '../kit';
-import { GuildsSection } from './GuildsSection';
 import { YourShowCard } from './tvKit';
 
-const RIDESHARE_HOURS = [1, 2, 4, 6, 8] as const;
+export const RIDESHARE_HOURS = [1, 2, 4, 6, 8] as const;
 const SLEEP_HOURS = [1, 4, 6, 8, 10] as const;
 
 const GROUPS: { id: ActionOption['group']; label: string }[] = [
@@ -17,7 +17,7 @@ const GROUPS: { id: ActionOption['group']; label: string }[] = [
   { id: 'grow', label: 'Level up' },
 ];
 
-function HoursPicker({
+export function HoursPicker({
   label,
   options,
   value,
@@ -48,7 +48,7 @@ function HoursPicker({
   );
 }
 
-function ActionCard({
+export function ActionCard({
   option,
   picker,
 }: {
@@ -128,7 +128,7 @@ export function HustleScreen({ onNavigate }: { onNavigate: (tab: Tab) => void })
   return (
     <div>
       <header className="mb-3">
-        <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">Daily Hustle · {location.name}</h1>
+        <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">Daily Hustle · {location.name}</h2>
         <p className="text-sm text-muted">{location.blurb}</p>
       </header>
 
@@ -151,11 +151,9 @@ export function HustleScreen({ onNavigate }: { onNavigate: (tab: Tab) => void })
         );
       })}
 
-      <GuildsSection onNavigate={onNavigate} />
-
       <div className="mt-5 grid grid-cols-2 gap-2">
-        <Button onClick={() => onNavigate('board')}>Find gigs</Button>
-        <Button onClick={() => onNavigate('map')}>Open map</Button>
+        <Button onClick={() => onNavigate('casting')}>Open {APPS.casting.name}</Button>
+        <Button onClick={() => onNavigate('rides')}>Open {APPS.rides.name}</Button>
       </div>
     </div>
   );

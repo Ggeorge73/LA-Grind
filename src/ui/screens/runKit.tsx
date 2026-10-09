@@ -32,7 +32,7 @@ export function ReasonWithMap({ id, text, error, onNavigate }: { id: string; tex
     <div className="flex items-center justify-between gap-2">
       <Reason id={id} text={text} error={error} />
       {text && needsTravel(text) && (
-        <Button variant="ghost" className="shrink-0" onClick={() => onNavigate('map')}>
+        <Button variant="ghost" className="shrink-0" onClick={() => onNavigate('rides')}>
           Map
         </Button>
       )}

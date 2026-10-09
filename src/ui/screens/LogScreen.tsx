@@ -8,7 +8,7 @@ export function LogScreen() {
 
   return (
     <div>
-      <h1 className="mb-3 font-[family-name:var(--font-display)] text-xl font-bold">Activity log</h1>
+      <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl font-bold">Activity log</h2>
       {items.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted">Nothing yet. Your memoir is off to a slow start.</p>
       ) : (
