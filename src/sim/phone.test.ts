@@ -521,11 +521,11 @@ describe('ledger rows: kind and label per source', () => {
   });
 
   it('leisure is "lifestyle" (a free beach walk writes no row)', () => {
-    const s = travelTo(at('indie', 2), LEISURE.museum.location);
+    const s = travelTo(at('indie', 2), leisureLocation(LEISURE.museum, 'silverlake'));
     const t = run(s, { type: 'LEISURE', leisureId: 'museum' }).state;
     expect(only(s, t)).toMatchObject({ kind: 'lifestyle', amount: -LEISURE.museum.cost, label: LEISURE.museum.name });
     expect(LEISURE.beach.cost).toBe(0);
-    const b = travelTo(at('indie', 2), LEISURE.beach.location);
+    const b = travelTo(at('indie', 2), leisureLocation(LEISURE.beach, 'silverlake'));
     expect(newRows(b, run(b, { type: 'LEISURE', leisureId: 'beach' }).state)).toHaveLength(0);
   });
 

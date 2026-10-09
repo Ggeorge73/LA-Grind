@@ -317,6 +317,7 @@ export function createHomeScene(canvas: HTMLCanvasElement, opts: HomeSceneOption
   const backpack = mkBox(hero, 0.32, 0.4, 0.14, 0x3b3b4a, 0, 0.98, -0.22);
   scene.add(hero);
   hero.position.set(-2.3, 0, -0.1);
+  if (import.meta.env.DEV) (window as unknown as { __homeDebug: unknown }).__homeDebug = { hero, cam };
   const selRing = new THREE.Mesh(
     geo(new THREE.RingGeometry(0.34, 0.46, 32)),
     new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.7, side: THREE.DoubleSide }),
@@ -573,14 +574,14 @@ export function createHomeScene(canvas: HTMLCanvasElement, opts: HomeSceneOption
       const dz = goal[1] - hero.position.z;
       const d = Math.hypot(dx, dz);
       const step = WALK_SPEED * dt;
+      let arrived: (() => void) | null = null;
       if (d <= step) {
         hero.position.x = goal[0];
         hero.position.z = goal[1];
         path.shift();
-        if (!path.length && onArrive) {
-          const f = onArrive;
+        if (!path.length) {
+          arrived = onArrive;
           onArrive = null;
-          f();
         }
       } else {
         hero.position.x += (dx / d) * step;
@@ -592,8 +593,11 @@ export function createHomeScene(canvas: HTMLCanvasElement, opts: HomeSceneOption
       legR.rotation.x = -s;
       armL.rotation.x = -s;
       armR.rotation.x = s;
-      hero.position.y = Math.abs(Math.sin(t * 12)) * 0.06;
+      hero.position.y = path.length ? Math.abs(Math.sin(t * 12)) * 0.06 : 0;
       hero.scale.y = 1;
+      if (!path.length) legL.rotation.x = legR.rotation.x = armL.rotation.x = armR.rotation.x = 0;
+      // Run the arrival last: it may seat the character, which the walk animation above must not undo.
+      arrived?.();
     } else {
       if (!seated) {
         legL.rotation.x = legR.rotation.x = 0;

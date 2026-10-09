@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { haptics, now, storage } from '../platform';
 import { usePhone } from './phone';
+import { useRoom } from './room';
 import * as C from '../sim/constants';
 import { describeEvent } from '../sim/describe';
 import { dayOf } from '../sim/formulas';
@@ -192,6 +193,7 @@ export const useGame = create<GameStore>((set, get) => {
           : newGame(archetype, seed);
       carryMs = 0;
       usePhone.getState().reset();
+      useRoom.getState().reset();
       set({ state, speed: 1, notices: [] });
       void get().save();
     },

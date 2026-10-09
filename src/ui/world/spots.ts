@@ -44,7 +44,9 @@ export function poseFor(act: Activity, origin: HotspotId | null): PoseSpec {
 export function webglAvailable(): boolean {
   try {
     const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') ?? c.getContext('webgl'));
+    const gl = c.getContext('webgl2') ?? c.getContext('webgl');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext(); // don't hold a context just for the check
+    return !!gl;
   } catch {
     return false;
   }

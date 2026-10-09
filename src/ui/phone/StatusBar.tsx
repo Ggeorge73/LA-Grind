@@ -12,11 +12,11 @@ const SPEED_META: Record<Speed, { aria: string; icon: string }> = {
 };
 
 /** Pause / 1x / fast as one segmented control: every speed is one tap away. */
-export function SpeedControl({ large = false }: { large?: boolean }) {
+export function SpeedControl({ large = false, slim = false }: { large?: boolean; slim?: boolean }) {
   const speed = useGame((g) => g.speed);
   const setSpeed = useGame((g) => g.setSpeed);
   return (
-    <div role="group" aria-label="Game speed" className={`flex rounded-full bg-black/35 p-0.5 ring-1 ring-white/10 ${large ? 'w-full' : ''}`}>
+    <div role="group" aria-label="Game speed" className={`flex rounded-full p-0.5 ${slim ? 'bg-white/[0.06]' : 'bg-black/35 ring-1 ring-white/10'} ${large ? 'w-full' : ''}`}>
       {SPEEDS.map((s) => {
         const on = speed === s;
         const meta = SPEED_META[s];
@@ -28,7 +28,7 @@ export function SpeedControl({ large = false }: { large?: boolean }) {
             aria-label={meta.aria}
             title={meta.aria}
             onClick={() => setSpeed(s)}
-            className={`flex min-h-11 items-center justify-center gap-1 rounded-full transition ${large ? 'flex-1 text-sm' : 'min-w-11 px-1'} ${
+            className={`flex items-center justify-center gap-1 rounded-full transition ${slim ? 'h-8 min-w-8 px-1' : 'min-h-11'} ${large ? 'flex-1 text-sm' : slim ? '' : 'min-w-11 px-1'} ${
               on ? 'bg-accent text-accent-ink shadow-[0_0_12px_rgb(255_138_61/0.5)]' : 'text-ink/80 active:bg-white/10'
             }`}
           >
@@ -36,7 +36,7 @@ export function SpeedControl({ large = false }: { large?: boolean }) {
               <path d={meta.icon} />
             </svg>
             {large && <span className="font-semibold">{s === 0 ? 'Pause' : `${s}x`}</span>}
-            {!large && s > 1 && <span className="text-[10px] font-bold tabular-nums" aria-hidden>{s}x</span>}
+            {!large && !slim && s > 1 && <span className="text-[10px] font-bold tabular-nums" aria-hidden>{s}x</span>}
           </button>
         );
       })}
