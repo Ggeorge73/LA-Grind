@@ -1,66 +1,174 @@
-import { useState } from 'react';
+// PI-3 Sprint 11 (LAG-89): the phone OS. A full-screen world with the in-game phone over it
+// (a raised sheet on phones, a pinned device frame on tablet/desktop).
+import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent } from 'react';
+import { tvView } from '../sim/actions';
+import { PHONE, type AppId } from '../sim/content/phoneFlavor';
+import type { GameState } from '../sim/types';
 import { useGame } from '../store/game';
-import { Hud } from './Hud';
-import { OverdraftBanner } from './OverdraftBanner';
-import { Toast } from './Toast';
-import { BoardScreen } from './screens/BoardScreen';
-import { HustleScreen } from './screens/HustleScreen';
-import { LogScreen } from './screens/LogScreen';
-import { MapScreen } from './screens/MapScreen';
-import { ProjectsScreen } from './screens/ProjectsScreen';
+import { usePhone } from '../store/phone';
+import { Notifications } from './phone/Notifications';
+import { PhoneScreen } from './phone/Phone';
+import { World } from './phone/World';
 import { RunSummary } from './screens/RunSummary';
-import { TradesScreen } from './screens/TradesScreen';
-import { CallbackSheet, RoomEventSheet } from './screens/tvKit';
 
-export type Tab = 'hustle' | 'map' | 'board' | 'projects' | 'trades' | 'log';
+/** Where a screen can send the player: an app, or the phone's home screen. */
+export type Tab = AppId | 'home';
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'hustle', label: 'Hustle', icon: 'M4 7h16M4 12h16M4 17h10' },
-  { id: 'map', label: 'Map', icon: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14' },
-  { id: 'board', label: 'Gigs', icon: 'M4 5h16v14H4zM4 9h16M9 9v10' },
-  { id: 'projects', label: 'Projects', icon: 'M4 10h16v10H4zM4 10l1-5 15-1 0 5M8.5 4.6 7 9.6M13.5 4.3 12 9.3' },
-  { id: 'trades', label: 'Trades', icon: 'M5 4h11l3 3v13H5zM8 9h8M8 13h8M8 17h5' },
-  { id: 'log', label: 'Log', icon: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z' },
-];
+const WIDE_QUERY = '(min-width: 900px)';
+const subscribeWide = (cb: () => void) => {
+  const m = window.matchMedia(WIDE_QUERY);
+  m.addEventListener('change', cb);
+  return () => m.removeEventListener('change', cb);
+};
+const useWide = () => useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE_QUERY).matches, () => false);
+
+/** Drag distance (px) past which letting go lowers the phone. */
+const LOWER_AT = 110;
+
+function MobilePhone() {
+  const open = usePhone((p) => p.open);
+  const setOpen = usePhone((p) => p.setOpen);
+  const [drag, setDrag] = useState<number | null>(null);
+  const start = useRef(0);
+  const lowerRef = useRef<HTMLButtonElement>(null);
+  const mounted = useRef(false);
+
+  // Keyboard users keep their place (LAG-92): lowering makes the phone inert and raising unmounts "Open phone",
+  // which would drop focus to <body>. Move it to the matching control instead.
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      // Only when focus was lost: on <body>, or still on a control that just went inert.
+      if (active && active !== document.body && !active.closest('[inert]')) return;
+      if (open) lowerRef.current?.focus({ preventScroll: true });
+      else document.querySelector<HTMLElement>('[data-open-phone]')?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open]);
+
+  const down = (e: PointerEvent<HTMLDivElement>) => {
+    start.current = e.clientY;
+    setDrag(0);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const move = (e: PointerEvent<HTMLDivElement>) => {
+    if (drag !== null) setDrag(Math.max(0, e.clientY - start.current));
+  };
+  const up = () => {
+    if (drag !== null && drag > LOWER_AT) setOpen(false);
+    setDrag(null);
+  };
+
+  const handle = (
+    <div className="relative z-20 flex items-center justify-center pt-1.5">
+      <div
+        className="flex h-6 w-36 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        aria-hidden
+      >
+        <span className="block h-1.5 w-12 rounded-full bg-white/30" />
+      </div>
+      <button
+        ref={lowerRef}
+        type="button"
+        onClick={() => setOpen(false)}
+        aria-label="Lower phone"
+        className="absolute right-2 top-0.5 grid min-h-11 min-w-11 place-items-center rounded-full text-muted active:bg-white/10"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+    </div>
+  );
+
+  const y = !open ? 'translateY(105%)' : drag ? `translateY(${drag}px)` : 'translateY(0)';
+  return (
+    <div
+      className={`absolute inset-x-0 bottom-0 h-[92%] overflow-hidden rounded-t-[2.2rem] shadow-[0_-20px_50px_-10px_rgb(0_0_0/0.7)] ring-1 ring-white/10 ${drag ? '' : 'phone-sheet'}`}
+      style={{ transform: y }}
+      inert={!open}
+      aria-label="Phone"
+      role="group"
+    >
+      <PhoneScreen chrome={handle} />
+    </div>
+  );
+}
+
+function DesktopPhone() {
+  return (
+    <div className="relative shrink-0 rounded-[3.2rem] bg-gradient-to-b from-[#3a2d5c] via-[#1c1530] to-[#2d2348] p-[11px] shadow-[0_40px_80px_-20px_rgb(0_0_0/0.85),inset_0_0_0_1px_rgb(255_255_255/0.12)]" style={{ height: 'min(800px, calc(100dvh - 40px))', width: 'calc(min(800px, calc(100dvh - 40px)) * 0.5)' }}>
+      <span aria-hidden className="absolute -left-[3px] top-28 h-14 w-[3px] rounded-l bg-[#4a3a74]" />
+      <span aria-hidden className="absolute -right-[3px] top-36 h-20 w-[3px] rounded-r bg-[#4a3a74]" />
+      <div role="group" aria-label="Phone" className="relative h-full overflow-hidden rounded-[2.5rem] bg-bg">
+        <PhoneScreen
+          chrome={
+            <div className="flex h-7 items-start justify-center pt-1.5" aria-hidden>
+              <span className="flex h-5 w-24 items-center justify-end rounded-full bg-black pr-2.5">
+                <span className="h-2 w-2 rounded-full bg-[#1d2440] ring-1 ring-[#2c3560]" />
+              </span>
+            </div>
+          }
+        />
+      </div>
+      <p className="absolute inset-x-0 -bottom-7 text-center text-[11px] tracking-widest text-white/35" aria-hidden>
+        {PHONE.brand}
+      </p>
+    </div>
+  );
+}
+
+/** A callback or writers'-room question is waiting on the player. */
+function hasPendingSheet(state: GameState | null): boolean {
+  if (!state) return false;
+  const tv = tvView(state);
+  return tv.callback !== null || tv.roomEvent !== null;
+}
 
 export function GameScreen() {
-  const [tab, setTab] = useState<Tab>('hustle');
+  const wide = useWide();
   const movedHome = useGame((g) => g.state?.status === 'movedHome');
+  const pending = useGame((g) => hasPendingSheet(g.state));
+  const phoneOpen = usePhone((p) => p.open);
+  const minimized = usePhone((p) => p.sheetsMinimized);
+  const setOpen = usePhone((p) => p.setOpen);
+  const setMinimized = usePhone((p) => p.setSheetsMinimized);
+
+  // A callback / room question lives in the phone: raise it. Once nothing is pending, the next one opens normally.
+  useEffect(() => {
+    if (pending && !minimized) setOpen(true);
+    if (!pending && minimized) setMinimized(false);
+  }, [pending, minimized, setOpen, setMinimized]);
+
+  if (wide) {
+    return (
+      <div className="relative flex h-full overflow-hidden">
+        <main className="relative min-w-0 flex-1" aria-label="World">
+          <World wide />
+        </main>
+        <div className="relative z-10 flex items-center justify-center bg-gradient-to-l from-black/40 to-transparent px-10 pb-6 xl:px-16">
+          <DesktopPhone />
+        </div>
+        {movedHome && <RunSummary />}
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto flex h-full max-w-xl flex-col">
-      <Hud />
-      <OverdraftBanner />
-      <main key={tab} className="screen-in min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-3">
-        {tab === 'hustle' && <HustleScreen onNavigate={setTab} />}
-        {tab === 'map' && <MapScreen onNavigate={setTab} />}
-        {tab === 'board' && <BoardScreen onNavigate={setTab} />}
-        {tab === 'projects' && <ProjectsScreen onNavigate={setTab} />}
-        {tab === 'trades' && <TradesScreen />}
-        {tab === 'log' && <LogScreen />}
+    <div className="relative h-full overflow-hidden">
+      <main className="absolute inset-0" aria-label="World" inert={phoneOpen}>
+        <World wide={false} />
       </main>
-      <nav className="safe-bottom border-t border-line bg-surface" aria-label="Main">
-        <ul className="grid grid-cols-6">
-          {TABS.map((t) => (
-            <li key={t.id}>
-              <button
-                type="button"
-                onClick={() => setTab(t.id)}
-                aria-current={tab === t.id ? 'page' : undefined}
-                className={`flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] ${tab === t.id ? 'text-accent' : 'text-muted'}`}
-              >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d={t.icon} />
-                </svg>
-                <span className={tab === t.id ? 'font-semibold' : ''}>{t.label}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <Toast />
-      <CallbackSheet />
-      <RoomEventSheet />
+      {!phoneOpen && <Notifications className="safe-top absolute inset-x-0 top-10" />}
+      <MobilePhone />
       {movedHome && <RunSummary />}
     </div>
   );

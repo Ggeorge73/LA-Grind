@@ -317,6 +317,70 @@ export interface Overdraft {
   deadlineMinute: number;
 }
 
+// ---------- Phone OS (PI-3 Sprint 11) ----------
+
+export type LedgerKind = 'job' | 'gig' | 'film' | 'music' | 'tv' | 'bills' | 'travel' | 'lifestyle' | 'career' | 'union';
+
+/** One money movement, as the Bank app shows it. Positive = money in. */
+export interface LedgerEntry {
+  id: string;
+  minute: number;
+  amount: number;
+  label: string;
+  kind: LedgerKind;
+}
+
+export type ContactId = 'agent' | 'casting' | 'booker' | 'network' | 'showrunner' | 'label' | 'festival' | 'landlord' | 'union' | 'mom';
+
+export type InboxKind =
+  | 'pilotSeasonOpen'
+  | 'callbackStarted'
+  | 'callbackBooked'
+  | 'callbackPassed'
+  | 'gigBooked'
+  | 'gigBookedMusic'
+  | 'pilotPickedUp'
+  | 'pilotPassed'
+  | 'episodeMissed'
+  | 'seriesWrapped'
+  | 'agentSigned'
+  | 'staffed'
+  | 'staffingNoOffer'
+  | 'staffingOver'
+  | 'roomEvent'
+  | 'roomPromoted'
+  | 'roomNotAskedBack'
+  | 'roomWrapped'
+  | 'labelSigned'
+  | 'labelPassed'
+  | 'festivalAccepted'
+  | 'festivalRejected'
+  | 'distributionOffer'
+  | 'overdraftStarted'
+  | 'overdraftCleared'
+  | 'movedHome'
+  | 'guildVoucherReady'
+  | 'guildJoined'
+  | 'guildDues'
+  | 'healthPlanOn'
+  | 'healthPlanOff'
+  | 'momCheckIn';
+
+export interface InboxMessage {
+  id: string;
+  minute: number;
+  kind: InboxKind;
+  text: string;
+}
+
+/** One chat thread per contact, newest message last. */
+export interface InboxThread {
+  contact: ContactId;
+  messages: InboxMessage[];
+  unread: number;
+  lastMinute: number;
+}
+
 export interface GameState {
   version: number;
   seed: number;
@@ -341,6 +405,10 @@ export interface GameState {
   contract: SeriesContract | null;
   /** A writers' room politics event waiting for your answer. */
   roomEvent: RoomEventState | null;
+  /** Bank app: newest first, capped at LEDGER_MAX. */
+  ledger: LedgerEntry[];
+  /** Messages app: one thread per contact, most recent thread first. */
+  inbox: InboxThread[];
 }
 
 export type Command =
@@ -380,7 +448,8 @@ export type Command =
   | { type: 'PITCH_AGENT'; agencyId: string }
   | { type: 'ROOM_DAY' }
   | { type: 'ROOM_CHOICE'; option: number }
-  | { type: 'JOIN_GUILD'; guild: Skill };
+  | { type: 'JOIN_GUILD'; guild: Skill }
+  | { type: 'READ_THREAD'; contact: ContactId };
 
 export type GameEvent =
   | { type: 'ACTION_STARTED'; activity: Activity }
@@ -428,7 +497,7 @@ export type GameEvent =
   | { type: 'PLACEMENT'; recordId: string; title: string; client: string; fee: number; rp: number }
   | { type: 'SOUNDTRACK_SET'; title: string; bonus: number }
   | { type: 'PILOT_SEASON_OPENED' }
-  | { type: 'CALLBACK_STARTED'; showTitle: string; network: string }
+  | { type: 'CALLBACK_STARTED'; showTitle: string; network: string; role: string }
   | { type: 'CALLBACK_READ'; beat: number; read: number; right: boolean }
   | { type: 'CALLBACK_DONE'; showTitle: string; right: number; odds: number; booked: boolean; pay: number }
   | { type: 'PILOT_DECIDED'; showTitle: string; network: string; pickedUp: boolean; odds: number; tookIt: boolean }
@@ -443,4 +512,5 @@ export type GameEvent =
   | { type: 'ROOM_WRAPPED'; showTitle: string; weeks: number; favor: number; outcome: 'promoted' | 'notAskedBack' | 'normal'; rp: number }
   | { type: 'GUILD_JOINED'; guild: Skill; fee: number }
   | { type: 'GUILD_DUES'; guilds: Skill[]; total: number }
-  | { type: 'HEALTH_PLAN'; guild: Skill; active: boolean };
+  | { type: 'HEALTH_PLAN'; guild: Skill; active: boolean }
+  | { type: 'MOM_CHECK_IN' };

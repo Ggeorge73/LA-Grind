@@ -2,6 +2,7 @@ import { useGame } from '../../store/game';
 import { NEW_RUN_NETWORK_KEEP } from '../../sim/constants';
 import { ARCHETYPES, ARCHETYPE_IDS } from '../../sim/content/archetypes';
 import { LOCATIONS } from '../../sim/content/locations';
+import { PHONE } from '../../sim/content/phoneFlavor';
 import { cloutTier } from '../../sim/formulas';
 import type { Skill } from '../../sim/types';
 import { Button, Card } from '../kit';
@@ -18,10 +19,11 @@ export function ArchetypeSelect() {
   const movedHome = useGame((g) => g.state?.status === 'movedHome');
 
   return (
-    <main className="h-full overflow-y-auto overscroll-contain">
+    <main className="phone-wallpaper h-full overflow-y-auto overscroll-contain">
       <div className="safe-top safe-bottom mx-auto max-w-xl px-4 pb-6">
-        <header className="pb-4 pt-4 text-center">
-          <h1 className="font-[family-name:var(--font-display)] text-4xl font-black tracking-tight text-accent">LA Grind</h1>
+        <header className="pb-5 pt-6 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted">{PHONE.brand} · new life</p>
+          <h1 className="mt-1 bg-gradient-to-r from-accent to-pink bg-clip-text font-[family-name:var(--font-display)] text-5xl font-black tracking-tight text-transparent">LA Grind</h1>
           <p className="mt-1 text-sm text-muted">Pay rent. Chase the dream. Try not to move back home.</p>
         </header>
 

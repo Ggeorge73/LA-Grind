@@ -1,6 +1,9 @@
 // Read-only views for the UI: what the player can do right now, what it costs, what it pays,
 // and why not. Keeps every rule in src/sim so components only render and dispatch.
 import { guildName, hasHealthPlan, isMember } from './guilds';
+import { CONTACTS } from './content/phoneFlavor';
+import { unreadCount } from './inbox';
+import type { ContactId, InboxThread, LedgerEntry } from './types';
 import { AGENCIES, SPEC_SCALE } from './content/writers';
 import { AGENCY_FLAVOR, GUILD_FLAVOR } from './content/writersFlavor';
 import { GUILDS, GUILD_SKILLS } from './content/guilds';
@@ -786,6 +789,72 @@ export function guildsView(s: GameState): { guilds: GuildView[]; healthPlan: boo
         dues: C.GUILD_DUES,
         command,
         disabledReason: whyNot(s, command),
+      };
+    }),
+  };
+}
+
+// ---------- Phone OS (PI-3 Sprint 11) ----------
+
+export interface BankView {
+  balance: number;
+  /** Set while cash is below $0: when you move home unless you get back to $0. */
+  overdraft: { deadlineMinute: number; minutesLeft: number } | null;
+  dailyBills: number;
+  /** The next 06:00 bills. */
+  nextBillsMinute: number;
+  /** Money in / out over the last 7 game days. */
+  week: { in: number; out: number };
+  entries: LedgerEntry[];
+  totalEarned: number;
+}
+
+export function bankView(s: GameState): BankView {
+  const day = dayOf(s.minute);
+  const billsToday = day * C.MINUTES_PER_DAY + C.BILLS_HOUR * C.MINUTES_PER_HOUR;
+  const weekStart = s.minute - 7 * C.MINUTES_PER_DAY;
+  const recent = s.ledger.filter((e) => e.minute >= weekStart);
+  return {
+    balance: s.player.cash,
+    overdraft: s.overdraft ? { deadlineMinute: s.overdraft.deadlineMinute, minutesLeft: Math.max(0, s.overdraft.deadlineMinute - s.minute) } : null,
+    dailyBills: dailyBills(ARCHETYPES[s.player.archetype].rentPerDay),
+    nextBillsMinute: s.minute < billsToday ? billsToday : billsToday + C.MINUTES_PER_DAY,
+    week: {
+      in: recent.filter((e) => e.amount > 0).reduce((n, e) => n + e.amount, 0),
+      out: -recent.filter((e) => e.amount < 0).reduce((n, e) => n + e.amount, 0),
+    },
+    entries: s.ledger,
+    totalEarned: s.stats.totalEarned,
+  };
+}
+
+export interface ThreadView {
+  contact: ContactId;
+  name: string;
+  role: string;
+  avatar: string;
+  unread: number;
+  lastMinute: number;
+  preview: string;
+  messages: InboxThread['messages'];
+  read: Command;
+}
+
+export function inboxView(s: GameState): { threads: ThreadView[]; unread: number } {
+  return {
+    unread: unreadCount(s),
+    threads: s.inbox.map((t) => {
+      const c = CONTACTS[t.contact];
+      return {
+        contact: t.contact,
+        name: c.name,
+        role: c.role,
+        avatar: c.avatar,
+        unread: t.unread,
+        lastMinute: t.lastMinute,
+        preview: t.messages[t.messages.length - 1]?.text ?? '',
+        messages: t.messages,
+        read: { type: 'READ_THREAD', contact: t.contact },
       };
     }),
   };

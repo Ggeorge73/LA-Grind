@@ -15,8 +15,8 @@ export function App() {
 
   if (!loaded) {
     return (
-      <main className="grid h-full place-items-center">
-        <p className="font-[family-name:var(--font-display)] text-2xl font-bold text-accent">LA Grind</p>
+      <main className="phone-wallpaper grid h-full place-items-center">
+        <p className="bg-gradient-to-r from-accent to-pink bg-clip-text font-[family-name:var(--font-display)] text-3xl font-black text-transparent">LA Grind</p>
       </main>
     );
   }

@@ -136,7 +136,7 @@ function OpportunityCard({ view, onNavigate }: { view: OpportunityView; onNaviga
                   {submitReason}
                 </p>
                 {needsTravel(submitReason) && (
-                  <Button variant="ghost" className="shrink-0" onClick={() => onNavigate('map')}>
+                  <Button variant="ghost" className="shrink-0" onClick={() => onNavigate('rides')}>
                     Map
                   </Button>
                 )}
@@ -165,7 +165,7 @@ export function BoardScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) 
   return (
     <div>
       <header className="mb-3">
-        <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">Opportunity Board</h1>
+        <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">Opportunity Board</h2>
         <p className="text-sm text-muted">
           Visible up to Tier {visibleTier(state.player)} · refreshes {pad(BOARD_REFRESH_HOUR)}:00
         </p>

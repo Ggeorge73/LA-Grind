@@ -64,6 +64,8 @@ const MIGRATIONS: Record<number, Migration> = {
     const contract = c ? { ...c, kind: 'actor' as const, favor: 50, roomScores: [] } : null;
     return { ...file, version: 7, state: { ...file.state, version: 7, player: { ...player, guilds }, project, contract, roomEvent: null } };
   },
+  // v7 → v8 (PI-3 Sprint 11): the phone. The Bank app's ledger and the Messages inbox start empty.
+  7: (file) => ({ ...file, version: 8, state: { ...file.state, version: 8, ledger: [], inbox: [] } }),
 };
 
 export function migrate(file: SaveFile): SaveFile | null {

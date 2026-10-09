@@ -2,7 +2,9 @@
 import { useEffect, useRef } from 'react';
 import { tvView, type TvView } from '../../sim/actions';
 import { CALLBACK_BEATS, EPISODE_ENERGY, EPISODE_HOURS, MISSED_EPISODE_PAY, PILOT_DECISION_DAYS, ROOM_ENERGY, ROOM_HOURS } from '../../sim/constants';
+import { APPS } from '../../sim/content/phoneFlavor';
 import { useGame } from '../../store/game';
+import { usePhone } from '../../store/phone';
 import { clock, day, money, pct } from '../format';
 import type { Tab } from '../GameScreen';
 import { Button, Meter, SectionTitle, Sheet } from '../kit';
@@ -134,11 +136,13 @@ const signed = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
 export function RoomEventSheet() {
   const state = useGame((g) => g.state);
   const { error, run } = useRun();
+  const minimized = usePhone((p) => p.sheetsMinimized);
+  const minimize = usePhone((p) => p.setSheetsMinimized);
   const ev = state ? tvView(state).roomEvent : null;
   const showTitle = state?.contract?.showTitle;
-  if (!ev) return null;
+  if (!ev || minimized) return null;
   return (
-    <Sheet title={showTitle ? `In the room: “${showTitle}”` : 'In the writers’ room'} onClose={() => {}}>
+    <Sheet title={showTitle ? `In the room: “${showTitle}”` : 'In the writers’ room'} onClose={() => minimize(true)}>
       <blockquote className="-mt-1 border-l-4 border-tv/60 pl-3 text-base italic leading-snug">{ev.prompt}</blockquote>
       <div role="group" aria-label="Your answer" className="mt-3 flex flex-col gap-2">
         {ev.choices.map((c, i) => {
@@ -159,6 +163,7 @@ export function RoomEventSheet() {
         })}
       </div>
       <p className="mt-3 text-xs text-muted">Everything else waits until you answer. Leave it until 06:00 and you'll go with answer 1.</p>
+      <LaterButton onClick={() => minimize(true)} />
       {error && (
         <p className="mt-1 text-xs text-bad" role="status">
           {error}
@@ -172,6 +177,8 @@ export function RoomEventSheet() {
 export function CallbackSheet() {
   const state = useGame((g) => g.state);
   const { error, run } = useRun();
+  const minimized = usePhone((p) => p.sheetsMinimized);
+  const minimize = usePhone((p) => p.setSheetsMinimized);
   const cb = state ? tvView(state).callback : null;
   const open = cb !== null;
   const wasOpen = useRef(false);
@@ -180,14 +187,14 @@ export function CallbackSheet() {
     if (open) wasOpen.current = true;
     else if (wasOpen.current) {
       wasOpen.current = false;
-      if (document.activeElement === document.body) document.querySelector<HTMLElement>('nav [aria-current="page"]')?.focus();
+      if (document.activeElement === document.body) document.querySelector<HTMLElement>('[data-phone-focus]')?.focus();
     }
   }, [open]);
-  if (!cb) return null;
+  if (!cb || minimized) return null;
   const beat = cb.beats[cb.beatIndex];
   const done = cb.beats.slice(0, cb.beatIndex);
   return (
-    <Sheet title={`Callback: ${cb.showTitle}`} onClose={() => {}}>
+    <Sheet title={`Callback: ${cb.showTitle}`} onClose={() => minimize(true)}>
       <p className="-mt-2 mb-2 text-sm text-muted">
         {cb.network} · {cb.role}
       </p>
@@ -246,11 +253,21 @@ export function CallbackSheet() {
         </span>
       </p>
       <p className="text-xs text-muted">The room won't tell you how a read landed until the end. Unfinished callbacks wrap at 06:00.</p>
+      <LaterButton onClick={() => minimize(true)} />
       {error && (
         <p className="mt-1 text-xs text-bad" role="status">
           {error}
         </p>
       )}
     </Sheet>
+  );
+}
+
+/** Put a blocking sheet away; it reopens from its thread in Messages (or the home screen's Now widget). */
+function LaterButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="ghost" className="mt-2 w-full text-xs" onClick={onClick}>
+      Later · it waits in {APPS.messages.name}
+    </Button>
   );
 }

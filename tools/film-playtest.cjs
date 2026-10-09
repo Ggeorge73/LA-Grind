@@ -20,8 +20,24 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
     const S = () => page.evaluate(() => window.__game.getState().state);
     const d = (cmd) => page.evaluate((c) => window.__game.getState().dispatch(c), cmd);
-    const tab = (n) => page.getByRole('navigation').getByRole('button', { name: n, exact: true }).click();
-    const main = () => page.getByRole('main');
+    // LAG-92 (PI-3 Sprint 11): the bottom tabs are gone; the old tabs map onto phone apps
+    // (Projects → StudioDesk, Hustle → Hustlr, Gigs → CastBoard, Map → Merge, Trades → Scrollr, Guilds → UnionCard).
+    const APPS = { Projects: 'StudioDesk', Hustle: 'Hustlr', Gigs: 'CastBoard', Map: 'Merge', Trades: 'Scrollr', Guilds: 'UnionCard', Bank: 'Balance', Messages: 'Textr', Settings: 'Settings' };
+    let current = null;
+    const tab = async (n) => {
+      const name = APPS[n] || n;
+      current = name;
+      // Banners sit over the top of the app; clear them so they never cover a button (phone-playtest checks banners).
+      await page.evaluate(() => window.__game.setState({ notices: [] }));
+      const raise = page.getByRole('button', { name: 'Open phone' });
+      if (await raise.count()) await raise.click();
+      if (await page.getByRole('region', { name, exact: true }).count()) return;
+      const back = page.getByRole('button', { name: 'Back to home' });
+      if (await back.count()) await back.click();
+      await page.getByRole('navigation', { name: 'Apps' }).getByRole('button', { name, exact: true }).click();
+      await page.getByRole('region', { name, exact: true }).waitFor();
+    };
+    const main = () => page.getByRole('region', { name: current, exact: true });
     const skip = async () => { if ((await S()).activity) await d({ type: 'SKIP_TO_DONE' }); };
     const advanceTo = async (h) => {
       const s = await S();

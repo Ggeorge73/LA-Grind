@@ -9,11 +9,12 @@ import { advance, settleOverdraft } from './clock';
 import { atHour, commute, cloutTier, dayOf, hourOf, minuteOfDay } from './formulas';
 import { Rng, seedToState } from './rng';
 import type { Activity, ArchetypeId, Command, GameEvent, GameState } from './types';
-import { addHeadline, addLog, formatMoney } from './world';
+import { addHeadline, addLog, formatMoney, spend } from './world';
 import { describeEvent } from './describe';
 import { PROJECT_SCALES } from './content/projects';
 import { labelById, labelName, playedShowToday, venueById, venueName } from './musicBiz';
 import { pickRead, resolveRoomEvent } from './tv';
+import { deliverMail, readThread } from './inbox';
 import { STUDIO_LOT } from './content/tv';
 import { GUILDS, GUILD_SKILLS } from './content/guilds';
 import { AGENCY_FLAVOR } from './content/writersFlavor';
@@ -98,6 +99,8 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
     pilots: [],
     contract: null,
     roomEvent: null,
+    ledger: [],
+    inbox: [],
   };
   const rng = new Rng(s.rngState);
   s.board = generateBoard(s, rng);
@@ -112,6 +115,8 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
 export function whyNot(s: GameState, cmd: Command): string | null {
   const p = s.player;
   if (cmd.type === 'NEW_RUN') return null;
+  // Reading messages is phone UI state: allowed any time, even mid-activity or after the run ends.
+  if (cmd.type === 'READ_THREAD') return s.inbox.some((t) => t.contact === cmd.contact) ? null : 'No such conversation.';
   if (s.status !== 'playing') return 'You moved back home. Start a new run.';
   if (cmd.type === 'ADVANCE') return null;
   if (cmd.type === 'SKIP_TO_DONE') return s.activity ? null : 'Nothing to skip.';
@@ -419,6 +424,9 @@ export function step(state: GameState, cmd: Command): StepResult {
     case 'ROOM_CHOICE':
       resolveRoomEvent(s, cmd.option, events);
       break;
+    case 'READ_THREAD':
+      readThread(s, cmd.contact);
+      break;
     default: {
       const activity = begin(s, cmd);
       s.activity = activity;
@@ -430,6 +438,7 @@ export function step(state: GameState, cmd: Command): StepResult {
     const text = describeEvent(e);
     if (text) addLog(s, text);
   }
+  deliverMail(s, rng, events);
   s.rngState = rng.state;
   return { state: s, events };
 }
@@ -439,7 +448,7 @@ function begin(
   s: GameState,
   cmd: Exclude<
     Command,
-    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' | 'PLACE_SONG' | 'CALLBACK_PICK' | 'ROOM_CHOICE' }
+    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' | 'PLACE_SONG' | 'CALLBACK_PICK' | 'ROOM_CHOICE' | 'READ_THREAD' }
   >,
 ): Activity {
   const p = s.player;
@@ -458,7 +467,7 @@ function begin(
   switch (cmd.type) {
     case 'TRAVEL': {
       const q = commute(p.location, cmd.to, hourOf(s.minute), p.carHealth);
-      p.cash -= q.gas;
+      spend(s, q.gas, `Gas to ${LOCATIONS[cmd.to].name}`, 'travel');
       p.carHealth = Math.max(0, p.carHealth - q.carWear);
       const how = q.byBus ? 'Bus' : 'Drive';
       return make('travel', `${how} to ${LOCATIONS[cmd.to].name}`, q.minutes, {
@@ -481,20 +490,20 @@ function begin(
       return make('sleep', 'Sleeping', cmd.hours * H, { hours: cmd.hours });
     case 'LEISURE': {
       const spot = LEISURE[cmd.leisureId];
-      p.cash -= spot.cost;
+      spend(s, spot.cost, spot.name, 'lifestyle');
       return make('leisure', spot.name, C.LEISURE_HOURS * H, { leisureId: spot.id });
     }
     case 'TAKE_CLASS':
-      p.cash -= C.CLASS_COST;
+      spend(s, C.CLASS_COST, CLASSES[cmd.skill].name, 'career');
       return make('class', CLASSES[cmd.skill].name, C.CLASS_HOURS * H, {
         skill: cmd.skill,
         energyPerMinute: C.CLASS_ENERGY / (C.CLASS_HOURS * H),
       });
     case 'BUY_HEADSHOTS':
-      p.cash -= C.HEADSHOTS_COST;
+      spend(s, C.HEADSHOTS_COST, 'Headshots', 'career');
       return make('headshots', 'Headshots and press photos', C.HEADSHOTS_HOURS * H);
     case 'REPAIR_CAR':
-      p.cash -= C.CAR_REPAIR_COST;
+      spend(s, C.CAR_REPAIR_COST, 'Car repair', 'travel');
       return make('repair', 'Car in the shop', C.CAR_REPAIR_HOURS * H);
     case 'PREP': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId)!;
@@ -598,7 +607,7 @@ function begin(
       });
     case 'SUBMIT': {
       const opp = s.board.find((o) => o.id === cmd.opportunityId)!;
-      p.cash -= submissionFee(p, opp);
+      spend(s, submissionFee(p, opp), `Submission: ${opp.title}`, 'career');
       return make('submit', `Sending ${SUBMISSION_NAME[opp.skill]}: ${opp.title}`, C.SUBMIT_HOURS * H, {
         opportunityId: opp.id,
         energyPerMinute: C.SUBMIT_ENERGY / (C.SUBMIT_HOURS * H),

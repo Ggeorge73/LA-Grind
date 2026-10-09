@@ -122,7 +122,7 @@ function NoProject() {
     <div>
       {celebrate && <ReleaseBanner credit={latest} onDismiss={() => setDismissed(latestKey)} />}
       <header className="mb-3">
-        <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">Projects</h1>
+        <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">Projects</h2>
         <p className="text-sm text-muted">Stop auditioning for other people's work. Make your own — one project at a time.</p>
       </header>
 
@@ -296,7 +296,7 @@ function InvestorCard({ inv, onNavigate }: { inv: ProjectView['investors'][numbe
           <div className="flex items-center justify-between gap-2">
             <Reason id={reasonId} text={inv.disabledReason} error={error} />
             {inv.disabledReason && needsTravel(inv.disabledReason) && (
-              <Button variant="ghost" className="shrink-0" onClick={() => onNavigate('map')}>
+              <Button variant="ghost" className="shrink-0" onClick={() => onNavigate('rides')}>
                 Map
               </Button>
             )}
@@ -1295,7 +1295,7 @@ function ActiveProject({ view, onNavigate }: { view: ProjectView; onNavigate: (t
   return (
     <div>
       <header className="mb-3">
-        <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">“{project.title}”</h1>
+        <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">“{project.title}”</h2>
         <p className="text-sm text-muted">
           {tv
             ? `${view.scaleName} · write it, pitch it, get staffed`

@@ -20,11 +20,12 @@ import {
 } from './formulas';
 import type { Rng } from './rng';
 import type { Activity, GameEvent, GameState } from './types';
-import { addHeadline, changeNetwork, changeRp, earn, ownHeadline } from './world';
+import { addHeadline, changeNetwork, changeRp, earn, ownHeadline, spend } from './world';
 import { completeProjectAction, resolveFestivals, resolveRelease } from './project';
 import { completeBeat, completeShow, resolveBeatLeases, resolvePlacements } from './musicBiz';
 import { announcePilotSeason, completeEpisode, completeRoomDay, resolveCallback, resolveContractWeek, resolvePilots, resolveRoomEvent, startCallback } from './tv';
 import { resolveStaffing } from './project';
+import { momCheckIn } from './inbox';
 import { grantVoucher, hasHealthPlan, isMember, joinGuild, recordUnionEarnings, resolveDues } from './guilds';
 
 /** Advance `minutes` game minutes (stops early if the run ends). */
@@ -80,7 +81,7 @@ function tick(s: GameState, rng: Rng, events: GameEvent[]): void {
 
 function newDay(s: GameState, rng: Rng, events: GameEvent[]): void {
   const bills = dailyBills(ARCHETYPES[s.player.archetype].rentPerDay);
-  s.player.cash -= bills;
+  spend(s, bills, 'Rent, food & car', 'bills');
   events.push({ type: 'BILLS_CHARGED', amount: bills });
 
   s.board = generateBoard(s, rng);
@@ -101,6 +102,7 @@ function newDay(s: GameState, rng: Rng, events: GameEvent[]): void {
   announcePilotSeason(s, rng, events, dayOf(s.minute));
   resolveStaffing(s, rng, events);
   resolveDues(s, events, dayOf(s.minute));
+  momCheckIn(rng, events);
 }
 
 /** Instant commands that pay out (e.g. accepting a distribution offer) settle an overdraft right away. */
@@ -139,7 +141,7 @@ function complete(s: GameState, a: Activity, rng: Rng, events: GameEvent[]): voi
     case 'job': {
       const job = JOBS[a.jobId!];
       const amount = job.hours === null ? (job.payPerHour - job.gasPerHour) * (a.hours ?? 0) : job.pay;
-      earn(s, amount);
+      earn(s, amount, `${job.name} shift`, 'job');
       events.push({ type: 'JOB_PAID', jobId: job.id, amount });
       if (job.networkChance > 0 && rng.chance(job.networkChance)) changeNetwork(s, events, job.networkGain);
       if (job.rpGain > 0) changeRp(s, rng, events, job.rpGain);
@@ -189,7 +191,7 @@ function complete(s: GameState, a: Activity, rng: Rng, events: GameEvent[]): voi
       completeRoomDay(s, rng, events);
       return;
     case 'guild':
-      p.cash -= C.GUILD_JOIN_FEE;
+      spend(s, C.GUILD_JOIN_FEE, 'Guild initiation', 'union');
       joinGuild(s, rng, a.skill!, events);
       return;
   }
@@ -210,7 +212,7 @@ function resolveSubmission(s: GameState, a: Activity, rng: Rng, events: GameEven
     const { pay, rp, network } = bookingPayout(opp.medium, opp.tier, union);
     recordUnionEarnings(s, opp.skill, pay);
     opp.status = 'booked';
-    earn(s, pay);
+    earn(s, pay, opp.title, opp.medium === 'music' ? 'music' : 'gig');
     p.skills[opp.skill] = clampStat(p.skills[opp.skill] + C.BOOKED_SKILL_GAIN);
     s.stats.bookings += 1;
     if (!s.stats.bestBooking || pay > s.stats.bestBooking.pay) s.stats.bestBooking = { title: opp.title, pay };

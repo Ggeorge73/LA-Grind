@@ -4,7 +4,7 @@ import { GUILD_SKILLS } from './content/guilds';
 import { GUILD_FLAVOR, WRITERS_HEADLINES } from './content/writersFlavor';
 import type { Rng } from './rng';
 import type { GameEvent, GameState, GuildState, Player, Skill } from './types';
-import { addHeadline, fillTemplate, who } from './world';
+import { addHeadline, fillTemplate, spend, who } from './world';
 
 export const emptyGuilds = (): Record<Skill, GuildState> =>
   Object.fromEntries(
@@ -59,6 +59,6 @@ export function resolveDues(s: GameState, events: GameEvent[], day: number): voi
     g.earnedThisCycle = 0;
   }
   const total = C.GUILD_DUES * members.length;
-  s.player.cash -= total;
+  spend(s, total, 'Guild dues', 'union');
   events.push({ type: 'GUILD_DUES', guilds: members, total });
 }

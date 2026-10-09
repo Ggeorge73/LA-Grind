@@ -24,3 +24,16 @@ export function compact(n: number): string {
 
 /** Whole number with thousands separators. */
 export const count = (n: number): string => Math.round(n).toLocaleString('en-US');
+
+/** Countdown for deadlines: "2d 5h", "5h", "40m". */
+export function remaining(minutes: number): string {
+  const m = Math.max(0, minutes);
+  const d = Math.floor(m / 1440);
+  const h = Math.floor((m % 1440) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h`;
+  return `${Math.ceil(m)}m`;
+}
+
+/** Signed money for ledgers: "+$120" / "−$45". */
+export const signedMoney = (n: number): string => (n >= 0 ? `+${formatMoney(n)}` : `−${formatMoney(-n)}`);

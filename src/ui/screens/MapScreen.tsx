@@ -73,7 +73,7 @@ export function MapScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
       return;
     }
     close();
-    onNavigate('hustle');
+    onNavigate('home');
   };
   const onKey = (id: LocationId) => (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -96,7 +96,7 @@ export function MapScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
 
   return (
     <div>
-      <h1 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">Greater Los Angeles (abridged)</h1>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">Greater Los Angeles (abridged)</h2>
       <div className="rounded-2xl border border-line bg-surface p-1">
         <svg
           viewBox="0 0 100 100"
