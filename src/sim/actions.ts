@@ -2,6 +2,7 @@
 // and why not. Keeps every rule in src/sim so components only render and dispatch.
 import { guildName, hasHealthPlan, isMember } from './guilds';
 import { CONTACTS } from './content/phoneFlavor';
+import { SOON } from './content/homeFlavor';
 import { unreadCount } from './inbox';
 import type { ContactId, InboxThread, LedgerEntry } from './types';
 import { AGENCIES, SPEC_SCALE } from './content/writers';
@@ -919,9 +920,9 @@ export function homeView(s: GameState): { atHome: boolean; hotspots: HotspotView
       { id: 'desk', soon: null, actions: desk },
       { id: 'ringlight', soon: prepable ? null : 'No auditions to prep for on today’s board.', actions: ring },
       { id: 'tv', soon: null, actions: [act(LEISURE.tv.name, C.LEISURE_HOURS * 60, [`+${LEISURE.tv.spark ?? C.LEISURE_SPARK} Spark`, `−${C.LEISURE_BURNOUT_RELIEF} Burnout`], { type: 'LEISURE', leisureId: 'tv' })] },
-      { id: 'fridge', soon: 'Cooking arrives with Hunger in Sprint 14.', actions: [] },
-      { id: 'shower', soon: 'Showers arrive with Hygiene in Sprint 14.', actions: [] },
-      { id: 'table', soon: 'Calling people arrives with Social in Sprint 14.', actions: [] },
+      { id: 'fridge', soon: SOON.fridge, actions: [] },
+      { id: 'shower', soon: SOON.shower, actions: [] },
+      { id: 'table', soon: SOON.table, actions: [] },
       { id: 'door', soon: null, actions: [] },
     ],
   };

@@ -148,7 +148,7 @@ export const BUSY: Record<string, string> = {
   submit: 'Submitting. Refreshing. Not refreshing. Refreshing.',
   show: 'On stage. Twelve people, three of them listening.',
   beat: 'Cooking a beat. Headphones on, world off.',
-  episode: 'Writing the episode. Act two is a crime scene.',
+  episode: 'On set, shooting the episode. Hit your mark, again.',
   room: 'In the writers\' room, pitching over the snack bowl.',
   guild: 'At the guild office, filling out form 7B in triplicate.',
 };

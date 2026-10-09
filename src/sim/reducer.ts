@@ -159,7 +159,7 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       const spot = LEISURE[cmd.leisureId];
       const where = leisureLocation(spot, p.home);
       if (where !== p.location) return spot.location === 'home' ? 'That is at home.' : `Go to ${LOCATIONS[where].name} first.`;
-      if (p.cash < spot.cost) return `Needs $${spot.cost}.`;
+      if (spot.cost > 0 && p.cash < spot.cost) return `Needs $${spot.cost}.`;
       return null;
     }
     case 'TAKE_CLASS': {
