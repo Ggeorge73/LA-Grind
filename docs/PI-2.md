@@ -115,6 +115,32 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
   - One show at a time; a second pickup while you're on a show is passed on by your agent. When the season wraps, it becomes a credit.
 - Tuned in LAG-76 (see README "Balance"): right read +12 → +6 points; pilot fee 2× → 1.5×; pickup base 20% → 15% and +10% → +8% per right read; a missed week pays 25% (was 50%).
 
+### Writers' room (Sprint 10, the writer's side)
+
+A **Spec pilot** project (TV, any Clout) on the shared engine: **write the spec → build the pitch deck → land an agent → staffing season**.
+
+1. **Write the spec** (`work`): 3 drafts, same as a film script (Writing, Spark).
+2. **Pitch deck** (`work`): 2 sessions, 2h, −10 Energy, −10 Spark, anywhere. Score `= clamp(15 + 0.4·Writing + 0.3·Directing + 0.2·Spark + rand(0–15))`.
+3. **Land an agent** (`raise`): meet one of five parody agencies at its neighbourhood, once a day (2h, −10 Energy). Odds `= logistic((0.4·Spec + 0.3·Deck + 10·Clout + 0.2·Network − (50 + agency modifier)) / 12)`, clamped 5–85%. A yes signs you; the agency's **heat** (+5% to +20%) helps staffing.
+4. **Staffing season** (`circuit`): every 5 days at 06:00, up to 3 tries: offer odds `= clamp(15% + (Spec + Deck)/500 + 5%·Clout + heat, 5%, 80%)`. No offer after 3 tries → the project ends "Didn't get staffed".
+5. **Staff writer** (a contract like a series regular): the show's tier is your Clout (1–4): $500 / $1,000 / $2,000 / $3,500 a week for 6 / 8 / 10 / 10 weeks.
+   - Each week, one **Room day** at the lot in Burbank (8h, −30 Energy): scored on Writing and Spark, Writing +1, +10·tier RP.
+   - After every room day comes a **politics event** with two choices that move your **Favor** (starts at 50) and the room's quality. An open event must be answered (like a callback); at 06:00 it defaults to the first choice.
+   - Missing a week pays 25% and costs 15 Favor.
+   - At wrap: Favor ≥ 70 → **promoted to Story Editor** (+50·tier RP); Favor ≤ 30 → **not asked back** (−10·tier RP); otherwise a solid credit.
+
+## Guilds & unions (Sprint 10)
+
+Four parody guilds, one per skill: Acting, Writing, Directing, Music. This replaces the Phase 1 rule ("3 vouchers of any kind → union rate everywhere").
+
+- **Vouchers** are per guild, up to 3. You earn one from a booked Tier 2+ gig in that skill, a booked pilot (Acting), getting staffed (Writing), a label signing (Music) or a festival acceptance (Directing).
+- **Join** at the guild's HQ with 3 vouchers: 1h, $1,000 initiation.
+- **Dues**: $100 per guild every 30 days, at 06:00 on days 31, 61, 91, …
+- **Scale minimums**: members get the union rate (2×) on gigs in their skill, and +25% on series-regular (Acting) or staff-writer (Writing) weekly pay.
+- **Health plan**: earn $2,000+ from union work in a 30-day cycle and you're covered the next cycle: Burnout builds 25% slower.
+- **Global Rule One**: members can't take non-union work (Tier 1 gigs) in their guild's skill.
+- Old saves: the single Phase 1 voucher count becomes Acting vouchers (capped at 3); nobody is a member until they join.
+
 ## Sprint plan
 
 | Sprint | Name | Scope |
@@ -124,7 +150,7 @@ Same engine, new pipeline: **write → book the studio → crew → record → r
 | 7 | **The Drop** (Music I) — LAG-51, LAG-57…62 | Write → record → release; Fans and Streams; release-week chart in The Trades |
 | 8 | **Deal Memo** (Music II) — LAG-52, LAG-63…69 | Label deal, tour, beat sales, song placements into film and TV projects |
 | 9 | **Pilot Season** (TV I) — LAG-53, LAG-71…76 | Callback mini-game; pilot season circuit |
-| 10 | **Writers' Room** (TV II) — LAG-54, LAG-55 | Pitch deck → agent meeting → writers' room; full guild and union membership |
+| 10 | **Writers' Room** (TV II) — LAG-54, LAG-55, LAG-78…82 | Pitch deck → agent meeting → writers' room; full guild and union membership |
 
 Music and TV get a detailed design at their sprint planning, following the same table format.
 

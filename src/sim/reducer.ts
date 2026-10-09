@@ -13,11 +13,16 @@ import { addHeadline, addLog, formatMoney } from './world';
 import { describeEvent } from './describe';
 import { PROJECT_SCALES } from './content/projects';
 import { labelById, labelName, playedShowToday, venueById, venueName } from './musicBiz';
-import { pickRead } from './tv';
+import { pickRead, resolveRoomEvent } from './tv';
 import { STUDIO_LOT } from './content/tv';
+import { GUILDS, GUILD_SKILLS } from './content/guilds';
+import { AGENCY_FLAVOR } from './content/writersFlavor';
+import { emptyGuilds, guildName, isMember, isNonUnionTier } from './guilds';
 import {
   abandonProject,
   acceptOffer,
+  agencyById,
+  agentOddsFor,
   eligibleFestivals,
   festivalById,
   fundingRoom,
@@ -62,7 +67,7 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
       skills: { ...a.skills },
       network: Math.min(C.STAT_MAX, a.network + carriedNetwork),
       rp: a.rp,
-      guildVouchers: 0,
+      guilds: emptyGuilds(),
       carHealth: a.carHealth,
       hasHeadshots: false,
       creativeBurnout: false,
@@ -92,6 +97,7 @@ export function newGame(archetype: ArchetypeId, seed: number, carriedNetwork = 0
     callback: null,
     pilots: [],
     contract: null,
+    roomEvent: null,
   };
   const rng = new Rng(s.rngState);
   s.board = generateBoard(s, rng);
@@ -115,6 +121,11 @@ export function whyNot(s: GameState, cmd: Command): string | null {
     return Number.isInteger(cmd.read) && cmd.read >= 0 && cmd.read <= 2 ? null : 'Pick one of the three reads.';
   }
   if (s.callback) return 'Finish your callback first. The casting director is waiting.';
+  if (cmd.type === 'ROOM_CHOICE') {
+    if (!s.roomEvent) return 'Nothing to answer in the room right now.';
+    return cmd.option === 0 || cmd.option === 1 ? null : 'Pick one of the two answers.';
+  }
+  if (s.roomEvent) return 'The room is waiting on your answer.';
 
   const hour = hourOf(s.minute);
   const tired = p.energy < C.MIN_ENERGY_TO_START ? 'Too exhausted. Sleep first.' : null;
@@ -294,11 +305,45 @@ export function whyNot(s: GameState, cmd: Command): string | null {
     case 'SHOOT_EPISODE': {
       const c = s.contract;
       if (!c) return "You're not on a show. Yet.";
+      if (c.kind !== 'actor') return "You're in the writers' room, not on set.";
       if (c.shotThisWeek) return "This week's episode is in the can.";
       if (p.location !== STUDIO_LOT) return `Report to set in ${LOCATIONS[STUDIO_LOT].name}.`;
       // An episode has to wrap before the week's 06:00 payday to count for this week.
       if (s.minute + C.EPISODE_HOURS * C.MINUTES_PER_HOUR > c.weekEndMinute) return "Too late for this week's episode: it wraps at 06:00. Shoot earlier next week.";
       return tired;
+    }
+    case 'ROOM_DAY': {
+      const c = s.contract;
+      if (!c || c.kind !== 'writer') return "You're not staffed on a show. Yet.";
+      if (c.shotThisWeek) return "You've done your room day this week.";
+      if (p.location !== STUDIO_LOT) return `The writers' room is in ${LOCATIONS[STUDIO_LOT].name}.`;
+      if (s.minute + C.ROOM_HOURS * C.MINUTES_PER_HOUR > c.weekEndMinute) return "Too late for this week's room day: the week ends at 06:00. Go in earlier next week.";
+      return tired;
+    }
+    case 'DECK_SESSION': {
+      const pr = s.project;
+      if (!pr || pr.medium !== 'tv' || pr.stage !== 'deck') return 'No pitch deck to build right now.';
+      if (p.spark < C.DECK_SPARK) return 'Not enough Creative Spark. Go recharge.';
+      return tired;
+    }
+    case 'PITCH_AGENT': {
+      const pr = s.project;
+      if (!pr || pr.medium !== 'tv' || pr.stage !== 'agent') return 'Finish your spec and deck first.';
+      const ag = agencyById(cmd.agencyId);
+      if (!ag) return 'Unknown agency.';
+      if (pitchedToday(s, pr)) return 'One agency meeting a day. Assistants talk to each other.';
+      if (p.location !== ag.location) return `They take meetings in ${LOCATIONS[ag.location].name}.`;
+      return tired;
+    }
+    case 'JOIN_GUILD': {
+      const g = p.guilds[cmd.guild];
+      if (!g || !GUILD_SKILLS.includes(cmd.guild)) return 'Unknown guild.';
+      if (g.member) return `You're already in ${guildName(cmd.guild)}.`;
+      if (g.vouchers < C.GUILD_VOUCHERS_NEEDED) return `Needs ${C.GUILD_VOUCHERS_NEEDED} vouchers (you have ${g.vouchers}).`;
+      const hq = GUILDS[cmd.guild].hq;
+      if (p.location !== hq) return `${guildName(cmd.guild)} HQ is in ${LOCATIONS[hq].name}.`;
+      if (p.cash < C.GUILD_JOIN_FEE) return `Initiation is ${formatMoney(C.GUILD_JOIN_FEE)}.`;
+      return null;
     }
     case 'PLACE_SONG': {
       const pr = s.project;
@@ -314,6 +359,8 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       if (hour < opp.windowStart || end > opp.windowEnd * C.MINUTES_PER_HOUR)
         return `Window is ${pad(opp.windowStart)}:00–${pad(opp.windowEnd)}:00.`;
       if (opp.tier >= C.HEADSHOTS_MIN_TIER && !p.hasHeadshots) return 'Tier 2+ needs headshots and press photos.';
+      // Global Rule One: guild members don't take non-union work in their guild's skill.
+      if (isNonUnionTier(opp.tier) && isMember(p, opp.skill)) return `Global Rule One: ${guildName(opp.skill)} members can't take non-union work.`;
       const fee = submissionFee(p, opp);
       if (p.cash < fee) return `Needs $${fee}.`;
       return tired;
@@ -369,6 +416,9 @@ export function step(state: GameState, cmd: Command): StepResult {
     case 'CALLBACK_PICK':
       pickRead(s, rng, cmd.read, events);
       break;
+    case 'ROOM_CHOICE':
+      resolveRoomEvent(s, cmd.option, events);
+      break;
     default: {
       const activity = begin(s, cmd);
       s.activity = activity;
@@ -389,7 +439,7 @@ function begin(
   s: GameState,
   cmd: Exclude<
     Command,
-    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' | 'PLACE_SONG' | 'CALLBACK_PICK' }
+    { type: 'ADVANCE' | 'SKIP_TO_DONE' | 'NEW_RUN' | 'START_PROJECT' | 'ABANDON_PROJECT' | 'SELF_FUND' | 'SUBMIT_FESTIVAL' | 'ACCEPT_OFFER' | 'SELF_RELEASE' | 'RELEASE_RECORD' | 'PLACE_SONG' | 'CALLBACK_PICK' | 'ROOM_CHOICE' }
   >,
 ): Activity {
   const p = s.player;
@@ -520,6 +570,27 @@ function begin(
       return make('episode', `On set: ${s.contract!.showTitle}`, C.EPISODE_HOURS * H, {
         energyPerMinute: C.EPISODE_ENERGY / (C.EPISODE_HOURS * H),
       });
+    case 'ROOM_DAY':
+      return make('room', `Writers' room: ${s.contract!.showTitle}`, C.ROOM_HOURS * H, {
+        energyPerMinute: C.ROOM_ENERGY / (C.ROOM_HOURS * H),
+      });
+    case 'DECK_SESSION':
+      return make('project', `Pitch deck: ${s.project!.title}`, C.DECK_HOURS * H, {
+        projectAction: 'deck',
+        energyPerMinute: C.DECK_ENERGY / (C.DECK_HOURS * H),
+        sparkPerMinute: -C.DECK_SPARK / (C.DECK_HOURS * H),
+      });
+    case 'PITCH_AGENT': {
+      const ag = agencyById(cmd.agencyId)!;
+      return make('project', `Meeting ${AGENCY_FLAVOR[ag.id].name}`, C.AGENT_PITCH_HOURS * H, {
+        projectAction: 'agentPitch',
+        investorId: ag.id,
+        energyPerMinute: C.AGENT_PITCH_ENERGY / (C.AGENT_PITCH_HOURS * H),
+        odds: agentOddsFor(s, s.project!, ag),
+      });
+    }
+    case 'JOIN_GUILD':
+      return make('guild', `Joining ${guildName(cmd.guild)}`, C.GUILD_JOIN_HOURS * H, { skill: cmd.guild });
     case 'MAKE_BEAT':
       return make('beat', 'Making a beat', C.BEAT_HOURS * H, {
         energyPerMinute: C.BEAT_ENERGY / (C.BEAT_HOURS * H),

@@ -5,6 +5,12 @@ import { FESTIVALS, FILM_LOCATIONS, FILM_SCALES, type Festival, type FilmScale, 
 import { MUSIC_SCALES, type MusicScale, type MusicScaleId } from './content/music';
 import { LABEL_DIFFICULTY, type LabelDeal } from './content/musicBiz';
 import { bizHeadline, labelById, labelName } from './musicBiz';
+import { AGENCIES, SPEC_SCALE, type Agency } from './content/writers';
+import { AGENCY_FLAVOR } from './content/writersFlavor';
+import { NETWORKS, PILOT_TITLE_FIRST, PILOT_TITLE_SECOND } from './content/tvFlavor';
+import { STUDIO_LOT } from './content/tv';
+import { grantVoucher } from './guilds';
+import { staffWriter, writersHeadline } from './tv';
 import { CREW_ROLE_IDS_BY_MEDIUM, PIPELINES, PROJECT_SCALES, type ProjectMedium, type ScaleInfo } from './content/projects';
 import {
   MUSIC_CREW_QUIRKS,
@@ -38,6 +44,9 @@ import {
   crewFee,
   crewPoolSize,
   dayOf,
+  deckScore,
+  agentOdds,
+  staffingOdds,
   editScore,
   festivalOdds,
   offerAmount,
@@ -78,6 +87,7 @@ export const productionValue = (p: Project): number =>
 
 /** Quality from what is done so far (unfinished stages count as 0). */
 export function projectQuality(p: Project): number {
+  if (p.medium === 'tv') return clampStat(C.SPEC_WEIGHT * scriptQuality(p) + C.DECK_WEIGHT * average(p.scores.deck));
   if (p.medium === 'music') {
     return clampStat(
       C.MUSIC_WEIGHT_SONGS * scriptQuality(p) +
@@ -113,6 +123,21 @@ export function labelOddsFor(s: GameState, p: Project, label: LabelDeal): number
     difficulty: LABEL_DIFFICULTY[p.scale as MusicScaleId] + label.difficultyMod,
   });
 }
+
+export const agencyById = (id: string): Agency | undefined => AGENCIES.find((a) => a.id === id);
+
+export function agentOddsFor(s: GameState, p: Project, agency: Agency): number {
+  return agentOdds({
+    spec: scriptQuality(p),
+    deck: average(p.scores.deck),
+    clout: cloutTier(s.player.rp),
+    network: s.player.network,
+    difficultyMod: agency.difficultyMod,
+  });
+}
+
+export const staffingOddsFor = (s: GameState, p: Project): number =>
+  staffingOdds(scriptQuality(p), average(p.scores.deck), cloutTier(s.player.rp), p.agent?.heat ?? 0);
 
 export const pitchedToday = (s: GameState, p: Project): boolean => p.pitches.some((x) => x.day === dayOf(s.minute));
 
@@ -160,17 +185,23 @@ export function musicHeadline(
 export function startProject(s: GameState, rng: Rng, scale: ProjectScaleId, events: GameEvent[]): void {
   const sc = PROJECT_SCALES[scale];
   const music = sc.medium === 'music';
+  const tv = sc.medium === 'tv';
   const studio = music ? rng.pick(STUDIOS) : null;
+  const title = music
+    ? `${rng.pick(RECORD_TITLE_FIRST)} ${rng.pick(RECORD_TITLE_SECOND)}`
+    : tv
+      ? `${rng.pick(PILOT_TITLE_FIRST)} ${rng.pick(PILOT_TITLE_SECOND)}`
+      : `${rng.pick(FILM_TITLE_FIRST)} ${rng.pick(FILM_TITLE_SECOND)}`;
   const project: Project = {
     id: newId(s, 'p'),
     medium: sc.medium,
     scale,
-    title: music ? `${rng.pick(RECORD_TITLE_FIRST)} ${rng.pick(RECORD_TITLE_SECOND)}` : `${rng.pick(FILM_TITLE_FIRST)} ${rng.pick(FILM_TITLE_SECOND)}`,
-    location: studio ? studio.location : rng.pick(FILM_LOCATIONS),
+    title,
+    location: studio ? studio.location : tv ? STUDIO_LOT : rng.pick(FILM_LOCATIONS),
     studio: studio ? studio.name : null,
     stage: 'develop',
     startedMinute: s.minute,
-    scores: { develop: [], shoot: [], post: [], record: [] },
+    scores: { develop: [], shoot: [], post: [], record: [], deck: [] },
     budget: sc.budget,
     raised: 0,
     selfFunded: 0,
@@ -182,9 +213,12 @@ export function startProject(s: GameState, rng: Rng, scale: ProjectScaleId, even
     release: null,
     label: null,
     soundtrack: null,
+    agent: null,
+    staffing: null,
   };
   s.project = project;
   events.push({ type: 'PROJECT_STARTED', project: structuredClone(project) });
+  if (tv) return;
   if (music) musicHeadline(s, rng, events, 'projectStarted');
   else filmHeadline(s, rng, events, 'projectStarted');
 }
@@ -228,6 +262,8 @@ function setStage(s: GameState, rng: Rng, events: GameEvent[], stage: ProjectSta
   if (stage === 'post') filmHeadline(s, rng, events, 'shootWrapped');
   if (stage === 'record') musicHeadline(s, rng, events, 'crewComplete');
   if (stage === 'release') musicHeadline(s, rng, events, 'recordWrapped');
+  if (stage === 'deck') writersHeadline(s, rng, events, 'specFinished', { title: p.title });
+  if (stage === 'staffing') p.staffing = { tries: 0, nextMinute: atHour(dayOf(s.minute) + C.STAFFING_INTERVAL_DAYS, C.BILLS_HOUR) };
 }
 
 /** Move to the next stage when the current one's goal is met. */
@@ -245,6 +281,8 @@ export function advanceIfReady(s: GameState, rng: Rng, events: GameEvent[]): voi
   if (p.stage === 'shoot' && p.scores.shoot.length >= filmScaleOf(p).shootDays) setStage(s, rng, events, next());
   if (p.stage === 'post' && p.scores.post.length >= filmScaleOf(p).editSessions) setStage(s, rng, events, next());
   if (p.stage === 'record' && p.scores.record.length >= musicScaleOf(p).recordSessions) setStage(s, rng, events, next());
+  if (p.stage === 'deck' && p.scores.deck.length >= SPEC_SCALE.deckSessions) setStage(s, rng, events, next());
+  if (p.stage === 'agent' && p.agent) setStage(s, rng, events, next());
 }
 
 export function selfFund(s: GameState, rng: Rng, amount: number, events: GameEvent[]): void {
@@ -273,6 +311,25 @@ export function completeProjectAction(s: GameState, a: Activity, rng: Rng, event
       pl.skills[skill] = clampStat(pl.skills[skill] + C.PROJECT_SKILL_GAIN);
       events.push({ type: 'SESSION_SCORED', stage: 'develop', score });
       events.push({ type: 'SKILL_GAINED', skill, amount: C.PROJECT_SKILL_GAIN });
+      break;
+    }
+    case 'deck': {
+      const score = Math.round(deckScore(pl.skills.writing, pl.skills.directing, pl.spark, rng.float()));
+      p.scores.deck.push(score);
+      pl.skills.writing = clampStat(pl.skills.writing + C.PROJECT_SKILL_GAIN);
+      events.push({ type: 'SESSION_SCORED', stage: 'deck', score });
+      events.push({ type: 'SKILL_GAINED', skill: 'writing', amount: C.PROJECT_SKILL_GAIN });
+      break;
+    }
+    case 'agentPitch': {
+      const agency = agencyById(a.investorId!)!;
+      const odds = a.odds ?? 0;
+      const yes = rng.chance(odds);
+      const name = AGENCY_FLAVOR[agency.id].name;
+      p.pitches.push({ investorId: agency.id, day: dayOf(a.startMinute), yes, amount: 0 });
+      if (yes) p.agent = { id: agency.id, name, heat: agency.heat };
+      events.push({ type: 'AGENT_PITCHED', agencyId: agency.id, agency: name, yes, odds });
+      writersHeadline(s, rng, events, yes ? 'agentSigned' : 'agentPassed', { agency: name });
       break;
     }
     case 'record': {
@@ -315,6 +372,7 @@ export function completeProjectAction(s: GameState, a: Activity, rng: Rng, event
       if (yes) {
         p.raised += advance;
         p.label = { id: label.id, name, advance, royaltyCut: label.royaltyCut, marketing: label.marketing };
+        grantVoucher(s, events, 'music');
         bizHeadline(s, rng, events, 'labelSigned', { title: p.title, label: name, amount: formatMoney(advance) });
       } else {
         bizHeadline(s, rng, events, 'labelPassed', { title: p.title, label: name });
@@ -390,6 +448,7 @@ export function resolveFestivals(s: GameState, rng: Rng, events: GameEvent[]): v
     }
     let rp = f.rp;
     filmHeadline(s, rng, events, 'festivalAccepted', { festival: f.name });
+    grantVoucher(s, events, 'directing');
     if (rng.chance(awardChance(quality, f.tier))) {
       sub.award = rng.pick(FESTIVAL_AWARDS);
       rp += Math.round(f.rp * C.AWARD_RP_MULTIPLIER);
@@ -499,7 +558,7 @@ export const peakPosition = (p: Project): number | null => {
   return ranks.length ? Math.min(...ranks) : null;
 };
 
-export const PROJECT_STAGES: readonly ProjectStage[] = [...PIPELINES.film.map((x) => x.id), 'record', 'release'];
+export const PROJECT_STAGES: readonly ProjectStage[] = [...PIPELINES.film.map((x) => x.id), 'record', 'release', 'deck', 'agent', 'staffing'];
 
 /** Put one of your catalogue records on a film's soundtrack (post stage, once per film). */
 export function placeSong(s: GameState, rng: Rng, recordId: string, events: GameEvent[]): void {
@@ -510,4 +569,36 @@ export function placeSong(s: GameState, rng: Rng, recordId: string, events: Game
   r.placements += 1;
   events.push({ type: 'SOUNDTRACK_SET', title: r.title, bonus });
   bizHeadline(s, rng, events, 'soundtrack', { title: r.title, film: p.title });
+}
+
+// ---------- TV staffing season (Sprint 10) ----------
+
+/** 06:00: every few days your agent sends the spec around; a yes puts you in a writers' room. */
+export function resolveStaffing(s: GameState, rng: Rng, events: GameEvent[]): void {
+  const p = s.project;
+  const st = p?.staffing;
+  if (!p || p.medium !== 'tv' || p.stage !== 'staffing' || !st || s.minute < st.nextMinute) return;
+  st.nextMinute = atHour(dayOf(s.minute) + C.STAFFING_INTERVAL_DAYS, C.BILLS_HOUR);
+  // Already on a show: the agent waits for you to be free (the try isn't spent).
+  if (s.contract) return;
+  st.tries += 1;
+  const odds = staffingOddsFor(s, p);
+  const staffed = rng.chance(odds);
+  const final = staffed || st.tries >= C.STAFFING_TRIES;
+  if (staffed) {
+    const tier = Math.max(1, Math.min(4, cloutTier(s.player.rp))) as 1 | 2 | 3 | 4;
+    const show = `${rng.pick(PILOT_TITLE_FIRST)} ${rng.pick(PILOT_TITLE_SECOND)}`;
+    const network = rng.pick(NETWORKS[tier]);
+    events.push({ type: 'STAFFING_ROLLED', attempt: st.tries, odds, staffed, show, network, final });
+    staffWriter(s, show, network);
+    grantVoucher(s, events, 'writing');
+    writersHeadline(s, rng, events, 'staffed', { show, network });
+    finishProject(s, `Staffed on ${show} via ${p.agent?.name ?? 'your agent'}`);
+    return;
+  }
+  events.push({ type: 'STAFFING_ROLLED', attempt: st.tries, odds, staffed, show: null, network: null, final });
+  if (final) {
+    writersHeadline(s, rng, events, 'notStaffed');
+    finishProject(s, "Didn't get staffed");
+  }
 }

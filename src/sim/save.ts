@@ -1,5 +1,6 @@
 // Versioned save format. Saves are JSON strings so any key-value store can hold them.
-import { SAVE_VERSION } from './constants';
+import { GUILD_VOUCHERS_NEEDED, SAVE_VERSION } from './constants';
+import { emptyGuilds } from './guilds';
 import type { GameState } from './types';
 
 interface SaveFile {
@@ -52,6 +53,17 @@ const MIGRATIONS: Record<number, Migration> = {
   },
   // v5 → v6 (Sprint 9): pilot season. No open callback, no pending pilots, no show yet.
   5: (file) => ({ ...file, version: 6, state: { ...file.state, version: 6, callback: null, pilots: [], contract: null } }),
+  // v6 → v7 (Sprint 10): writers' room and guilds. The old voucher count becomes Acting vouchers; nobody is a member yet.
+  6: (file) => {
+    const { guildVouchers, ...player } = file.state.player as GameState['player'] & { guildVouchers?: number };
+    const guilds = emptyGuilds();
+    guilds.acting.vouchers = Math.min(GUILD_VOUCHERS_NEEDED, guildVouchers ?? 0);
+    const old = file.state.project;
+    const project = old ? { ...old, scores: { ...old.scores, deck: [] }, agent: null, staffing: null } : null;
+    const c = file.state.contract;
+    const contract = c ? { ...c, kind: 'actor' as const, favor: 50, roomScores: [] } : null;
+    return { ...file, version: 7, state: { ...file.state, version: 7, player: { ...player, guilds }, project, contract, roomEvent: null } };
+  },
 };
 
 export function migrate(file: SaveFile): SaveFile | null {

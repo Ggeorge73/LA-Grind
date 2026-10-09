@@ -18,7 +18,8 @@ export interface Player {
   skills: Skills;
   network: number;
   rp: number;
-  guildVouchers: number;
+  /** Per-guild vouchers and membership (Sprint 10; replaced the single Phase 1 voucher count). */
+  guilds: Record<Skill, GuildState>;
   carHealth: number;
   hasHeadshots: boolean;
   creativeBurnout: boolean;
@@ -42,7 +43,9 @@ export type ActivityKind =
   | 'submit'
   | 'show'
   | 'beat'
-  | 'episode';
+  | 'episode'
+  | 'room'
+  | 'guild';
 
 export interface Activity {
   kind: ActivityKind;
@@ -72,9 +75,9 @@ export interface Activity {
 
 // ---------- Projects (PI-2 career engine) ----------
 
-export type ProjectStage = 'develop' | 'finance' | 'crew' | 'shoot' | 'post' | 'festival' | 'record' | 'release';
-export type ProjectAction = 'write' | 'pitch' | 'labelPitch' | 'hire' | 'shoot' | 'edit' | 'record' | 'promo';
-export type ProjectScaleId = 'short' | 'micro' | 'indie' | 'single' | 'ep' | 'album';
+export type ProjectStage = 'develop' | 'finance' | 'crew' | 'shoot' | 'post' | 'festival' | 'record' | 'release' | 'deck' | 'agent' | 'staffing';
+export type ProjectAction = 'write' | 'pitch' | 'labelPitch' | 'hire' | 'shoot' | 'edit' | 'record' | 'promo' | 'deck' | 'agentPitch';
+export type ProjectScaleId = 'short' | 'micro' | 'indie' | 'single' | 'ep' | 'album' | 'spec';
 
 export interface CrewCandidate {
   id: string;
@@ -98,7 +101,7 @@ export interface Project {
   stage: ProjectStage;
   startedMinute: number;
   /** Session scores per work stage (0–100 each). */
-  scores: { develop: number[]; shoot: number[]; post: number[]; record: number[] };
+  scores: { develop: number[]; shoot: number[]; post: number[]; record: number[]; deck: number[] };
   budget: number;
   raised: number;
   selfFunded: number;
@@ -114,6 +117,10 @@ export interface Project {
   label: SignedLabel | null;
   /** Film: one of your records on the soundtrack. */
   soundtrack: { recordId: string; title: string; bonus: number } | null;
+  /** TV spec: the agency that signed you, if any. */
+  agent: { id: string; name: string; heat: number } | null;
+  /** TV spec: staffing season progress (stage 'staffing'). */
+  staffing: { tries: number; nextMinute: number } | null;
 }
 
 export interface SignedLabel {
@@ -246,7 +253,27 @@ export interface PendingPilot {
   decisionMinute: number;
 }
 
+export interface GuildState {
+  vouchers: number;
+  member: boolean;
+  joinedMinute: number | null;
+  /** Union earnings in the current 30-day dues cycle (health-plan threshold). */
+  earnedThisCycle: number;
+  healthPlan: boolean;
+}
+
+export interface RoomEventState {
+  prompt: string;
+  choices: readonly [{ text: string; favor: number; quality: number }, { text: string; favor: number; quality: number }];
+}
+
 export interface SeriesContract {
+  /** actor = series regular (Sprint 9); writer = staff writer in a writers' room (Sprint 10). */
+  kind: 'actor' | 'writer';
+  /** Writers' room standing, 0–100 (writers only). */
+  favor: number;
+  /** Room-day scores after politics adjustments (writers only). */
+  roomScores: number[];
   showTitle: string;
   network: string;
   role: string;
@@ -312,6 +339,8 @@ export interface GameState {
   callback: Callback | null;
   pilots: PendingPilot[];
   contract: SeriesContract | null;
+  /** A writers' room politics event waiting for your answer. */
+  roomEvent: RoomEventState | null;
 }
 
 export type Command =
@@ -346,7 +375,12 @@ export type Command =
   | { type: 'MAKE_BEAT' }
   | { type: 'PLACE_SONG'; recordId: string }
   | { type: 'CALLBACK_PICK'; read: number }
-  | { type: 'SHOOT_EPISODE' };
+  | { type: 'SHOOT_EPISODE' }
+  | { type: 'DECK_SESSION' }
+  | { type: 'PITCH_AGENT'; agencyId: string }
+  | { type: 'ROOM_DAY' }
+  | { type: 'ROOM_CHOICE'; option: number }
+  | { type: 'JOIN_GUILD'; guild: Skill };
 
 export type GameEvent =
   | { type: 'ACTION_STARTED'; activity: Activity }
@@ -366,7 +400,7 @@ export type GameEvent =
   | { type: 'BILLS_CHARGED'; amount: number }
   | { type: 'BOARD_REFRESHED'; count: number }
   | { type: 'TIER_CHANGED'; from: number; to: number }
-  | { type: 'GUILD_VOUCHER'; total: number }
+  | { type: 'GUILD_VOUCHER'; guild: Skill; total: number }
   | { type: 'CREATIVE_BURNOUT_STARTED' }
   | { type: 'CREATIVE_BURNOUT_CLEARED' }
   | { type: 'OVERDRAFT_STARTED'; deadlineMinute: number }
@@ -400,4 +434,13 @@ export type GameEvent =
   | { type: 'PILOT_DECIDED'; showTitle: string; network: string; pickedUp: boolean; odds: number; tookIt: boolean }
   | { type: 'EPISODE_SHOT'; showTitle: string; episode: number; rp: number }
   | { type: 'EPISODE_WEEK'; showTitle: string; episode: number; pay: number; missed: boolean; rpLost: number }
-  | { type: 'SERIES_WRAPPED'; showTitle: string; episodes: number; missed: number };
+  | { type: 'SERIES_WRAPPED'; showTitle: string; episodes: number; missed: number }
+  | { type: 'AGENT_PITCHED'; agencyId: string; agency: string; yes: boolean; odds: number }
+  | { type: 'STAFFING_ROLLED'; attempt: number; odds: number; staffed: boolean; show: string | null; network: string | null; final: boolean }
+  | { type: 'ROOM_DAY_DONE'; showTitle: string; score: number; rp: number }
+  | { type: 'ROOM_EVENT'; prompt: string }
+  | { type: 'ROOM_CHOICE_MADE'; text: string; favor: number; quality: number; favorNow: number }
+  | { type: 'ROOM_WRAPPED'; showTitle: string; weeks: number; favor: number; outcome: 'promoted' | 'notAskedBack' | 'normal'; rp: number }
+  | { type: 'GUILD_JOINED'; guild: Skill; fee: number }
+  | { type: 'GUILD_DUES'; guilds: Skill[]; total: number }
+  | { type: 'HEALTH_PLAN'; guild: Skill; active: boolean };

@@ -114,7 +114,7 @@ export const TRADES_MAX = 60;
 export const LOG_MAX = 120;
 export const NPC_HEADLINES_PER_DAY = 3;
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 // Projects (PI-2 career engine) — film numbers; scales live in content/film.ts
 export const WRITE_SESSION_HOURS = 3;
@@ -303,3 +303,51 @@ export const EPISODE_RP_PER_TIER = 10;
 /** Share of the week's pay you get if you missed the episode.
  *  LAG-76: 50% → 25%, so a missed tier-1 week ($225) costs more than the barista shift you could work instead. */
 export const MISSED_EPISODE_PAY = 0.25;
+
+// TV writers' room (Sprint 10) — agencies and room tiers live in content/writers.ts
+export const DECK_HOURS = 2;
+export const DECK_ENERGY = 10;
+export const DECK_SPARK = 10;
+export const DECK_SCORE_BASE = 15;
+export const DECK_SCORE_WRITING = 0.4;
+export const DECK_SCORE_DIRECTING = 0.3;
+export const DECK_SCORE_SPARK = 0.2;
+export const DECK_SCORE_LUCK = 15;
+export const AGENT_PITCH_HOURS = 2;
+export const AGENT_PITCH_ENERGY = 10;
+export const AGENT_BASE_DIFFICULTY = 50;
+export const AGENT_SPEC_WEIGHT = 0.4;
+export const AGENT_DECK_WEIGHT = 0.3;
+export const AGENT_CLOUT_WEIGHT = 10;
+export const AGENT_NETWORK_WEIGHT = 0.2;
+export const STAFFING_INTERVAL_DAYS = 5;
+export const STAFFING_TRIES = 3;
+export const STAFFING_BASE = 0.15;
+/** Staffing odds add (Spec + Deck) / this. */
+export const STAFFING_QUALITY_DIVISOR = 500;
+export const STAFFING_PER_CLOUT = 0.05;
+export const STAFFING_MIN = 0.05;
+export const STAFFING_MAX = 0.8;
+export const ROOM_HOURS = 8;
+export const ROOM_ENERGY = 30;
+export const ROOM_RP_PER_TIER = 10;
+export const FAVOR_START = 50;
+export const FAVOR_MISSED_WEEK = 15;
+export const FAVOR_PROMOTED = 70;
+export const FAVOR_NOT_ASKED_BACK = 30;
+export const PROMOTION_RP_PER_TIER = 50;
+export const NOT_ASKED_BACK_RP_PER_TIER = 10;
+
+// Guilds & unions (Sprint 10) — guild HQs live in content/guilds.ts
+export const GUILD_JOIN_FEE = 1000;
+export const GUILD_JOIN_HOURS = 1;
+export const GUILD_DUES = 100;
+export const GUILD_DUES_CYCLE_DAYS = 30;
+/** Members get this × weekly pay on series-regular / staff-writer contracts. */
+export const GUILD_CONTRACT_MINIMUM = 1.25;
+export const HEALTH_PLAN_THRESHOLD = 2000;
+/** Burnout builds at this rate while you have a health plan. */
+export const HEALTH_PLAN_BURNOUT = 0.75;
+/** Spec-pilot quality = SPEC_WEIGHT·spec + DECK_WEIGHT·deck. */
+export const SPEC_WEIGHT = 0.5;
+export const DECK_WEIGHT = 0.5;

@@ -307,7 +307,7 @@ function festivalStage(arch: 'indie' | 'nepo' | 'midwest' = 'indie', seed = 3): 
 /** Make the finished film great (state tweak), so acceptance/award/offer odds are high. */
 function polish(s: GameState): GameState {
   const t = structuredClone(s);
-  t.project!.scores = { develop: [95, 95], shoot: [95, 95], post: [95], record: [] };
+  t.project!.scores = { develop: [95, 95], shoot: [95, 95], post: [95], record: [], deck: [] };
   return t;
 }
 

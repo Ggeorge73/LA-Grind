@@ -272,3 +272,18 @@ export const callbackOdds = (base: number, right: number, beats = C.CALLBACK_BEA
 
 export const pickupOdds = (right: number, clout: number, tier: number): number =>
   clamp(C.PICKUP_BASE + C.PICKUP_PER_RIGHT * right + C.PICKUP_PER_CLOUT * clout - C.PICKUP_PER_TIER * (tier - 1), C.PICKUP_MIN, C.PICKUP_MAX);
+
+export const deckScore = (writing: number, directing: number, spark: number, roll: number): number =>
+  clamp(
+    C.DECK_SCORE_BASE + C.DECK_SCORE_WRITING * writing + C.DECK_SCORE_DIRECTING * directing + C.DECK_SCORE_SPARK * spark + roll * C.DECK_SCORE_LUCK,
+    0,
+    100,
+  );
+
+export function agentOdds(i: { spec: number; deck: number; clout: number; network: number; difficultyMod: number }): number {
+  const score = C.AGENT_SPEC_WEIGHT * i.spec + C.AGENT_DECK_WEIGHT * i.deck + C.AGENT_CLOUT_WEIGHT * i.clout + C.AGENT_NETWORK_WEIGHT * i.network;
+  return clamp(1 / (1 + Math.exp(-(score - (C.AGENT_BASE_DIFFICULTY + i.difficultyMod)) / C.PITCH_SPREAD)), C.PITCH_FLOOR, C.PITCH_CEILING);
+}
+
+export const staffingOdds = (spec: number, deck: number, clout: number, heat: number): number =>
+  clamp(C.STAFFING_BASE + (spec + deck) / C.STAFFING_QUALITY_DIVISOR + C.STAFFING_PER_CLOUT * clout + heat, C.STAFFING_MIN, C.STAFFING_MAX);

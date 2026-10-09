@@ -289,7 +289,7 @@ describe('invariants', () => {
         expect(v).toBeLessThanOrEqual(100);
       }
       expect(p.rp).toBeGreaterThanOrEqual(0);
-      expect(p.guildVouchers).toBeLessThanOrEqual(3);
+      for (const g of Object.values(p.guilds)) expect(g.vouchers).toBeLessThanOrEqual(C.GUILD_VOUCHERS_NEEDED);
       expect(Number.isFinite(p.cash)).toBe(true);
     }
   });
