@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as C from './constants';
 import { FESTIVALS, FILM_SCALES } from './content/film';
 import { ARCHETYPES } from './content/archetypes';
+import { PROJECT_SCALES } from './content/projects';
 import { INVESTORS } from './content/filmFlavor';
 import { atHour, cloutTier, crewFee, crewPoolSize, dailyBills, dayOf, festivalOdds, hourOf, minuteOfDay, pitchOdds, writeScore } from './formulas';
 import {
@@ -235,7 +236,7 @@ describe('project invariants and saves', () => {
       if (p) {
         expect(p.spent).toBeLessThanOrEqual(p.raised);
         expect(p.raised).toBeGreaterThanOrEqual(p.selfFunded);
-        expect(hiredCrew(p).length).toBeLessThanOrEqual(FILM_SCALES[p.scale as keyof typeof FILM_SCALES].crewSlots);
+        expect(hiredCrew(p).length).toBeLessThanOrEqual(PROJECT_SCALES[p.scale].crewSlots);
         for (const x of p.scores.develop) expect(x).toBeGreaterThanOrEqual(0);
       }
     }

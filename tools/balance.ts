@@ -1,7 +1,8 @@
 // Headless balance run: every archetype × scripted strategies × 30 in-game days,
 // plus a film table (one short film end-to-end next to a survival job), a music table (a single / an EP)
 // and a music-business table (signed EP, beat store, nightly shows; LAG-69).
-// and a pilot-season table (chase every pilot season next to the barista job; LAG-76).
+// a pilot-season table (chase every pilot season next to the barista job; LAG-76)
+// and a writers'-room table (spec pilot → agent → staffing → room days, with and without joining the guild; LAG-82).
 // Usage: npm run balance
 import * as C from '../src/sim/constants';
 import { ARCHETYPES, ARCHETYPE_IDS } from '../src/sim/content/archetypes';
@@ -12,9 +13,12 @@ import { HEADSHOTS_LOCATION } from '../src/sim/content/locations';
 import { LABELS, VENUES, type LabelDeal, type Venue } from '../src/sim/content/musicBiz';
 import { playedShowToday } from '../src/sim/musicBiz';
 import { STUDIO_LOT } from '../src/sim/content/tv';
+import { AGENCIES, type Agency } from '../src/sim/content/writers';
+import { GUILDS } from '../src/sim/content/guilds';
 import { oddsFor, submissionFee, visibleTier } from '../src/sim/board';
-import { bookingPayout, cloutTier, dailyBills, dayOf, hourOf, isExposure, isPilotSeason, showPay } from '../src/sim/formulas';
+import { average, bookingPayout, cloutTier, dailyBills, dayOf, hourOf, isExposure, isPilotSeason, showPay, staffingOdds } from '../src/sim/formulas';
 import {
+  agentOddsFor,
   eligibleFestivals,
   festivalOddsFor,
   fundingRoom,
@@ -756,6 +760,216 @@ for (const id of ARCHETYPE_IDS) {
       `| ${ARCHETYPES[id].name} | ${perfect ? 'perfect' : 'sensed or 0'} | ${pct(rows.filter((x) => x.st.firstSeasonBooked).length / rows.length)} | ${avg(rows.flatMap((x) => x.st.callbackRight)).toFixed(1)} / 3 | ${pct(avg(odds))} | ${decided ? `${picks}/${decided} (${pct(picks / decided)})` : '—'} | ${rows.filter((x) => x.series).length}/${rows.length} | ${rows.reduce((a, x) => a + x.st.shot, 0)} / ${rows.reduce((a, x) => a + x.st.weeks, 0)} | ${money(Math.round(avg(diffs)))} / ${money(Math.min(...diffs))} / ${money(Math.max(...diffs))} | ${Math.round(avg(rows.map((x) => x.rp)))} |`,
     );
   }
+}
+
+// ---------- Writers' room table (LAG-82) ----------
+// Weekday barista as "normal life", plus: start a spec pilot at once (and another whenever free and not on a show),
+// write the 3 drafts and 2 deck sessions in the afternoons (records in Hollywood when Spark runs low), meet the agency
+// with the best odds × staffing value once a day, wait out staffing season, then do the week's room day first thing
+// (05:00–14:00, before the café) and answer every politics event for Favor ("favor") or for the pages ("quality").
+// The guild variant also chases one writing gig a day (Tier 2+ once headshots are affordable; Tier 1 until it joins)
+// and joins the Writing guild in West Hollywood as soon as it has 3 vouchers and the $1,000.
+
+/** Agency with the best chance of a signing that then gets you staffed. */
+function bestAgency(s: GameState): Agency {
+  const p = s.project!;
+  const value = (a: Agency) =>
+    agentOddsFor(s, p, a) * staffingOdds(average(p.scores.develop), average(p.scores.deck), cloutTier(s.player.rp), a.heat);
+  return [...AGENCIES].sort((a, b) => value(b) - value(a))[0]!;
+}
+
+/** Best open writing gig on today's board (by odds × pay), skipping exposure risks, Tier 2+ without headshots and Global Rule One. */
+function bestWritingGig(s: GameState): Opportunity | null {
+  const pl = s.player;
+  const options = s.board.filter(
+    (o) =>
+      !o.pilot &&
+      o.status === 'open' &&
+      o.skill === 'writing' &&
+      (o.tier < 2 || pl.hasHeadshots) &&
+      !(o.tier < C.GUILD_VOUCHER_MIN_TIER && pl.guilds.writing.member) &&
+      !isExposure(pl.skills.writing, o.tier) &&
+      pl.cash >= submissionFee(pl, o),
+  );
+  let best: Opportunity | null = null;
+  let bestValue = -1;
+  for (const o of options) {
+    const value = oddsFor(pl, o, 2) * bookingPayout(o.medium, o.tier, pl.guilds.writing.member).pay * (o.tier >= C.GUILD_VOUCHER_MIN_TIER ? 2 : 1);
+    if (value > bestValue) [best, bestValue] = [o, value];
+  }
+  return best;
+}
+
+function writerPolicy(answer: 'favor' | 'quality', guild: boolean): () => Policy {
+  return () => {
+    const job = baristaWeekdays();
+    let gigDay = -1;
+    return (s) => {
+      const pl = s.player;
+      const h = hour(s);
+      const d = day(s);
+      if (s.roomEvent) {
+        const [a, b] = s.roomEvent.choices;
+        const pick = answer === 'favor' ? b.favor > a.favor || (b.favor === a.favor && b.quality > a.quality) : b.quality > a.quality;
+        return { type: 'ROOM_CHOICE', option: pick ? 1 : 0 };
+      }
+      const reserve = 10 * dailyBills(ARCHETYPES[pl.archetype].rentPerDay);
+      if (!s.project && !s.contract) return { type: 'START_PROJECT', scale: 'spec' };
+      if (h >= 22 || h < 5) return sleepUntil(s, 5);
+      // On a show: this week's room day comes first.
+      const c = s.contract;
+      if (c && c.kind === 'writer' && !c.shotThisWeek && h >= 5 && h <= 14) {
+        if (pl.energy < 45) return go(s, pl.home) ?? sleepUntil(s, h + 2);
+        return go(s, STUDIO_LOT) ?? { type: 'ROOM_DAY' };
+      }
+      if (guild) {
+        const g = pl.guilds.writing;
+        if (!g.member && g.vouchers >= C.GUILD_VOUCHERS_NEEDED && pl.cash >= C.GUILD_JOIN_FEE + reserve && h >= 9 && h < 18)
+          return go(s, GUILDS.writing.hq) ?? { type: 'JOIN_GUILD', guild: 'writing' };
+        if (!pl.hasHeadshots && visibleTier(pl) >= 2 && pl.cash >= C.HEADSHOTS_COST + reserve && h >= 9 && h < 15 && pl.energy > 20)
+          return go(s, HEADSHOTS_LOCATION) ?? { type: 'BUY_HEADSHOTS' };
+        if (gigDay !== d && h >= 5 && h < 16 && pl.energy > 30) {
+          const opp = bestWritingGig(s);
+          if (!opp) gigDay = d;
+          else {
+            const cmd = chaseOpp(s, opp, 8);
+            if (cmd?.type === 'SUBMIT') gigDay = d;
+            if (cmd) return cmd;
+            if (h >= opp.windowEnd - 1) gigDay = d;
+          }
+        }
+      }
+      const workday = d % 7 >= 1 && d % 7 <= 5;
+      if (workday && h >= 6 && h <= 11) {
+        const cmd = job(s);
+        if (cmd?.type === 'START_JOB' || cmd?.type === 'TRAVEL') return cmd;
+      }
+      if (pl.energy < 30) return sleepUntil(s, 5);
+      const p = s.project;
+      if (p && h < 21) {
+        switch (p.stage) {
+          case 'develop':
+            if (pl.spark >= C.WRITE_SESSION_SPARK) return { type: 'WRITE_SESSION' };
+            return go(s, 'hollywood') ?? { type: 'LEISURE', leisureId: 'records' };
+          case 'deck':
+            if (pl.spark >= C.DECK_SPARK) return { type: 'DECK_SESSION' };
+            return go(s, 'hollywood') ?? { type: 'LEISURE', leisureId: 'records' };
+          case 'agent': {
+            if (p.pitches.some((x) => x.day === d) || h > 18) break;
+            const a = bestAgency(s);
+            return go(s, a.location) ?? { type: 'PITCH_AGENT', agencyId: a.id };
+          }
+          default:
+            break;
+        }
+      }
+      return go(s, pl.home);
+    };
+  };
+}
+
+const WRITER_DAYS = Number(process.env.WRITER_DAYS ?? 90);
+const WRITER_SEEDS = Number(process.env.WRITER_SEEDS ?? 10);
+const WRITER_RUNS: Array<[string, 'favor' | 'quality', boolean]> = [
+  ['Writer, answers for Favor', 'favor', false],
+  ['Writer, answers for the pages', 'quality', false],
+  ['Writer + writing gigs, joins the guild', 'favor', true],
+];
+
+interface WriterStats {
+  specDay: number | null;
+  agentDay: number | null;
+  meetings: number;
+  staffedDay: number | null;
+  staffings: number;
+  tries: number;
+  failedSeasons: number;
+  weeklyPay: number;
+  roomDays: number;
+  weeks: number;
+  missed: number;
+  roomPay: number;
+  wraps: string[];
+  joinedDay: number | null;
+  dues: number;
+  healthPlan: boolean;
+  endFavor: number | null;
+}
+
+function writerStats(r: Result): WriterStats {
+  let gameDay = 1;
+  const st: WriterStats = {
+    specDay: null, agentDay: null, meetings: 0, staffedDay: null, staffings: 0, tries: 0, failedSeasons: 0, weeklyPay: 0,
+    roomDays: 0, weeks: 0, missed: 0, roomPay: 0, wraps: [], joinedDay: null, dues: 0, healthPlan: false, endFavor: null,
+  };
+  for (const e of r.events) {
+    if (e.type === 'BILLS_CHARGED') gameDay += 1;
+    else if (e.type === 'PROJECT_STAGE' && e.stage === 'deck') st.specDay ??= gameDay;
+    else if (e.type === 'AGENT_PITCHED') {
+      st.meetings += 1;
+      if (e.yes) st.agentDay ??= gameDay;
+    } else if (e.type === 'STAFFING_ROLLED') {
+      st.tries += 1;
+      if (e.staffed) {
+        st.staffings += 1;
+        st.staffedDay ??= gameDay;
+      } else if (e.final) st.failedSeasons += 1;
+    } else if (e.type === 'ROOM_DAY_DONE') st.roomDays += 1;
+    else if (e.type === 'EPISODE_WEEK') {
+      st.weeks += 1;
+      st.roomPay += e.pay;
+      if (e.missed) st.missed += 1;
+      else st.weeklyPay = Math.max(st.weeklyPay, e.pay);
+    } else if (e.type === 'ROOM_WRAPPED') st.wraps.push(e.outcome);
+    else if (e.type === 'GUILD_JOINED') st.joinedDay ??= gameDay;
+    else if (e.type === 'GUILD_DUES') st.dues += e.total;
+    else if (e.type === 'HEALTH_PLAN') st.healthPlan = e.active;
+  }
+  const c = r.state.contract;
+  if (c?.kind === 'writer') {
+    st.endFavor = c.favor;
+    if (!st.weeklyPay) st.weeklyPay = c.weeklyPay;
+  }
+  return st;
+}
+
+const fmtDays = (xs: number[]) => (xs.length ? `${Math.round(avg(xs))} (${Math.min(...xs)}–${Math.max(...xs)})` : '—');
+
+console.log(`\nWriters' room: ${WRITER_DAYS} days next to a weekday barista job, ${WRITER_SEEDS} seeds (${SEED}…${SEED + WRITER_SEEDS - 1}), vs barista alone\n`);
+console.log('| Archetype | Strategy | Staffed | Day staffed (avg, range) | Agency meetings / run | Staffing tries won | Weekly pay | Room days / weeks | Wrapped: promoted / asked back / not asked back | Favor at end (on a show) | Joined guild | Cash vs barista-only (avg / min / max) | RP (avg) |');
+console.log('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
+const writerSummary: Record<string, { runs: number; staffed: number; promoted: number; wraps: number; diff: number[] }> = {};
+for (const id of ARCHETYPE_IDS) {
+  const bases = Array.from({ length: WRITER_SEEDS }, (_, k) => simulate(id, baristaWeekdays, WRITER_DAYS, undefined, SEED + k).endCash);
+  for (const [name, answer, guild] of WRITER_RUNS) {
+    const rows = bases.map((baseCash, k) => {
+      const r = simulate(id, writerPolicy(answer, guild), WRITER_DAYS, undefined, SEED + k);
+      return { st: writerStats(r), diff: r.endCash - baseCash, rp: r.rp };
+    });
+    const staffedRuns = rows.filter((x) => x.st.staffings > 0);
+    const wraps = rows.flatMap((x) => x.st.wraps);
+    const count = (o: string) => wraps.filter((w) => w === o).length;
+    const favors = rows.flatMap((x) => (x.st.endFavor === null ? [] : [x.st.endFavor]));
+    const tries = rows.reduce((a, x) => a + x.st.tries, 0);
+    const wins = rows.reduce((a, x) => a + x.st.staffings, 0);
+    const pays = staffedRuns.map((x) => x.st.weeklyPay).filter((x) => x > 0);
+    const diffs = rows.map((x) => x.diff);
+    const joined = rows.filter((x) => x.st.joinedDay !== null);
+    const sum = writerSummary[name] ?? (writerSummary[name] = { runs: 0, staffed: 0, promoted: 0, wraps: 0, diff: [] });
+    sum.runs += rows.length;
+    sum.staffed += staffedRuns.length;
+    sum.promoted += count('promoted');
+    sum.wraps += wraps.length;
+    sum.diff.push(...diffs);
+    console.log(
+      `| ${ARCHETYPES[id].name} | ${name} | ${staffedRuns.length}/${rows.length} | ${fmtDays(staffedRuns.map((x) => x.st.staffedDay!))} | ${avg(rows.map((x) => x.st.meetings)).toFixed(1)} | ${tries ? `${wins}/${tries} (${pct(wins / tries)})` : '—'} | ${pays.length ? `${money(Math.min(...pays))}–${money(Math.max(...pays))}` : '—'} | ${rows.reduce((a, x) => a + x.st.roomDays, 0)} / ${rows.reduce((a, x) => a + x.st.weeks, 0)} | ${count('promoted')} / ${count('normal')} / ${count('notAskedBack')} | ${favors.length ? `${Math.round(avg(favors))} (${favors.length} runs)` : '—'} | ${guild ? `${joined.length}/${rows.length}${joined.length ? `, day ${fmtDays(joined.map((x) => x.st.joinedDay!))}` : ''}` : '—'} | ${money(Math.round(avg(diffs)))} / ${money(Math.min(...diffs))} / ${money(Math.max(...diffs))} | ${Math.round(avg(rows.map((x) => x.rp)))} |`,
+    );
+  }
+}
+console.log('\n| Strategy (all archetypes) | Staffed | Promoted (of wraps) | Cash vs barista-only (avg) |');
+console.log('|---|---:|---:|---:|');
+for (const [name, x] of Object.entries(writerSummary)) {
+  console.log(`| ${name} | ${pct(x.staffed / x.runs)} (${x.staffed}/${x.runs}) | ${x.wraps ? `${pct(x.promoted / x.wraps)} (${x.promoted}/${x.wraps})` : '—'} | ${money(Math.round(avg(x.diff)))} |`);
 }
 
 console.log('\nNo-income runway (days before cash first drops below $0):\n');
