@@ -198,6 +198,7 @@ export function World({ wide }: { wide: boolean }) {
         <div className="safe-bottom absolute inset-x-0 bottom-0 flex justify-center px-6 pb-6">
           <button
             type="button"
+            data-open-phone
             onClick={() => setOpen(true)}
             className="flex min-h-14 w-full max-w-xs items-center justify-center gap-2 rounded-full bg-gradient-to-r from-accent to-pink text-base font-bold text-accent-ink shadow-[0_12px_30px_-8px_rgb(255_92_147/0.8)] active:scale-[0.98]"
           >

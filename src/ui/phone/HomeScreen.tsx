@@ -55,7 +55,7 @@ function AppTile({ id, state }: { id: AppId; state: GameState }) {
                   : `absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold ring-2 ring-bg ${id === 'bank' ? 'bg-warn text-bg' : 'bg-pink text-white'}`
               }
             >
-              <span className={badge.dot ? 'sr-only' : ''}>{badge.dot ? badge.label : badge.text}</span>
+              <span className={badge.dot ? 'sr-only' : ''} aria-hidden={badge.dot ? undefined : true}>{badge.dot ? badge.label : badge.text}</span>
               {!badge.dot && <span className="sr-only"> {badge.label}</span>}
             </span>
           )}

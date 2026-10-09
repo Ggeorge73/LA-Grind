@@ -30,6 +30,25 @@ function MobilePhone() {
   const setOpen = usePhone((p) => p.setOpen);
   const [drag, setDrag] = useState<number | null>(null);
   const start = useRef(0);
+  const lowerRef = useRef<HTMLButtonElement>(null);
+  const mounted = useRef(false);
+
+  // Keyboard users keep their place (LAG-92): lowering makes the phone inert and raising unmounts "Open phone",
+  // which would drop focus to <body>. Move it to the matching control instead.
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      // Only when focus was lost: on <body>, or still on a control that just went inert.
+      if (active && active !== document.body && !active.closest('[inert]')) return;
+      if (open) lowerRef.current?.focus({ preventScroll: true });
+      else document.querySelector<HTMLElement>('[data-open-phone]')?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   const down = (e: PointerEvent<HTMLDivElement>) => {
     start.current = e.clientY;
@@ -57,6 +76,7 @@ function MobilePhone() {
         <span className="block h-1.5 w-12 rounded-full bg-white/30" />
       </div>
       <button
+        ref={lowerRef}
         type="button"
         onClick={() => setOpen(false)}
         aria-label="Lower phone"

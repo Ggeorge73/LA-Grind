@@ -1,6 +1,6 @@
 // LAG-82: writers' room + guilds acceptance play-test. For every archetype: start a spec pilot, write it, build the
-// deck and meet an agency from the Projects tab; wait out staffing season; if staffed, do a room day from Hustle and
-// answer the politics sheet; then join a guild from the Guilds section.
+// deck and meet an agency from StudioDesk (was the Projects tab); wait out staffing season; if staffed, do a room day from Hustle and
+// answer the politics sheet; then join a guild from UnionCard (was the Guilds section).
 // Travel, sleep and waiting use the dev-only window.__game handle; every writer and guild decision goes through the UI.
 // Usage: npm run dev, then: node tools/writers-playtest.cjs <screenshot-dir> [url]
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
@@ -26,8 +26,24 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
     const S = () => page.evaluate(() => window.__game.getState().state);
     const d = (cmd) => page.evaluate((c) => window.__game.getState().dispatch(c), cmd);
-    const tab = (n) => page.getByRole('navigation').getByRole('button', { name: n, exact: true }).click();
-    const main = () => page.getByRole('main');
+    // LAG-92 (PI-3 Sprint 11): the bottom tabs are gone; the old tabs map onto phone apps
+    // (Projects → StudioDesk, Hustle → Hustlr, Gigs → CastBoard, Map → Merge, Trades → Scrollr, Guilds → UnionCard).
+    const APPS = { Projects: 'StudioDesk', Hustle: 'Hustlr', Gigs: 'CastBoard', Map: 'Merge', Trades: 'Scrollr', Guilds: 'UnionCard', Bank: 'Balance', Messages: 'Textr', Settings: 'Settings' };
+    let current = null;
+    const tab = async (n) => {
+      const name = APPS[n] || n;
+      current = name;
+      // Banners sit over the top of the app; clear them so they never cover a button (phone-playtest checks banners).
+      await page.evaluate(() => window.__game.setState({ notices: [] }));
+      const raise = page.getByRole('button', { name: 'Open phone' });
+      if (await raise.count()) await raise.click();
+      if (await page.getByRole('region', { name, exact: true }).count()) return;
+      const back = page.getByRole('button', { name: 'Back to home' });
+      if (await back.count()) await back.click();
+      await page.getByRole('navigation', { name: 'Apps' }).getByRole('button', { name, exact: true }).click();
+      await page.getByRole('region', { name, exact: true }).waitFor();
+    };
+    const main = () => page.getByRole('region', { name: current, exact: true });
     const skip = async () => { if ((await S()).activity) await d({ type: 'SKIP_TO_DONE' }); };
     const day = async () => Math.floor((await S()).minute / 1440);
     const stage = async () => (await S()).project?.stage ?? null;
@@ -142,15 +158,15 @@ const ok = (m) => { results.push('OK   ' + m); console.log('  ✓', m); };
     await rest(40);
     await travel('hollywood');
     await advanceTo(10);
-    await tab('Hustle');
-    const guilds = main().getByRole('region', { name: 'Guilds' });
-    (await guilds.count()) ? ok(`${arch}: Guilds section shown`) : fail(`${arch}: no Guilds section`);
+    await tab('Guilds');
+    const guilds = main();
+    (await guilds.count()) ? ok(`${arch}: Guilds app (UnionCard) shown`) : fail(`${arch}: no Guilds app`);
     const cash0 = (await S()).player.cash;
     if (await press(/^Join TEA/, guilds)) {
       const t = await S();
       t.player.guilds.acting.member && t.player.cash === cash0 - 1000 ? ok(`${arch}: joined TEA (−$1,000)`) : fail(`${arch}: join had no effect`);
-      await tab('Hustle');
-      (await main().getByRole('region', { name: 'Guilds' }).getByText(/Member/).count()) ? ok(`${arch}: Member badge shown`) : fail(`${arch}: no Member badge`);
+      await tab('Guilds');
+      (await main().getByText(/Member/).count()) ? ok(`${arch}: Member badge shown`) : fail(`${arch}: no Member badge`);
     } else fail(`${arch}: Join TEA disabled`);
     await page.screenshot({ path: `${OUT}/${arch}-3-guilds.png`, fullPage: true });
 
