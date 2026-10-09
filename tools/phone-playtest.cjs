@@ -1,7 +1,9 @@
 // LAG-92 (PI-3 Sprint 11): phone OS play-test. For every archetype on a phone (390×844), and once on desktop (1280×800):
 // open all nine apps; a text message lights the Textr badge and the status-bar dot, and opening the thread clears them;
 // notification banners appear and tapping one opens the right app; Balance shows the barista shift's ledger row;
-// Lower phone / Open phone (mobile); no console errors, no horizontal overflow, state survives a reload.
+// Lower phone / Open phone; no console errors, no horizontal overflow, state survives a reload.
+// LAG-96 (Sprint 12): the room is the main screen and the phone is a pocket overlay, closed (inert) by default on
+// every device; the HUD button raises it ("Open phone…", aria-expanded) and puts it away ("Put away phone").
 // Money states that are slow to reach for real (overdraft) are set with the dev-only window.__game handle;
 // every phone interaction goes through the UI.
 // Usage: npm run dev, then: node tools/phone-playtest.cjs <screenshot-dir> [url]
@@ -42,11 +44,22 @@ const RUNS = [
     const setCash = (cash) => page.evaluate((c) => { const g = window.__game; const st = structuredClone(g.getState().state); st.player.cash = c; g.setState({ state: st }); }, cash);
     const clearNotices = () => page.evaluate(() => window.__game.setState({ notices: [] }));
     const phone = () => page.getByRole('group', { name: 'Phone' });
-    const phoneInert = () => page.locator('[role=group][aria-label="Phone"]').evaluate((el) => el.inert);
+    const phoneInert = () => page.evaluate(() => !!document.querySelector('[role=group][aria-label="Phone"]')?.closest('[inert]'));
+    const phoneBtn = () => page.locator('header[aria-label="Status"]').getByRole('button', { name: /^(Open phone|Put away phone)/ });
+    const phoneIsOpen = async () => (await phoneBtn().getAttribute('aria-expanded')) === 'true';
+    const openPhone = async () => {
+      if (!(await phoneIsOpen())) await phoneBtn().click();
+      await page.waitForFunction(() => { const g = document.querySelector('[role=group][aria-label="Phone"]'); return !!g && !g.closest('[inert]'); });
+    };
+    const closePhone = async () => {
+      if (await phoneIsOpen()) await phoneBtn().click();
+      await page.waitForFunction(() => !!document.querySelector('[role=group][aria-label="Phone"]')?.closest('[inert]'));
+    };
     const region = (name) => page.getByRole('region', { name, exact: true });
     const apps = () => page.getByRole('navigation', { name: 'Apps' });
     const home = async () => {
-      const back = page.getByRole('button', { name: 'Back to home' });
+      await openPhone();
+      const back = phone().getByRole('button', { name: 'Back to home' });
       if (await back.count()) await back.click();
       await apps().waitFor();
     };
@@ -68,6 +81,9 @@ const RUNS = [
     await page.getByRole('button', { name: new RegExp(`Start as ${NAMES[arch]}`) }).click();
     await page.getByRole('group', { name: 'Game speed' }).first().getByRole('button', { name: 'Pause' }).click();
     check((await S()) && (await page.evaluate(() => window.__game.getState().speed)) === 0, `${who}: paused from the status bar`);
+    check(!(await phoneIsOpen()) && (await phoneInert()) && /^Open phone/.test(await phoneBtn().getAttribute('aria-label')), `${who}: phone starts put away (inert) with an Open phone button`);
+    await openPhone();
+    check((await phoneBtn().getAttribute('aria-label')) === 'Put away phone' && (await phoneIsOpen()), `${who}: Open phone raises it; the HUD button becomes "Put away phone" (aria-expanded)`);
 
     // 1. Home screen: nine tiles; every app opens to its own region, and Back returns home.
     check((await apps().getByRole('button').count()) === 9, `${who}: home screen shows 9 app tiles`);
@@ -131,6 +147,9 @@ const RUNS = [
     check(unread1 === unread0 + 1, `${who}: landlord text arrived (unread ${unread0} → ${unread1})`);
     check((await textrBadge()) === `${unread1} ${unread1} unread`, `${who}: Textr tile badge reads ${unread1} unread`, `badge "${await textrBadge()}"`);
     check((await unreadDot().getAttribute('aria-label')) === `${unread1} unread messages`, `${who}: status-bar dot says ${unread1} unread messages`);
+    await closePhone();
+    check((await phoneBtn().getAttribute('aria-label')) === `Open phone, ${unread1} unread message${unread1 === 1 ? '' : 's'}`, `${who}: HUD phone button announces ${unread1} unread`, await phoneBtn().getAttribute('aria-label'));
+    await openPhone();
 
     // 5. Back above $0: the landlord texts again; that banner opens Textr straight into his thread, which reads it.
     await clearNotices();
@@ -166,23 +185,31 @@ const RUNS = [
     await d({ type: 'ADVANCE', minutes: 1 });
     await clearNotices();
 
-    // 7. Lower phone / Open phone (mobile sheet). Desktop has the phone pinned: no Lower button.
+    // 7. Lower phone / Open phone, on every device now (Sprint 12: the phone is a pocket overlay over the room).
+    await page.getByRole('button', { name: 'Lower phone' }).click();
+    await page.waitForFunction(() => !!document.querySelector('[role=group][aria-label="Phone"]')?.closest('[inert]'));
+    const raise = page.locator('header[aria-label="Status"]').getByRole('button', { name: /^Open phone/ });
+    check((await raise.isVisible()) && (await phoneInert()) && (await raise.getAttribute('aria-expanded')) === 'false', `${who}: Lower phone shows the room and an Open phone button (phone inert)`);
+    await page.waitForTimeout(100);
+    if (mobile) check(await raise.evaluate((el) => el === document.activeElement), `${who}: focus moves to Open phone (not lost to <body>)`);
+    await page.screenshot({ path: `${OUT}/${who}-5-lowered.png` });
+    await raise.focus();
+    await page.keyboard.press('Enter');
+    await apps().waitFor({ timeout: 3000 }).catch(() => {});
+    check((await apps().isVisible()) && (await phoneIsOpen()) && !(await phoneInert()), `${who}: Open phone (keyboard) brings the phone back`);
     if (mobile) {
-      await page.getByRole('button', { name: 'Lower phone' }).click();
-      const raise = page.getByRole('button', { name: 'Open phone' });
-      await raise.waitFor({ timeout: 3000 }).catch(() => {});
-      check((await raise.isVisible()) && (await phoneInert()), `${who}: Lower phone shows the world and an Open phone button (phone inert)`);
       await page.waitForTimeout(100);
-      check(await raise.evaluate((el) => el === document.activeElement), `${who}: focus moves to Open phone (not lost to <body>)`);
-      await page.screenshot({ path: `${OUT}/${who}-5-lowered.png` });
-      await page.keyboard.press('Enter');
-      await apps().waitFor({ timeout: 3000 }).catch(() => {});
-      check((await apps().isVisible()) && (await raise.count()) === 0 && !(await phoneInert()), `${who}: Open phone (keyboard) brings the phone back`);
-      await page.waitForTimeout(100);
-      check((await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) === 'Lower phone', `${who}: focus lands on Lower phone after raising`);
-    } else {
-      check((await page.getByRole('button', { name: 'Lower phone' }).count()) === 0 && (await phone().isVisible()), `${who}: desktop keeps the phone pinned (no Lower phone)`);
+      // The HUD button is a disclosure toggle now (it stays mounted), so focus stays on it rather than jumping.
+      const focused = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
+      check(focused === 'Put away phone' || focused === 'Lower phone', `${who}: focus stays on a phone control after raising (not lost to <body>)`, `focused "${focused}"`);
     }
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+    check(!(await phoneIsOpen()) && (await phoneInert()), `${who}: Escape puts the phone away`);
+    await openPhone();
+    await phoneBtn().click();
+    await page.waitForTimeout(400);
+    check(!(await phoneIsOpen()) && (await phoneInert()), `${who}: "Put away phone" in the HUD puts it away`);
 
     // 8. Hygiene: overflow at this width, state survives a reload.
     for (const name of APPS) {
@@ -194,7 +221,7 @@ const RUNS = [
     await page.evaluate(() => window.__game.getState().save());
     const before = JSON.stringify(await S());
     await page.reload();
-    await apps().waitFor();
+    await page.locator('header[aria-label="Status"]').waitFor();
     check(JSON.stringify(await S()) === before, `${who}: reload restores identical state (ledger and inbox included)`);
     check(!errors.length, `${who}: no console errors`, errors.join(' | '));
     await ctx.close();

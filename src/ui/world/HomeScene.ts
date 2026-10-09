@@ -88,7 +88,8 @@ export function createHomeScene(canvas: HTMLCanvasElement, opts: HomeSceneOption
   THREE.ColorManagement.enabled = false;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  // Phones: cap at 1.5× (most of the GPU cost is fill rate; the low-poly room still looks sharp).
+  renderer.setPixelRatio(Math.min(window.innerWidth < 600 ? 1.5 : 2, window.devicePixelRatio || 1));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const LEGACY = Math.PI; // r155+ physical light units: legacy intensity × π looks the same
@@ -356,6 +357,8 @@ export function createHomeScene(canvas: HTMLCanvasElement, opts: HomeSceneOption
   let pitch = 0.82;
   let dist = 19;
   let distGoal = 19;
+  /** Zoom-out limit; on portrait phones it's far enough that the whole room fits the width. */
+  let maxDist = 36;
   const target = new THREE.Vector3(0, 0.6, 0.2);
   let markerScale = 0.62;
   const placeCam = () => {
@@ -372,7 +375,9 @@ export function createHomeScene(canvas: HTMLCanvasElement, opts: HomeSceneOption
     if (!w || !h || (w === lastW && h === lastH)) return;
     const small = w < 600;
     if (lastW === 0 || small !== lastW < 600) {
-      dist = distGoal = small ? 36 : 19;
+      // LAG-96: at 36 a 390×844 phone clipped both side walls; back off with the aspect (≈52 there) instead.
+      maxDist = small ? Math.max(36, Math.round(24 / (w / h))) : 36;
+      dist = distGoal = small ? maxDist : 19;
       target.set(small ? 0.6 : 0, 0.6, small ? 0.6 : 0.2);
     }
     lastW = w;
@@ -417,7 +422,7 @@ export function createHomeScene(canvas: HTMLCanvasElement, opts: HomeSceneOption
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pinch && pointers.size === 2) {
       const d = pinchDist();
-      if (pinch.d > 0 && d > 0) distGoal = THREE.MathUtils.clamp((pinch.dist * pinch.d) / d, 11, 36);
+      if (pinch.d > 0 && d > 0) distGoal = THREE.MathUtils.clamp((pinch.dist * pinch.d) / d, 11, maxDist);
       if (opts.reducedMotion) dist = distGoal;
       placeCam();
       return;
@@ -444,7 +449,7 @@ export function createHomeScene(canvas: HTMLCanvasElement, opts: HomeSceneOption
   };
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
-    distGoal = THREE.MathUtils.clamp(distGoal + e.deltaY * 0.01, 11, 36);
+    distGoal = THREE.MathUtils.clamp(distGoal + e.deltaY * 0.01, 11, maxDist);
     if (opts.reducedMotion) {
       dist = distGoal;
       placeCam();
