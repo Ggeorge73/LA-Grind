@@ -3,7 +3,7 @@ export type Skill = 'acting' | 'writing' | 'directing' | 'music';
 export type LocationId = 'noho' | 'burbank' | 'hollywood' | 'weho' | 'silverlake' | 'santamonica';
 export type ArchetypeId = 'nepo' | 'midwest' | 'indie' | 'producer';
 export type JobId = 'barista' | 'barback' | 'rideshare' | 'pa';
-export type LeisureId = 'beach' | 'screening' | 'museum' | 'records';
+export type LeisureId = 'beach' | 'screening' | 'museum' | 'records' | 'tv';
 
 export type Skills = Record<Skill, number>;
 

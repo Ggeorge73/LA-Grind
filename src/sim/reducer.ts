@@ -2,7 +2,7 @@
 import * as C from './constants';
 import { ARCHETYPES } from './content/archetypes';
 import { JOBS } from './content/jobs';
-import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LOCATIONS, REPAIR_LOCATION } from './content/locations';
+import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LOCATIONS, REPAIR_LOCATION, leisureLocation } from './content/locations';
 import { NPC_HEADLINES } from './content/headlines';
 import { SUBMISSION_NAME, generateBoard, oddsFor, submissionFee } from './board';
 import { advance, settleOverdraft } from './clock';
@@ -157,7 +157,8 @@ export function whyNot(s: GameState, cmd: Command): string | null {
       return null;
     case 'LEISURE': {
       const spot = LEISURE[cmd.leisureId];
-      if (spot.location !== p.location) return `Go to ${LOCATIONS[spot.location].name} first.`;
+      const where = leisureLocation(spot, p.home);
+      if (where !== p.location) return spot.location === 'home' ? 'That is at home.' : `Go to ${LOCATIONS[where].name} first.`;
       if (p.cash < spot.cost) return `Needs $${spot.cost}.`;
       return null;
     }

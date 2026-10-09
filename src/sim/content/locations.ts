@@ -24,8 +24,11 @@ export const LOCATION_IDS: readonly LocationId[] = ['noho', 'burbank', 'hollywoo
 export interface LeisureSpot {
   id: LeisureId;
   name: string;
-  location: LocationId;
+  /** Where it happens; 'home' means wherever you live. */
+  location: LocationId | 'home';
   cost: number;
+  /** Spark gained (defaults to LEISURE_SPARK). */
+  spark?: number;
   flavour: string;
 }
 
@@ -34,9 +37,14 @@ export const LEISURE: Record<LeisureId, LeisureSpot> = {
   screening: { id: 'screening', name: 'Indie screening', location: 'silverlake', cost: 15, flavour: 'A 3-hour black-and-white film about a lamp. You were moved.' },
   museum: { id: 'museum', name: 'Museum afternoon', location: 'hollywood', cost: 20, flavour: 'You stared at a red square until it stared back.' },
   records: { id: 'records', name: 'Record digging', location: 'hollywood', cost: 10, flavour: 'Found a sample nobody has cleared yet. Probably fine.' },
+  // PI-3 Sprint 12: the 3D home's TV. Free and close, so it restores less than getting out of the house.
+  tv: { id: 'tv', name: 'Prestige TV binge', location: 'home', cost: 0, spark: 12, flavour: 'Research, technically. You took notes on the cold open.' },
 };
 
-export const LEISURE_IDS: readonly LeisureId[] = ['beach', 'screening', 'museum', 'records'];
+/** Where a leisure spot is for this player ('home' resolves to their home neighbourhood). */
+export const leisureLocation = (spot: LeisureSpot, home: LocationId): LocationId => (spot.location === 'home' ? home : spot.location);
+
+export const LEISURE_IDS: readonly LeisureId[] = ['beach', 'screening', 'museum', 'records', 'tv'];
 
 export interface ClassInfo {
   skill: Skill;

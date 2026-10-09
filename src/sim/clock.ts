@@ -151,7 +151,7 @@ function complete(s: GameState, a: Activity, rng: Rng, events: GameEvent[]): voi
       events.push({ type: 'WOKE_UP' });
       return;
     case 'leisure':
-      p.spark = clampStat(p.spark + C.LEISURE_SPARK);
+      p.spark = clampStat(p.spark + (LEISURE[a.leisureId ?? 'beach'].spark ?? C.LEISURE_SPARK));
       events.push({ type: 'LEISURE_DONE', leisureId: a.leisureId ?? LEISURE.beach.id });
       return;
     case 'class':

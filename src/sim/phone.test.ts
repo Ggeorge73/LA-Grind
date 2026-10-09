@@ -8,7 +8,7 @@ import { FESTIVALS } from './content/film';
 import { INVESTORS } from './content/filmFlavor';
 import { GUILDS, GUILD_SKILLS } from './content/guilds';
 import { JOBS, JOB_IDS } from './content/jobs';
-import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LEISURE_IDS, LOCATIONS, LOCATION_IDS, REPAIR_LOCATION } from './content/locations';
+import { CLASSES, HEADSHOTS_LOCATION, LEISURE, LEISURE_IDS, LOCATIONS, LOCATION_IDS, REPAIR_LOCATION, leisureLocation } from './content/locations';
 import { LABELS, VENUES } from './content/musicBiz';
 import { CONTACTS, INBOX_SENDER, INBOX_TEMPLATES } from './content/phoneFlavor';
 import { STUDIO_LOT } from './content/tv';
@@ -145,7 +145,7 @@ function placeFor(s: GameState, cmd: Command): LocationId | null {
     case 'TAKE_CLASS':
       return CLASSES[cmd.skill].location;
     case 'LEISURE':
-      return LEISURE[cmd.leisureId].location;
+      return leisureLocation(LEISURE[cmd.leisureId], s.player.home);
     case 'BUY_HEADSHOTS':
       return HEADSHOTS_LOCATION;
     case 'REPAIR_CAR':

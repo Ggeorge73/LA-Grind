@@ -8,21 +8,18 @@
 - **Multiplayer** (chat, transfers, presence) moves to **PI-4**.
 - **Needs** (Hunger, Hygiene, Social) join Energy and Spark in Sprint 14.
 
-**Jira:** project `LAG`, label `PI-3`, sprint labels `sprint-11` … `sprint-14`. Epics: LAG-84 E12 Phone OS, LAG-85 E13 3D City, LAG-86 E14 Rooms & Character, LAG-87 E15 Needs.
+**Jira:** project `LAG`, label `PI-3`, sprint labels `sprint-11` … `sprint-14`. Epics: LAG-84 E12 Phone OS, LAG-85 E13 3D Home, LAG-86 E14 Commute Runner, LAG-87 E15 City, You & Needs.
 **Working agreement:** unchanged (one PR per sprint, merged when CI is green, PO approves each new sprint).
 
 ## Design principle: the sim doesn't move
 
 The sim (`src/sim`) stays pure and keeps every rule. PI-3 is mostly a new `src/ui`. Every phone app, map tap and room hotspot sends a command the game already understands (`TRAVEL`, `SUBMIT`, `SLEEP`, `WRITE_SESSION`, …) and shows the read models in `actions.ts`. The sim gains only what the new screens truly need: a bank ledger, a message inbox, appearance, and needs. Each comes with a save migration.
 
-## The screen
+## The screen (revised after the Sprint 11 review)
 
-| Device | Layout |
-|---|---|
-| Phone (portrait, the main target) | The 3D world fills the screen with a slim status strip. A phone button (or swipe up) raises **your in-game phone** over about 90% of the screen; swipe down to return to the world. |
-| Tablet / desktop | World on the left, the phone pinned on the right as a device frame. |
+The Product Owner played Sprint 11 and redirected again with a Lagos Life screenshot: **the 3D room is the game, and the phone is a pocket tool.** A cutaway "dollhouse" apartment fills the screen. Your character lives in it and walks to tap-to-act spots. A slim floating bar on top shows the day, time, mood, Clout and cash, plus a phone button with an unread badge. The phone slides up over the room only when you pull it out.
 
-**About 70% of play happens in the phone.** The world is where you look, travel and click things in rooms.
+The approved look is `prototypes/home-and-runner.html`: a grounded, dark-walled, warm-lit low-poly room and a golden-hour LA boulevard. A bright cartoon variant (`prototypes/toon-home-and-runner.html`) was tried and rejected.
 
 ## Sprint 11 — Phone OS (E12)
 
@@ -44,40 +41,45 @@ A phone home screen with a status bar (clock, cash, Energy, Spark; later the nee
 - `ledger`: the last 200 money movements `{minute, amount, label, kind}`. Every cash change already has an event; the reducer now also writes a ledger row (an invariant test enforces this).
 - `inbox`: message threads `{id, from, title, messages[], unread}` written by the sim when events happen (callback started, agent signed, label offer, pilot decision, staffing roll, dues, overdraft). Read/unread is a command (`READ_THREAD`).
 
-## Sprint 12 — 3D City (E13)
+## Sprint 12: 3D Home (E13, LAG-85)
 
-- **Stack:** `three` + `@react-three/fiber` + `@react-three/drei`, **lazy-loaded** so the phone works before the world arrives.
-- **Fallback:** when WebGL is unavailable, the current SVG map is shown.
-- **Budget:** ≤ 350 KB gzipped for the 3D chunk; ≤ 150 draw calls; aim for 30 fps on a mid-range phone.
-- **Accessibility:** `prefers-reduced-motion` turns off camera flights.
-- **The city:** six districts (NoHo, Burbank, Hollywood, WeHo, Silver Lake, Santa Monica) as low-poly tiles in their real relative positions, with the 405 as a ribbon and the ocean to the west. Every mesh is procedural (boxes, extrusions, instanced buildings), so no 3D artist is needed. Each district gets one landmark:
-  - a hillside sign reading **LA GRIND**, not the trademarked one
-  - a backlot water tower
-  - a pier with a Ferris wheel
-  - the Strip's billboards
-  - the reservoir
-  - an arts-district warehouse
-- **Day and night** follow the game clock: sun angle, sky colour, window lights after 19:00.
-- **Interaction:** tap a district to get a card (what's there, open gigs, travel time and cost) with **Ride there**. That dispatches `TRAVEL`, and a car (or bus when the car is dead) drives the road while the clock runs. A pin marks where you are, and traffic on the 405 is drawn heavier at rush hour.
+- **Main screen:** the apartment from the prototype becomes the game's main screen when you're at home. Elsewhere, a street placeholder shows until Sprint 14's district interiors.
+- **Stack:** `three` is lazy-loaded, so the phone works before the room arrives. When WebGL is unavailable, an accessible fallback list of the room's actions replaces it.
+- **Character:** walks to a spot, then plays its action while the real activity runs. It lies down for sleep and sits for desk work.
+- **Hotspots** come from `homeView()` in `actions.ts`; each dispatches real commands:
 
-## Sprint 13 — Rooms & Character (E14)
-
-**Character creator** at the start of a new run (cosmetic): body, skin tone, hair style and colour, outfit, one accessory. You see your low-poly avatar in rooms and on the map pin. Save v9 adds `player.appearance`.
-
-**Dioramas:** small 3D rooms seen at an angle, with glowing **hotspots** that dispatch existing commands:
-
-| Place | Hotspots |
+| Spot | Actions |
 |---|---|
-| Your apartment (one look per archetype: NoHo couch-surf, Burbank studio, Silver Lake loft, Hollywood Hills guest house) | Bed → Sleep · Desk → Write / Make beat / Deck · Mirror → (S14) Shower · Fridge → (S14) Eat · Door → Rides |
-| Coffee shop (WeHo) | Counter → Barista shift |
-| Casting office (Hollywood) | Front desk → Send submission for gigs held here |
-| Studio lot (Burbank) | Soundstage → Shoot episode · Writers' room → Room day |
-| Recording studio | Booth → Record session |
-| Beach (Santa Monica) | Boardwalk → Beach walk (Spark) |
+| Bed | Sleep 8h |
+| Desk | Write the script / song / draft, Build the deck, Edit the cut (depending on your project stage), Make a beat |
+| Ring light | Prep 1h for today's open audition with the best odds |
+| TV | "Prestige TV binge", a new home leisure: 2h, free, +12 Spark (half of going out) |
+| Front door | Opens Merge (Rides) until the runner arrives in Sprint 13 |
+| Fridge, shower, table | Shown as "coming with Needs" until Sprint 14 |
 
-Walking into a district with a diorama shows it. The phone still offers every action, so rooms are a faster, nicer way in, never the only way.
+- **HUD:** the slim top bar shows the day and time, mood, Clout, cash and the phone button with its unread badge. Next to it is the speed control, and a small panel shows Energy, Spark and Burnout. An action card at the bottom shows the selected spot's actions with effects, costs and disabled reasons, then a progress bar and "Skip to done".
+- **Phone:** the Sprint 11 phone becomes the pocket overlay: closed by default, raised by the button. Notifications still drop in over the room.
+- **Accessibility:** every spot is also a real button in an off-canvas list, reachable by keyboard and screen reader. The play-tests use that list too.
 
-## Sprint 14 — Needs & polish (E15)
+## Sprint 13: Commute Runner (E14, LAG-86)
+
+- Every trip by car becomes the runner from the prototype, down a golden-hour LA boulevard:
+  - three lanes: dodge cars, jump cones, roll under low-clearance signs;
+  - coins to grab, and a parking officer who closes in after each bump.
+- **Run length** comes from the real commute minutes; rush hour (07–10 and 16–19) adds traffic.
+- **Results:**
+  - coins become tips in the ledger;
+  - arriving on time gives +5 Spark;
+  - three bumps gets you ticketed: −$35, and you arrive late. "Late" lowers that day's audition odds at the destination.
+- **"Take the bus"** keeps the old instant travel, for players who don't want to run.
+- The sim gains a `COMMUTE_RESULT` command validated by the reducer: coin counts are capped by the run length, so the client can't mint money.
+
+## Sprint 14: City, You & Needs (E15, LAG-87)
+
+- **A 3D LA map** to pick destinations: the six districts with landmarks.
+- **District interiors** with hotspots: casting office (Hollywood), studio lot (Burbank), coffee shop (WeHo), recording studio, and the beach.
+- **A character creator** at the start of a run (cosmetic; save version bump).
+- **The needs**, as below.
 
 Three new needs join Energy and Spark. Each runs 0–100 and starts at 80.
 
@@ -98,9 +100,9 @@ Needs show in the status bar and on the phone home screen. Save v10. The balance
 | Sprint | Theme | Jira |
 |---|---|---|
 | 11 | Phone OS: shell, apps, ledger, inbox (save v8) | E12 LAG-84 · LAG-88 sim · LAG-89 shell · LAG-90 apps · LAG-91 content · LAG-92 QA |
-| 12 | 3D City: Three.js world, districts, travel, day/night | E13 LAG-85 (stories at sprint planning) |
-| 13 | Rooms & Character: creator, apartment and place dioramas (save v9) | E14 LAG-86 (stories at sprint planning) |
-| 14 | Needs & polish: Hunger, Hygiene, Social, food/hangout apps, LAG-83, LAG-77 (save v10) | E15 LAG-87 (stories at sprint planning) |
+| 12 | 3D Home: the apartment is the main screen; hotspots run real commands; pocket phone | E13 LAG-85 (stories at sprint planning) |
+| 13 | Commute Runner: every trip by car is the runner; tips, lateness, "Take the bus" | E14 LAG-86 |
+| 14 | City, You & Needs: 3D map, district interiors, character creator, Hunger/Hygiene/Social, LAG-83, LAG-77 | E15 LAG-87 |
 
 ## Out of PI-3
 
