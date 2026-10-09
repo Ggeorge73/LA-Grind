@@ -224,10 +224,11 @@ No-income runway (days before cash first drops below $0):
 - **Overdraft:** "Moved Back Home" fires exactly 3 game days after cash first drops below $0, unless you get back to $0 first.
 - **Saves:** written on every player action, each new day, and whenever the app is backgrounded or the tab hidden. No time passes while closed.
 
-## Deliberately missing (Phase 1 scope)
+## Deliberately missing (still to come)
 
-- Accounts, server-side rules, shared Trades feed, leaderboards, shared clock (**Phase 3**)
-- Presence, chat, co-op productions (**Phase 4**)
+- The phone OS, 3D city, room dioramas, character creator and needs (Hunger, Hygiene, Social) (**PI-3, Phone & City**, see `docs/PI-3.md`)
+- Accounts, server-side rules, shared Feed and Messages, money transfers, leaderboards, presence, shared clock (**PI-4, Shared world**)
+- Co-op productions (**later**)
 - Purchases, ads, analytics, account deletion, moderation tools: not needed until accounts and social features exist
 - Real store assets, privacy policy and age rating: placeholders only
 - Sound and music
