@@ -497,7 +497,7 @@ export type GameEvent =
   | { type: 'PLACEMENT'; recordId: string; title: string; client: string; fee: number; rp: number }
   | { type: 'SOUNDTRACK_SET'; title: string; bonus: number }
   | { type: 'PILOT_SEASON_OPENED' }
-  | { type: 'CALLBACK_STARTED'; showTitle: string; network: string }
+  | { type: 'CALLBACK_STARTED'; showTitle: string; network: string; role: string }
   | { type: 'CALLBACK_READ'; beat: number; read: number; right: boolean }
   | { type: 'CALLBACK_DONE'; showTitle: string; right: number; odds: number; booked: boolean; pay: number }
   | { type: 'PILOT_DECIDED'; showTitle: string; network: string; pickedUp: boolean; odds: number; tookIt: boolean }

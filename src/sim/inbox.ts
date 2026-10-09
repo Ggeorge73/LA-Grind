@@ -13,13 +13,13 @@ type Post = { kind: InboxKind; vars: Vars };
 
 const festivalName = (id: string): string => FESTIVALS.find((f) => f.id === id)?.name ?? 'the festival';
 
-/** Which messages (if any) an event sends. Pure: reads the state only for context the event lacks. */
-export function messagesFor(s: GameState, e: GameEvent): Post[] {
+/** Which messages (if any) an event sends. Pure: everything comes from the event (the state is kept in the signature for future context). */
+export function messagesFor(_s: GameState, e: GameEvent): Post[] {
   switch (e.type) {
     case 'PILOT_SEASON_OPENED':
       return [{ kind: 'pilotSeasonOpen', vars: {} }];
     case 'CALLBACK_STARTED':
-      return [{ kind: 'callbackStarted', vars: { show: e.showTitle, network: e.network, role: s.callback?.role ?? 'the lead' } }];
+      return [{ kind: 'callbackStarted', vars: { show: e.showTitle, network: e.network, role: e.role } }];
     case 'CALLBACK_DONE':
       return [e.booked ? { kind: 'callbackBooked', vars: { show: e.showTitle, pay: formatMoney(e.pay) } } : { kind: 'callbackPassed', vars: { show: e.showTitle } }];
     case 'BOOKED':
@@ -84,7 +84,7 @@ export function postMessage(s: GameState, rng: Rng, kind: InboxKind, vars: Vars)
   }
   thread.messages.push({ id: newId(s, 'x'), minute: s.minute, kind, text });
   if (thread.messages.length > C.INBOX_THREAD_MAX) thread.messages.splice(0, thread.messages.length - C.INBOX_THREAD_MAX);
-  thread.unread += 1;
+  thread.unread = Math.min(thread.unread + 1, thread.messages.length);
   thread.lastMinute = s.minute;
   s.inbox.unshift(thread);
 }

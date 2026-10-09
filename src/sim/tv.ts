@@ -66,7 +66,7 @@ export function startCallback(s: GameState, a: Activity, opp: Opportunity, rng: 
     beats,
     picks: [],
   };
-  events.push({ type: 'CALLBACK_STARTED', showTitle: opp.pilot!.showTitle, network: opp.pilot!.network });
+  events.push({ type: 'CALLBACK_STARTED', showTitle: opp.pilot!.showTitle, network: opp.pilot!.network, role: opp.pilot!.role });
   tvHeadline(s, rng, events, 'callback', { title: opp.pilot!.showTitle });
 }
 
